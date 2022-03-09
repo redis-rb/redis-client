@@ -2,9 +2,10 @@
 
 require "socket"
 require "redis_client/version"
-require "redis_client/resp3"
 
 class RedisClient
+  Error = Class.new(StandardError)
+
   def initialize
     @host = "localhost"
     @port = 6379
@@ -12,9 +13,14 @@ class RedisClient
   end
 
   def call(*command)
-    raw_connection.write_nonblock(RESP3.dump(command), exception: false)
-    raw_connection.wait_readable
-    RESP3.load(raw_connection.read_nonblock(100, exception: false))
+    raw_connection.write(RESP3.dump(command))
+    RESP3.load(raw_connection)
+  end
+
+  def close
+    @raw_connection&.close
+    @raw_connection = nil
+    self
   end
 
   private
@@ -23,3 +29,5 @@ class RedisClient
     @raw_connection ||= TCPSocket.new(@host, @port)
   end
 end
+
+require "redis_client/resp3"

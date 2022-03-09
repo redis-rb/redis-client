@@ -1,13 +1,17 @@
 # frozen_string_literal: true
 
 require "set"
-require "strscan"
 
 class RedisClient
   module RESP3
     extend self
 
+    Error = Class.new(RedisClient::Error)
+    UnknownType = Class.new(Error)
+    SyntaxError = Class.new(Error)
+
     EOL = "\r\n"
+    EOL_SIZE = EOL.bytesize
     TYPES = {
       String => :dump_string,
       Integer => :dump_integer,
@@ -22,8 +26,8 @@ class RedisClient
     PARSER_TYPES = {
       '#' => :parse_boolean,
       '$' => :parse_blob,
-      '+' => :read_line,
-      '-' => :read_line,
+      '+' => :parse_string,
+      '-' => :parse_string,
       ':' => :parse_integer,
       '(' => :parse_integer,
       ',' => :parse_double,
@@ -31,8 +35,7 @@ class RedisClient
       '*' => :parse_array,
       '%' => :parse_map,
       '~' => :parse_set
-    }.freeze
-    SIGILS = Regexp.union(PARSER_TYPES.keys.map { |sig| Regexp.new(Regexp.escape(sig)) })
+    }.transform_keys(&:ord).freeze
     EOL_PATTERN = /\r\n/.freeze
     INTEGER_RANGE = ((((2**64) / 2) * -1)..(((2**64) / 2) - 1)).freeze
 
@@ -40,8 +43,8 @@ class RedisClient
       send(TYPES.fetch(payload.class), payload, buffer)
     end
 
-    def load(payload)
-      parse(StringScanner.new(payload))
+    def load(io)
+      parse(io)
     end
 
     private
@@ -108,76 +111,77 @@ class RedisClient
       buffer << '_' << EOL
     end
 
-    def read_line(scanner)
-      scanner.scan_until(EOL_PATTERN).byteslice(0..-3)
-    end
-
-    def parse(scanner)
-      if type = scanner.scan(SIGILS)
-        send(PARSER_TYPES.fetch(type), scanner)
-      else
-        raise UnknownType, "Unknown sigil type: #{scanner.peek(1).inspect}"
+    def parse(io)
+      type = io.getbyte
+      method = PARSER_TYPES.fetch(type) do
+        raise UnknownType, "Unknown sigil type: #{type.chr.inspect}"
       end
+      send(method, io)
     end
 
-    def parse_boolean(scanner)
-      case value = scanner.get_byte
-      when 't'
-        scanner.skip(EOL_PATTERN)
+    def parse_string(io)
+      io.gets(chomp: true)
+    end
+
+    TRUE_BYTE = 't'.ord
+    FALSE_BYTE = 'f'.ord
+    def parse_boolean(io)
+      case value = io.getbyte
+      when TRUE_BYTE
+        io.seek(EOL_SIZE, IO::SEEK_CUR)
         true
-      when 'f'
-        scanner.skip(EOL_PATTERN)
+      when FALSE_BYTE
+        io.seek(EOL_SIZE, IO::SEEK_CUR)
         false
       else
-        raise SyntaxError, "Expected `t` or `f` after `#`, got: #{value.inspect}"
+        raise SyntaxError, "Expected `t` or `f` after `#`, got: #{value.chr.inspect}"
       end
     end
 
-    def parse_array(scanner)
-      parse_sequence(scanner, parse_integer(scanner))
+    def parse_array(io)
+      parse_sequence(io, parse_integer(io))
     end
 
-    def parse_set(scanner)
-      parse_sequence(scanner, parse_integer(scanner)).to_set
+    def parse_set(io)
+      parse_sequence(io, parse_integer(io)).to_set
     end
 
-    def parse_map(scanner)
-      Hash[*parse_sequence(scanner, parse_integer(scanner) * 2)]
+    def parse_map(io)
+      Hash[*parse_sequence(io, parse_integer(io) * 2)]
     end
 
-    def parse_sequence(scanner, size)
+    def parse_sequence(io, size)
       array = Array.new(size)
       size.times do |index|
-        array[index] = parse(scanner)
+        array[index] = parse(io)
       end
       array
     end
 
-    def parse_integer(scanner)
-      Integer(read_line(scanner))
+    def parse_integer(io)
+      Integer(io.gets)
     end
 
-    def parse_double(scanner)
-      case value = read_line(scanner)
-      when 'inf'
+    def parse_double(io)
+      case value = io.gets
+      when "inf\r\n"
         Float::INFINITY
-      when '-inf'
+      when "-inf\r\n"
         -Float::INFINITY
       else
         Float(value)
       end
     end
 
-    def parse_null(scanner)
-      scanner.skip(EOL_PATTERN)
+    def parse_null(io)
+      io.seek(EOL_SIZE, IO::SEEK_CUR)
       nil
     end
 
-    def parse_blob(scanner)
-      bytesize = parse_integer(scanner)
-      blob = scanner.peek(bytesize)
-      scanner.pos += bytesize
-      scanner.skip(EOL_PATTERN)
+    def parse_blob(io)
+      bytesize = parse_integer(io)
+      blob = io.read(bytesize)
+      io.seek(EOL_SIZE, IO::SEEK_CUR)
       blob
     end
   end
