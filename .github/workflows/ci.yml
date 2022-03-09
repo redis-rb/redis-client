@@ -1,0 +1,53 @@
+---
+name: Test
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "*"
+jobs:
+  lint:
+    name: Rubocop
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "2.5"
+          bundler-cache: true
+      - name: Lint
+        run: bundle exec rubocop
+
+  test:
+    name: Ruby ${{ matrix.ruby }} / Redis ${{ matrix.redis }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        redis: ["6.2"]
+        ruby: ["3.1", "3.0", "2.7", "2.6", "2.5"]
+    services:
+      redis:
+        image: redis:${{ matrix.redis }}
+        ports:
+          - 6379:6379
+        options: --entrypoint redis-server
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+      - name: Test
+        run: bundle exec rake test
