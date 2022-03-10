@@ -14,4 +14,10 @@ class RedisClientTest < Minitest::Test
   def test_ping
     assert_equal "PONG", @redis.call("PING")
   end
+
+  def test_get_set
+    string = "a" * 15_000
+    assert_equal "OK", @redis.call("SET", "foo", string)
+    assert_equal string, @redis.call("GET", "foo")
+  end
 end

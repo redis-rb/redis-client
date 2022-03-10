@@ -2,9 +2,13 @@
 
 require "socket"
 require "redis_client/version"
+require "redis_client/buffered_io"
 
 class RedisClient
   Error = Class.new(StandardError)
+  TimeoutError = Class.new(Error)
+  ReadTimeoutError = Class.new(TimeoutError)
+  WriteTimeoutError = Class.new(TimeoutError)
 
   def initialize
     @host = "localhost"
@@ -26,7 +30,7 @@ class RedisClient
   private
 
   def raw_connection
-    @raw_connection ||= TCPSocket.new(@host, @port)
+    @raw_connection ||= BufferedIO.new(TCPSocket.new(@host, @port))
   end
 end
 
