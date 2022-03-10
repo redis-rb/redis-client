@@ -10,7 +10,7 @@ class RedisClient
     UnknownType = Class.new(Error)
     SyntaxError = Class.new(Error)
 
-    EOL = "\r\n"
+    EOL = "\r\n".b.freeze
     EOL_SIZE = EOL.bytesize
     TYPES = {
       String => :dump_string,
@@ -36,11 +36,17 @@ class RedisClient
       '%' => :parse_map,
       '~' => :parse_set
     }.transform_keys(&:ord).freeze
-    EOL_PATTERN = /\r\n/.freeze
     INTEGER_RANGE = ((((2**64) / 2) * -1)..(((2**64) / 2) - 1)).freeze
 
-    def dump(payload, buffer = String.new(encoding: Encoding::BINARY, capacity: 128))
-      send(TYPES.fetch(payload.class), payload, buffer)
+    def dump(object, buffer = new_buffer)
+      send(TYPES.fetch(object.class), object, buffer)
+    end
+
+    def dump_all(objects, buffer = new_buffer)
+      objects.each do |object|
+        dump(object, buffer)
+      end
+      buffer
     end
 
     def load(io)
@@ -48,6 +54,10 @@ class RedisClient
     end
 
     private
+
+    def new_buffer
+      String.new(encoding: Encoding::BINARY, capacity: 128)
+    end
 
     def dump_array(payload, buffer)
       buffer << '*' << payload.size.to_s << EOL

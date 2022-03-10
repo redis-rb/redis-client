@@ -27,6 +27,28 @@ class RedisClient
     self
   end
 
+  def pipelined
+    commands = []
+    yield Pipeline.new(commands)
+    call_pipelined(commands)
+  end
+
+  def call_pipelined(commands)
+    raw_connection.write(RESP3.dump_all(commands))
+    commands.map { RESP3.load(raw_connection) }
+  end
+
+  class Pipeline
+    def initialize(commands)
+      @commands = commands
+    end
+
+    def call(*command)
+      @commands << command
+      nil
+    end
+  end
+
   private
 
   def raw_connection

@@ -20,4 +20,13 @@ class RedisClientTest < Minitest::Test
     assert_equal "OK", @redis.call("SET", "foo", string)
     assert_equal string, @redis.call("GET", "foo")
   end
+
+  def test_pipelining
+    result = @redis.pipelined do |pipeline|
+      assert_nil pipeline.call("SET", "foo", "42")
+      assert_equal "OK", @redis.call("SET", "foo", "21") # Not pipelined
+      assert_nil pipeline.call("EXPIRE", "foo", "100")
+    end
+    assert_equal ["OK", 1], result
+  end
 end
