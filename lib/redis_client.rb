@@ -9,6 +9,7 @@ class RedisClient
   TimeoutError = Class.new(Error)
   ReadTimeoutError = Class.new(TimeoutError)
   WriteTimeoutError = Class.new(TimeoutError)
+  CommandError = Class.new(Error)
 
   def initialize
     @host = "localhost"
@@ -18,7 +19,12 @@ class RedisClient
 
   def call(*command)
     raw_connection.write(RESP3.dump(command))
-    RESP3.load(raw_connection)
+    result = RESP3.load(raw_connection)
+    if result.is_a?(CommandError)
+      raise result
+    else
+      result
+    end
   end
 
   def close
@@ -35,7 +41,20 @@ class RedisClient
 
   def call_pipelined(commands)
     raw_connection.write(RESP3.dump_all(commands))
-    commands.map { RESP3.load(raw_connection) }
+    exception = nil
+    results = commands.map do
+      result = RESP3.load(raw_connection)
+      if result.is_a?(CommandError)
+        exception ||= result
+      end
+      result
+    end
+
+    if exception
+      raise exception
+    else
+      results
+    end
   end
 
   class Pipeline

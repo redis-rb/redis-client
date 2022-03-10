@@ -27,7 +27,7 @@ class RedisClient
       '#' => :parse_boolean,
       '$' => :parse_blob,
       '+' => :parse_string,
-      '-' => :parse_string,
+      '-' => :parse_error,
       ':' => :parse_integer,
       '(' => :parse_integer,
       ',' => :parse_double,
@@ -131,6 +131,10 @@ class RedisClient
 
     def parse_string(io)
       io.gets(chomp: true)
+    end
+
+    def parse_error(io)
+      CommandError.new(parse_string(io))
     end
 
     TRUE_BYTE = 't'.ord

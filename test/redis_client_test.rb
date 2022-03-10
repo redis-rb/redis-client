@@ -29,4 +29,22 @@ class RedisClientTest < Minitest::Test
     end
     assert_equal ["OK", 1], result
   end
+
+  def test_pipelining_error
+    assert_raises RedisClient::CommandError do
+      @redis.pipelined do |pipeline|
+        pipeline.call("DOESNOTEXIST")
+        pipeline.call("SET", "foo", "42")
+      end
+    end
+
+    assert_equal "42", @redis.call("GET", "foo")
+  end
+
+  def test_command_missing
+    error = assert_raises RedisClient::CommandError do
+      @redis.call("DOESNOTEXIST", "foo")
+    end
+    assert error.message.start_with?("ERR unknown command `DOESNOTEXIST`")
+  end
 end

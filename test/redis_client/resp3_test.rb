@@ -56,7 +56,7 @@ class RedisClient
     end
 
     def test_load_error
-      assert_parses "ERROR", "-ERROR\r\n"
+      assert_parses CommandError.new("SOMEERROR"), "-SOMEERROR\r\n"
     end
 
     def test_load_integer
