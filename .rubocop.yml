@@ -99,6 +99,9 @@ Style/RescueStandardError:
 Style/WordArray:
   Enabled: false
 
+Style/TrailingCommaInArguments:
+  EnforcedStyleForMultiline: comma
+  
 Lint/NonLocalExitFromIterator:
   Enabled: false
 

@@ -4,7 +4,7 @@ class RedisClient
   class BufferedIO
     EOL = "\r\n".b.freeze
 
-    def initialize(io, read_timeout: 5, write_timeout: 5, chunk_size: 4096)
+    def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096)
       @io = io
       @buffer = String.new(encoding: Encoding::BINARY)
       @chunk_size = chunk_size

@@ -15,6 +15,9 @@ class RedisClient
     @host = "localhost"
     @port = 6379
     @raw_connection = nil
+    @read_timeout = 5
+    @write_timeout = 5
+    @open_timeout = 5
   end
 
   def call(*command)
@@ -71,7 +74,11 @@ class RedisClient
   private
 
   def raw_connection
-    @raw_connection ||= BufferedIO.new(TCPSocket.new(@host, @port))
+    @raw_connection ||= BufferedIO.new(
+      TCPSocket.new(@host, @port),
+      read_timeout: @read_timeout,
+      write_timeout: @write_timeout,
+    )
   end
 end
 
