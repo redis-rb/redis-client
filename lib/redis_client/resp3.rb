@@ -21,7 +21,7 @@ class RedisClient
       Hash => :dump_hash,
       TrueClass => :dump_true,
       FalseClass => :dump_false,
-      NilClass => :dump_nil
+      NilClass => :dump_nil,
     }.freeze
     PARSER_TYPES = {
       '#' => :parse_boolean,
@@ -34,7 +34,7 @@ class RedisClient
       '_' => :parse_null,
       '*' => :parse_array,
       '%' => :parse_map,
-      '~' => :parse_set
+      '~' => :parse_set,
     }.transform_keys(&:ord).freeze
     INTEGER_RANGE = ((((2**64) / 2) * -1)..(((2**64) / 2) - 1)).freeze
 
