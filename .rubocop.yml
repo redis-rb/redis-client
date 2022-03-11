@@ -99,9 +99,15 @@ Style/RescueStandardError:
 Style/WordArray:
   Enabled: false
 
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: consistent_comma
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: consistent_comma
+
 Style/TrailingCommaInArguments:
-  EnforcedStyleForMultiline: comma
-  
+  EnforcedStyleForMultiline: consistent_comma
+
 Lint/NonLocalExitFromIterator:
   Enabled: false
 

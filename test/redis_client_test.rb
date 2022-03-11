@@ -4,7 +4,7 @@ require "test_helper"
 
 class RedisClientTest < Minitest::Test
   def setup
-    @redis = RedisClient.new
+    @redis = RedisClient.new(**RedisServerHelper.tcp_config)
   end
 
   def test_has_version

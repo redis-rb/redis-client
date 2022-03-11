@@ -11,9 +11,9 @@ class RedisClient
   WriteTimeoutError = Class.new(TimeoutError)
   CommandError = Class.new(Error)
 
-  def initialize
-    @host = "localhost"
-    @port = 6379
+  def initialize(host: nil, port: nil)
+    @host = host || "localhost"
+    @port = port || 6_379
     @raw_connection = nil
     @read_timeout = 5
     @write_timeout = 5
