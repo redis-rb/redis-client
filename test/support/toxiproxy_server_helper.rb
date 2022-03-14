@@ -19,6 +19,7 @@ module ToxiproxyServerHelper
     if alive?
       puts "toxiproxy-server already running with pid=#{pid}"
     else
+      print "starting toxiproxy-server... "
       pid = Process.spawn(
         "toxiproxy-server",
         "-port", PORT.to_s,
@@ -27,8 +28,9 @@ module ToxiproxyServerHelper
       )
       PID_FILE.parent.mkpath
       PID_FILE.write(pid.to_s)
-      puts "toxiproxy-server started with pid=#{pid}"
+      print "started with pid=#{pid}... "
       wait_until_ready
+      puts "ready."
     end
   end
 

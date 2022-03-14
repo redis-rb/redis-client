@@ -37,6 +37,8 @@ class RedisClient
           @io.wait_readable(@read_timeout) or raise ReadTimeoutError
         when :wait_writable
           @io.wait_writable(@write_timeout) or raise WriteTimeoutError
+        when nil
+          raise Errno::ECONNRESET
         end
       end
     end
@@ -80,7 +82,8 @@ class RedisClient
     def fill_buffer(size = @chunk_size)
       remaining = size
       loop do
-        case bytes = @io.read_nonblock([remaining, @chunk_size].max, exception: false)
+        bytes = @io.read_nonblock([remaining, @chunk_size].max, exception: false)
+        case bytes
         when String
           @buffer << bytes
           remaining -= bytes.bytesize
@@ -89,6 +92,8 @@ class RedisClient
           @io.wait_readable(@read_timeout) or raise ReadTimeoutError
         when :wait_writable
           @io.wait_writable(@write_timeout) or raise WriteTimeoutError
+        when nil
+          raise Errno::ECONNRESET
         end
       end
     end

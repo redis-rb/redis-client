@@ -4,7 +4,7 @@ require "test_helper"
 
 class RedisClientTest < Minitest::Test
   def setup
-    @redis = RedisClient.new(**RedisServerHelper.tcp_config)
+    @redis = new_client
   end
 
   def test_has_version
@@ -15,22 +15,59 @@ class RedisClientTest < Minitest::Test
     assert_equal "PONG", @redis.call("PING")
   end
 
+  def test_connect_failure
+    client = new_client(host: "example.com")
+    assert_raises RedisClient::ConnectionError do
+      client.call("PING")
+    end
+  end
+
   def test_redis_down_after_connect
-    skip "this hangs forever on CI (TODO connect timeout)" if ENV["CI"]
     @redis.call("PING") # force connect
     Toxiproxy[/redis/].down do
-      assert_raises Errno::ECONNRESET do # TODO: wrap all network errors
-        assert_equal "PONG", @redis.call("PING")
+      assert_raises RedisClient::ConnectionError do
+        @redis.call("PING")
       end
     end
   end
 
   def test_redis_down_before_connect
-    skip "this hangs forever on CI (TODO connect timeout)" if ENV["CI"]
     @redis.close
     Toxiproxy[/redis/].down do
-      assert_raises Errno::ECONNREFUSED do # TODO: wrap all network errors
-        assert_equal "PONG", @redis.call("PING")
+      assert_raises RedisClient::ConnectionError do
+        @redis.call("PING")
+      end
+    end
+  end
+
+  def test_tcp_upstream_timeout
+    Toxiproxy[/redis/].upstream(:timeout, timeout: 3_000).apply do
+      assert_raises RedisClient::ReadTimeoutError do
+        @redis.call("PING")
+      end
+    end
+  end
+
+  def test_tcp_upstream_latency
+    Toxiproxy[/redis/].upstream(:latency, latency: 3_000).apply do
+      assert_raises RedisClient::ReadTimeoutError do
+        @redis.call("PING")
+      end
+    end
+  end
+
+  def test_tcp_downstream_timeout
+    Toxiproxy[/redis/].downstream(:timeout, timeout: 3_000).apply do
+      assert_raises RedisClient::ReadTimeoutError do
+        @redis.call("PING")
+      end
+    end
+  end
+
+  def test_tcp_downstream_latency
+    Toxiproxy[/redis/].downstream(:latency, latency: 3_000).apply do
+      assert_raises RedisClient::ReadTimeoutError do
+        @redis.call("PING")
       end
     end
   end
@@ -66,5 +103,11 @@ class RedisClientTest < Minitest::Test
       @redis.call("DOESNOTEXIST", "foo")
     end
     assert error.message.start_with?("ERR unknown command `DOESNOTEXIST`")
+  end
+
+  private
+
+  def new_client(**overrides)
+    RedisClient.new(**RedisServerHelper.tcp_config.merge(overrides))
   end
 end

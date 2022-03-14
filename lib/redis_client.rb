@@ -5,24 +5,47 @@ require "redis_client/version"
 require "redis_client/buffered_io"
 
 class RedisClient
+  DEFAULT_TIMEOUT = 3
+
   Error = Class.new(StandardError)
-  TimeoutError = Class.new(Error)
+
+  ConnectionError = Class.new(Error)
+  TimeoutError = Class.new(ConnectionError)
   ReadTimeoutError = Class.new(TimeoutError)
   WriteTimeoutError = Class.new(TimeoutError)
+  ConnectTimeoutError = Class.new(TimeoutError)
+
   CommandError = Class.new(Error)
 
-  def initialize(host: nil, port: nil)
-    @host = host || "localhost"
-    @port = port || 6379
+  attr_reader :host, :post
+  attr_accessor :connect_timeout, :read_timeout, :write_timeout
+
+  def initialize(
+    host: "localhost",
+    port: 6379,
+    timeout: DEFAULT_TIMEOUT,
+    read_timeout: timeout,
+    write_timeout: timeout,
+    connect_timeout: timeout
+  )
+    @host = host
+    @port = port
     @raw_connection = nil
-    @read_timeout = 5
-    @write_timeout = 5
-    @open_timeout = 5
+    @connect_timeout = connect_timeout
+    @read_timeout = read_timeout
+    @write_timeout = write_timeout
+  end
+
+  def timeout=(timeout)
+    @connect_timeout = @read_timeout = @write_timeout = timeout
   end
 
   def call(*command)
-    raw_connection.write(RESP3.dump(command))
-    result = RESP3.load(raw_connection)
+    query = RESP3.dump(command)
+    result = handle_network_errors do
+      raw_connection.write(query)
+      RESP3.load(raw_connection)
+    end
     if result.is_a?(CommandError)
       raise result
     else
@@ -43,14 +66,18 @@ class RedisClient
   end
 
   def call_pipelined(commands)
-    raw_connection.write(RESP3.dump_all(commands))
     exception = nil
-    results = commands.map do
-      result = RESP3.load(raw_connection)
-      if result.is_a?(CommandError)
-        exception ||= result
+    query = RESP3.dump_all(commands)
+
+    results = handle_network_errors do
+      raw_connection.write(query)
+      commands.map do
+        result = RESP3.load(raw_connection)
+        if result.is_a?(CommandError)
+          exception ||= result
+        end
+        result
       end
-      result
     end
 
     if exception
@@ -73,12 +100,30 @@ class RedisClient
 
   private
 
+  def handle_network_errors
+    yield
+  rescue SystemCallError => error
+    close
+    raise ConnectionError, error.message
+  rescue ConnectionError
+    close
+    raise
+  end
+
   def raw_connection
     @raw_connection ||= BufferedIO.new(
-      TCPSocket.new(@host, @port),
+      new_socket,
       read_timeout: @read_timeout,
       write_timeout: @write_timeout,
     )
+  end
+
+  def new_socket
+    Socket.tcp(@host, @port, connect_timeout: @connect_timeout)
+  rescue Errno::ETIMEDOUT
+    raise ConnectTimeoutError, error.message
+  rescue SystemCallError => error
+    raise ConnectionError, error.message
   end
 end
 

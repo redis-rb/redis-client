@@ -19,6 +19,7 @@ module RedisServerHelper
     {
       host: HOST,
       port: TCP_PORT,
+      timeout: 1,
     }
   end
 
@@ -26,6 +27,7 @@ module RedisServerHelper
     {
       host: HOST,
       port: TLS_PORT,
+      timeout: 1,
     }
   end
 
@@ -33,6 +35,7 @@ module RedisServerHelper
     if alive?
       puts "redis-server already running with pid=#{pid}"
     else
+      print "starting redis-server... "
       pid = Process.spawn(
         "redis-server",
         "--port", REAL_TCP_PORT.to_s,
@@ -47,8 +50,9 @@ module RedisServerHelper
       )
       PID_FILE.parent.mkpath
       PID_FILE.write(pid.to_s)
-      puts "redis-server started with pid=#{pid}"
+      print "started with pid=#{pid}... "
       wait_until_ready
+      puts "ready."
     end
   end
 
