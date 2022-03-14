@@ -20,7 +20,7 @@ jobs:
 
   lint:
     name: Rubocop
-    timeout-minutes: 30
+    timeout-minutes: 5
     strategy:
       fail-fast: false
     runs-on: ubuntu-latest
@@ -38,7 +38,7 @@ jobs:
   test:
     name: Ruby ${{ matrix.ruby }} / Redis ${{ matrix.redis }}
     needs: build
-    timeout-minutes: 30
+    timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
@@ -49,10 +49,18 @@ jobs:
       redis:
         image: ghcr.io/${{ github.repository_owner }}/redis-ci:${{ matrix.redis }}
         ports:
+          - 16380:16380
+          - 26380:26380
+      toxiproxy:
+        image: ghcr.io/shopify/toxiproxy:2.4.0
+        ports:
+          - 8474:8474
           - 16379:16379
           - 26379:26379
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Lower system timeout
+        run: sudo sysctl -w net.ipv4.tcp_syn_retries=2
       - name: Check out code
         uses: actions/checkout@v2
       - name: Set up Ruby

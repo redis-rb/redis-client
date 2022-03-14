@@ -29,6 +29,7 @@ GEM
     rubocop-minitest (0.14.0)
       rubocop (>= 0.90, < 2.0)
     ruby-progressbar (1.11.0)
+    toxiproxy (2.0.0)
     unicode-display_width (2.1.0)
 
 PLATFORMS
@@ -42,6 +43,7 @@ DEPENDENCIES
   redis-client!
   rubocop
   rubocop-minitest
+  toxiproxy
 
 BUNDLED WITH
    2.3.8

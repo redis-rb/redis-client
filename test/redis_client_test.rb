@@ -15,6 +15,26 @@ class RedisClientTest < Minitest::Test
     assert_equal "PONG", @redis.call("PING")
   end
 
+  def test_redis_down_after_connect
+    skip "this hangs forever on CI (TODO connect timeout)" if ENV["CI"]
+    @redis.call("PING") # force connect
+    Toxiproxy[/redis/].down do
+      assert_raises Errno::ECONNRESET do # TODO: wrap all network errors
+        assert_equal "PONG", @redis.call("PING")
+      end
+    end
+  end
+
+  def test_redis_down_before_connect
+    skip "this hangs forever on CI (TODO connect timeout)" if ENV["CI"]
+    @redis.close
+    Toxiproxy[/redis/].down do
+      assert_raises Errno::ECONNREFUSED do # TODO: wrap all network errors
+        assert_equal "PONG", @redis.call("PING")
+      end
+    end
+  end
+
   def test_get_set
     string = "a" * 15_000
     assert_equal "OK", @redis.call("SET", "foo", string)

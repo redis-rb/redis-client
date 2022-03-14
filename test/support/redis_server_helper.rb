@@ -10,8 +10,10 @@ module RedisServerHelper
   PID_FILE = ROOT.join("tmp/redis.pid")
 
   HOST = "localhost"
-  TCP_PORT = 16_379
-  SSL_PORT = 26_379
+  TCP_PORT = 1_6379
+  TLS_PORT = 2_6379
+  REAL_TCP_PORT = 1_6380
+  REAL_TLS_PORT = 2_6380
 
   def tcp_config
     {
@@ -23,7 +25,7 @@ module RedisServerHelper
   def ssl_config
     {
       host: HOST,
-      port: SSL_PORT,
+      port: TLS_PORT,
     }
   end
 
@@ -33,8 +35,8 @@ module RedisServerHelper
     else
       pid = Process.spawn(
         "redis-server",
-        "--port", TCP_PORT.to_s,
-        "--tls-port", SSL_PORT.to_s,
+        "--port", REAL_TCP_PORT.to_s,
+        "--tls-port", REAL_TLS_PORT.to_s,
         "--tls-cert-file", CERTS_PATH.join("redis.crt").to_s,
         "--tls-key-file", CERTS_PATH.join("redis.key").to_s,
         "--tls-ca-cert-file", CERTS_PATH.join("ca.crt").to_s,
@@ -46,7 +48,7 @@ module RedisServerHelper
       PID_FILE.parent.mkpath
       PID_FILE.write(pid.to_s)
       puts "redis-server started with pid=#{pid}"
-      sleep 1 # TODO: some TCP readiness check would be better
+      wait_until_ready
     end
   end
 

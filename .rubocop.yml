@@ -62,6 +62,9 @@ Style/ParallelAssignment:
 Style/NumericPredicate:
   Enabled: false
 
+Style/NumericLiterals:
+  Enabled: false
+
 Style/IfUnlessModifier:
   Enabled: false
 
@@ -111,6 +114,12 @@ Style/TrailingCommaInArguments:
 Lint/NonLocalExitFromIterator:
   Enabled: false
 
+Layout/FirstArrayElementIndentation:
+  EnforcedStyle: consistent
+
+Layout/FirstHashElementIndentation:
+  EnforcedStyle: consistent
+
 Layout/EndAlignment:
   EnforcedStyleAlignWith: variable
 
@@ -148,4 +157,3 @@ Style/SymbolProc:
 
 Gemspec/RequireMFA:
   Enabled: false
-
