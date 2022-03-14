@@ -7,6 +7,7 @@ module ToxiproxyServerHelper
 
   ROOT = Pathname.new(File.expand_path("../../", __dir__))
   PID_FILE = ROOT.join("tmp/toxiproxy.pid")
+  BIN = ROOT.join("bin/toxiproxy-server")
 
   HOST = "localhost"
   PORT = 8474
@@ -19,14 +20,15 @@ module ToxiproxyServerHelper
     if alive?
       puts "toxiproxy-server already running with pid=#{pid}"
     else
+      PID_FILE.parent.mkpath
+      system(ROOT.join("bin/install-toxiproxy").to_s) unless BIN.exist?
       print "starting toxiproxy-server... "
       pid = Process.spawn(
-        "toxiproxy-server",
+        BIN.to_s,
         "-port", PORT.to_s,
         out: ROOT.join("tmp/toxiproxy.log").to_s,
         err: ROOT.join("tmp/toxiproxy.log").to_s,
       )
-      PID_FILE.parent.mkpath
       PID_FILE.write(pid.to_s)
       print "started with pid=#{pid}... "
       wait_until_ready

@@ -51,12 +51,6 @@ jobs:
         ports:
           - 16380:16380
           - 26380:26380
-      toxiproxy:
-        image: ghcr.io/shopify/toxiproxy:2.4.0
-        ports:
-          - 8474:8474
-          - 16379:16379
-          - 26379:26379
     runs-on: ${{ matrix.os }}
     steps:
       - name: Lower system timeout

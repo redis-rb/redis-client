@@ -6,33 +6,29 @@ require "toxiproxy"
 
 Dir[File.join(__dir__, "support/**/*.rb")].sort.each { |f| require f }
 
-require "minitest/autorun"
+ToxiproxyServerHelper.shutdown
+ToxiproxyServerHelper.spawn
 
 unless ENV["CI"]
   RedisServerHelper.shutdown
-  ToxiproxyServerHelper.shutdown
-  ToxiproxyServerHelper.spawn
   RedisServerHelper.spawn
-  Minitest.after_run { RedisServerHelper.shutdown }
-  Minitest.after_run { ToxiproxyServerHelper.shutdown }
 end
 
 Toxiproxy.host = ToxiproxyServerHelper.url
-redis_host = proxy_host = "localhost"
-if ENV["CI"]
-  redis_host = "redis"
-  proxy_host = "toxiproxy"
-end
-
 Toxiproxy.populate([
   {
     name: "redis",
-    upstream: "#{redis_host}:#{RedisServerHelper::REAL_TCP_PORT}",
-    listen: "#{proxy_host}:#{RedisServerHelper::TCP_PORT}",
+    upstream: "localhost:#{RedisServerHelper::REAL_TCP_PORT}",
+    listen: ":#{RedisServerHelper::TCP_PORT}",
   },
   {
     name: "redis_tls",
-    upstream: "#{redis_host}:#{RedisServerHelper::REAL_TLS_PORT}",
-    listen: "#{proxy_host}:#{RedisServerHelper::TLS_PORT}",
+    upstream: "localhost:#{RedisServerHelper::REAL_TLS_PORT}",
+    listen: ":#{RedisServerHelper::TLS_PORT}",
   },
 ])
+
+require "minitest/autorun"
+
+Minitest.after_run { ToxiproxyServerHelper.shutdown }
+Minitest.after_run { RedisServerHelper.shutdown }
