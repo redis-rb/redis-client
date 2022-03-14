@@ -15,63 +15,6 @@ class RedisClientTest < Minitest::Test
     assert_equal "PONG", @redis.call("PING")
   end
 
-  def test_connect_failure
-    client = new_client(host: "example.com")
-    assert_raises RedisClient::ConnectionError do
-      client.call("PING")
-    end
-  end
-
-  def test_redis_down_after_connect
-    @redis.call("PING") # force connect
-    Toxiproxy[/redis/].down do
-      assert_raises RedisClient::ConnectionError do
-        @redis.call("PING")
-      end
-    end
-  end
-
-  def test_redis_down_before_connect
-    @redis.close
-    Toxiproxy[/redis/].down do
-      assert_raises RedisClient::ConnectionError do
-        @redis.call("PING")
-      end
-    end
-  end
-
-  def test_tcp_upstream_timeout
-    Toxiproxy[/redis/].upstream(:timeout, timeout: 3_000).apply do
-      assert_raises RedisClient::ReadTimeoutError do
-        @redis.call("PING")
-      end
-    end
-  end
-
-  def test_tcp_upstream_latency
-    Toxiproxy[/redis/].upstream(:latency, latency: 3_000).apply do
-      assert_raises RedisClient::ReadTimeoutError do
-        @redis.call("PING")
-      end
-    end
-  end
-
-  def test_tcp_downstream_timeout
-    Toxiproxy[/redis/].downstream(:timeout, timeout: 3_000).apply do
-      assert_raises RedisClient::ReadTimeoutError do
-        @redis.call("PING")
-      end
-    end
-  end
-
-  def test_tcp_downstream_latency
-    Toxiproxy[/redis/].downstream(:latency, latency: 3_000).apply do
-      assert_raises RedisClient::ReadTimeoutError do
-        @redis.call("PING")
-      end
-    end
-  end
-
   def test_get_set
     string = "a" * 15_000
     assert_equal "OK", @redis.call("SET", "foo", string)

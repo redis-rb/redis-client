@@ -9,7 +9,7 @@ module RedisServerHelper
   CERTS_PATH = ROOT.join("test/docker/files/certs")
   PID_FILE = ROOT.join("tmp/redis.pid")
 
-  HOST = "localhost"
+  HOST = "127.0.0.1"
   TCP_PORT = 1_6379
   TLS_PORT = 2_6379
   REAL_TCP_PORT = 1_6380
@@ -28,6 +28,13 @@ module RedisServerHelper
       host: HOST,
       port: TLS_PORT,
       timeout: 0.1,
+      ssl: true,
+      ssl_params: {
+        verify_hostname: false, # TODO: See if we could actually verify the hostname with our CI and dev setup
+        cert: OpenSSL::X509::Certificate.new(CERTS_PATH.join("client.crt").read),
+        key: OpenSSL::PKey.read(CERTS_PATH.join("client.key").read),
+        ca_file: CERTS_PATH.join("ca.crt").to_s,
+      },
     }
   end
 

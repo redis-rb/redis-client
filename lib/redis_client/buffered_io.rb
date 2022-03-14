@@ -34,11 +34,13 @@ class RedisClient
             return total
           end
         when :wait_readable
-          @io.wait_readable(@read_timeout) or raise ReadTimeoutError
+          @io.to_io.wait_readable(@read_timeout) or raise ReadTimeoutError
         when :wait_writable
-          @io.wait_writable(@write_timeout) or raise WriteTimeoutError
+          @io.to_io.wait_writable(@write_timeout) or raise WriteTimeoutError
         when nil
           raise Errno::ECONNRESET
+        else
+          raise "Unexpected `write_nonblock` return: #{bytes.inspect}"
         end
       end
     end
@@ -89,11 +91,13 @@ class RedisClient
           remaining -= bytes.bytesize
           return if remaining < 0
         when :wait_readable
-          @io.wait_readable(@read_timeout) or raise ReadTimeoutError
+          @io.to_io.wait_readable(@read_timeout) or raise ReadTimeoutError
         when :wait_writable
-          @io.wait_writable(@write_timeout) or raise WriteTimeoutError
+          @io.to_io.wait_writable(@write_timeout) or raise WriteTimeoutError
         when nil
           raise Errno::ECONNRESET
+        else
+          raise "Unexpected `read_nonblock` return: #{bytes.inspect}"
         end
       end
     end

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "socket"
+require "openssl"
 require "redis_client/version"
 require "redis_client/buffered_io"
 
@@ -17,7 +18,7 @@ class RedisClient
 
   CommandError = Class.new(Error)
 
-  attr_reader :host, :post
+  attr_reader :host, :port, :ssl
   attr_accessor :connect_timeout, :read_timeout, :write_timeout
 
   def initialize(
@@ -26,10 +27,14 @@ class RedisClient
     timeout: DEFAULT_TIMEOUT,
     read_timeout: timeout,
     write_timeout: timeout,
-    connect_timeout: timeout
+    connect_timeout: timeout,
+    ssl: false,
+    ssl_params: nil
   )
     @host = host
     @port = port
+    @ssl = ssl
+    @ssl_params = ssl_params
     @raw_connection = nil
     @connect_timeout = connect_timeout
     @read_timeout = read_timeout
@@ -104,7 +109,7 @@ class RedisClient
     yield
   rescue SystemCallError => error
     close
-    raise ConnectionError, error.message
+    raise ConnectionError, error.message, error.backtrace
   rescue ConnectionError
     close
     raise
@@ -113,13 +118,32 @@ class RedisClient
   def raw_connection
     @raw_connection ||= BufferedIO.new(
       new_socket,
-      read_timeout: @read_timeout,
-      write_timeout: @write_timeout,
+      read_timeout: read_timeout,
+      write_timeout: write_timeout,
     )
   end
 
   def new_socket
-    Socket.tcp(@host, @port, connect_timeout: @connect_timeout)
+    socket = Socket.tcp(host, port, connect_timeout: connect_timeout)
+    if ssl
+      ssl_context = OpenSSL::SSL::SSLContext.new
+      ssl_context.set_params(@ssl_params || {})
+      socket = OpenSSL::SSL::SSLSocket.new(socket, ssl_context)
+      socket.hostname = host
+      loop do
+        case status = socket.connect_nonblock(exception: false)
+        when :wait_readable
+          socket.to_io.wait_readable(@connect_timeout) or raise ReadTimeoutError
+        when :wait_writable
+          socket.to_io.wait_writable(@connect_timeout) or raise WriteTimeoutError
+        when socket
+          break
+        else
+          raise "Unexpected `connect_nonblock` return: #{status.inspect}"
+        end
+      end
+    end
+    socket
   rescue Errno::ETIMEDOUT
     raise ConnectTimeoutError, error.message
   rescue SystemCallError => error
