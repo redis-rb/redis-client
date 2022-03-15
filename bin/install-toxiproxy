@@ -6,7 +6,7 @@ TOXIPROXY_LOG_DIR=${CIRCLE_ARTIFACTS:-'/tmp'}
 if [[ "$OSTYPE" == "linux"* ]]; then
     DOWNLOAD_TYPE="linux-amd64"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    DOWNLOAD_TYPE="darwin-amd64"
+    DOWNLOAD_TYPE="darwin-$(uname -m)"
 fi
 
 echo "[dowload toxiproxy for $DOWNLOAD_TYPE]"
