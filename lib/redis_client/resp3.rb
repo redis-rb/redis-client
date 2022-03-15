@@ -134,7 +134,7 @@ class RedisClient
     end
 
     def parse_error(io)
-      CommandError.new(parse_string(io))
+      CommandError.parse(parse_string(io))
     end
 
     TRUE_BYTE = 't'.ord

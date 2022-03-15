@@ -16,7 +16,23 @@ class RedisClient
   WriteTimeoutError = Class.new(TimeoutError)
   ConnectTimeoutError = Class.new(TimeoutError)
 
-  CommandError = Class.new(Error)
+  class CommandError < Error
+    class << self
+      def parse(error_message)
+        code = error_message.split(' ', 2).first
+        klass = ERRORS.fetch(code, self)
+        klass.new(error_message)
+      end
+    end
+  end
+
+  AuthenticationError = Class.new(CommandError)
+  PermissionError = Class.new(CommandError)
+
+  CommandError::ERRORS = {
+    "WRONGPASS" => AuthenticationError,
+    "NOPERM" => PermissionError,
+  }.freeze
 
   attr_reader :host, :port, :ssl, :path
   attr_accessor :connect_timeout, :read_timeout, :write_timeout
@@ -25,6 +41,8 @@ class RedisClient
     host: "localhost",
     port: 6379,
     path: nil,
+    username: nil,
+    password: nil,
     timeout: DEFAULT_TIMEOUT,
     read_timeout: timeout,
     write_timeout: timeout,
@@ -35,6 +53,8 @@ class RedisClient
     @host = host
     @port = port
     @path = path
+    @username = username || "default"
+    @password = password
     @ssl = ssl
     @ssl_params = ssl_params
     @raw_connection = nil
@@ -118,11 +138,21 @@ class RedisClient
   end
 
   def raw_connection
-    @raw_connection ||= BufferedIO.new(
+    return @raw_connection if @raw_connection
+
+    @raw_connection = BufferedIO.new(
       new_socket,
       read_timeout: read_timeout,
       write_timeout: write_timeout,
     )
+
+    if @password
+      call("HELLO", "3", "AUTH", @username, @password)
+    else
+      call("HELLO", "3")
+    end
+
+    @raw_connection
   end
 
   def new_socket

@@ -5,6 +5,7 @@ require "test_helper"
 class RedisClientTest < Minitest::Test
   def setup
     @redis = new_client
+    @redis.call("FLUSHDB")
   end
 
   def test_has_version
@@ -19,6 +20,11 @@ class RedisClientTest < Minitest::Test
     string = "a" * 15_000
     assert_equal "OK", @redis.call("SET", "foo", string)
     assert_equal string, @redis.call("GET", "foo")
+  end
+
+  def test_hashes
+    @redis.call("HMSET", "foo", "bar", "1", "baz", "2")
+    assert_equal({ "bar" => "1", "baz" => "2" }, @redis.call("HGETALL", "foo"))
   end
 
   def test_pipelining
@@ -46,6 +52,22 @@ class RedisClientTest < Minitest::Test
       @redis.call("DOESNOTEXIST", "foo")
     end
     assert error.message.start_with?("ERR unknown command `DOESNOTEXIST`")
+  end
+
+  def test_authentication
+    @redis.call("ACL", "SETUSER", "AzureDiamond", ">hunter2", "on", "+PING")
+
+    client = new_client(username: "AzureDiamond", password: "hunter2")
+    assert_equal "PONG", client.call("PING")
+
+    assert_raises RedisClient::PermissionError do
+      client.call("GET", "foo")
+    end
+
+    client = new_client(username: "AzureDiamond", password: "trolilol")
+    assert_raises RedisClient::AuthenticationError do
+      client.call("PING")
+    end
   end
 
   private

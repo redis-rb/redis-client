@@ -20,6 +20,8 @@ module RedisServerHelper
   REAL_TCP_PORT = 1_6380
   REAL_TLS_PORT = 2_6380
 
+  PASSWORD = "hunter2"
+
   def tcp_config
     {
       host: HOST,
