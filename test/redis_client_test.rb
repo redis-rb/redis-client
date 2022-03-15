@@ -70,6 +70,47 @@ class RedisClientTest < Minitest::Test
     end
   end
 
+  def test_transaction
+    result = @redis.multi do |transaction|
+      transaction.call("SET", "foo", "1")
+      transaction.call("EXPIRE", "foo", "42")
+    end
+    assert_equal ["OK", 1], result
+  end
+
+  def test_transaction_abort
+    other_client = new_client
+
+    @redis.call("SET", "foo", "1")
+
+    result = @redis.multi(watch: ["foo"]) do |transaction|
+      counter = Integer(@redis.call("GET", "foo"))
+
+      other_client.call("SET", "foo", "2")
+
+      transaction.call("SET", "foo", (counter + 1).to_s)
+      transaction.call("EXPIRE", "foo", "42")
+    end
+    assert_nil result
+  end
+
+  def test_transaction_watch_reset
+    other_client = new_client
+
+    assert_raises RuntimeError do
+      @redis.multi(watch: ["foo"]) do |_transaction|
+        raise "oops"
+      end
+    end
+
+    result = @redis.multi do |transaction|
+      other_client.call("SET", "foo", "2")
+      transaction.call("SET", "foo", "3")
+    end
+    assert_equal ["OK"], result
+    assert_equal "3", @redis.call("GET", "foo")
+  end
+
   private
 
   def new_client(**overrides)

@@ -92,6 +92,17 @@ class RedisClient
     call_pipelined(commands)
   end
 
+  def multi(watch: nil)
+    call("WATCH", *watch) if watch
+
+    commands = []
+    yield Pipeline.new(commands)
+    call_pipelined([["MULTI"], *commands, ["EXEC"]]).last
+  rescue
+    call("UNWATCH") if watch
+    raise
+  end
+
   def call_pipelined(commands)
     exception = nil
     query = RESP3.dump_all(commands)
@@ -122,6 +133,12 @@ class RedisClient
     def call(*command)
       @commands << command
       nil
+    end
+  end
+
+  class Transaction < Pipeline
+    def commands
+      [["MULTI"], *@commands, ["EXEC"]]
     end
   end
 
