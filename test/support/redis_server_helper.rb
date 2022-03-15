@@ -8,6 +8,11 @@ module RedisServerHelper
   ROOT = Pathname.new(File.expand_path("../../", __dir__))
   CERTS_PATH = ROOT.join("test/docker/files/certs")
   PID_FILE = ROOT.join("tmp/redis.pid")
+  SOCKET_FILE = if ENV["CI"]
+    Pathname.new("/var/redis/redis.sock")
+  else
+    ROOT.join("tmp/redis.sock")
+  end
 
   HOST = "127.0.0.1"
   TCP_PORT = 1_6379
@@ -38,6 +43,13 @@ module RedisServerHelper
     }
   end
 
+  def unix_config
+    {
+      path: SOCKET_FILE.to_s,
+      timeout: 0.1,
+    }
+  end
+
   def spawn
     if alive?
       puts "redis-server already running with pid=#{pid}"
@@ -46,6 +58,8 @@ module RedisServerHelper
       print "starting redis-server... "
       pid = Process.spawn(
         "redis-server",
+        "--unixsocket", SOCKET_FILE.to_s,
+        "--unixsocketperm", "700",
         "--port", REAL_TCP_PORT.to_s,
         "--tls-port", REAL_TLS_PORT.to_s,
         "--tls-cert-file", CERTS_PATH.join("redis.crt").to_s,

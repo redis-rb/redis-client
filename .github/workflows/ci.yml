@@ -51,6 +51,8 @@ jobs:
         ports:
           - 16380:16380
           - 26380:26380
+        volumes:
+          - /var/redis/:/var/redis
     runs-on: ${{ matrix.os }}
     steps:
       - name: Lower system timeout

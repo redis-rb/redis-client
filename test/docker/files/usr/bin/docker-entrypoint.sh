@@ -1,4 +1,6 @@
 exec redis-server \
+  --unixsocket /var/redis/redis.sock \
+  --unixsocketperm 777 \
   --port 16380 \
   --tls-port 26380 \
   --tls-cert-file /certs/redis.crt \

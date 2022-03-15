@@ -18,12 +18,13 @@ class RedisClient
 
   CommandError = Class.new(Error)
 
-  attr_reader :host, :port, :ssl
+  attr_reader :host, :port, :ssl, :path
   attr_accessor :connect_timeout, :read_timeout, :write_timeout
 
   def initialize(
     host: "localhost",
     port: 6379,
+    path: nil,
     timeout: DEFAULT_TIMEOUT,
     read_timeout: timeout,
     write_timeout: timeout,
@@ -33,6 +34,7 @@ class RedisClient
   )
     @host = host
     @port = port
+    @path = path
     @ssl = ssl
     @ssl_params = ssl_params
     @raw_connection = nil
@@ -124,7 +126,12 @@ class RedisClient
   end
 
   def new_socket
-    socket = Socket.tcp(host, port, connect_timeout: connect_timeout)
+    socket = if path
+      UNIXSocket.new(path)
+    else
+      Socket.tcp(host, port, connect_timeout: connect_timeout)
+    end
+
     if ssl
       ssl_context = OpenSSL::SSL::SSLContext.new
       ssl_context.set_params(@ssl_params || {})
@@ -143,6 +150,7 @@ class RedisClient
         end
       end
     end
+
     socket
   rescue Errno::ETIMEDOUT => error
     raise ConnectTimeoutError, error.message

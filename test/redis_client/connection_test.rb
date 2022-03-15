@@ -93,4 +93,18 @@ class RedisClient
       RedisClient.new(**RedisServerHelper.ssl_config.merge(overrides))
     end
   end
+
+  class UnixConnectionTest < Minitest::Test
+    def setup
+      @redis = new_client
+    end
+
+    def test_connection_working
+      assert_equal "PONG", @redis.call("PING")
+    end
+
+    def new_client(**overrides)
+      RedisClient.new(**RedisServerHelper.unix_config.merge(overrides))
+    end
+  end
 end
