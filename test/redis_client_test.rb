@@ -16,6 +16,106 @@ class RedisClientTest < Minitest::Test
     assert_equal "PONG", @redis.call("PING")
   end
 
+  def test_argument_casting_numeric
+    assert_equal "OK", @redis.call("SET", "str", 42)
+    assert_equal "42", @redis.call("GET", "str")
+
+    assert_equal "OK", @redis.call("SET", "str", 4.2)
+    assert_equal "4.2", @redis.call("GET", "str")
+  end
+
+  def test_argument_casting_symbol
+    assert_equal "OK", @redis.call("SET", :str, 42)
+    assert_equal "42", @redis.call(:GET, "str")
+  end
+
+  def test_argument_casting_unsupported
+    assert_raises TypeError do
+      @redis.call("SET", "str", nil) # Could be casted as empty string, but would likely hide errors
+    end
+
+    assert_raises TypeError do
+      @redis.call("SET", "str", true) # Unclear how it should be casted
+    end
+
+    assert_raises TypeError do
+      @redis.call("SET", "str", false) # Unclear how it should be casted
+    end
+  end
+
+  def test_argument_casting_arrays
+    assert_equal 3, @redis.call("LPUSH", "list", [1, 2, 3])
+    assert_equal ["1", "2", "3"], @redis.call("RPOP", "list", 3)
+
+    error = assert_raises TypeError do
+      @redis.call("LPUSH", "list", [1, [2, 3]])
+    end
+    assert_includes error.message, "Unsupported argument type: Array inside a Array"
+
+    error = assert_raises TypeError do
+      @redis.call("LPUSH", "list", [1, { 2 => 3 }])
+    end
+    assert_includes error.message, "Unsupported argument type: Hash inside a Array"
+  end
+
+  def test_argument_casting_hashes
+    assert_equal "OK", @redis.call("HMSET", "hash", { "bar" => 1, "baz" => 2 })
+    assert_equal({ "bar" => "1", "baz" => "2" }, @redis.call("HGETALL", "hash"))
+
+    error = assert_raises TypeError do
+      @redis.call("HMSET", "hash", { "bar" => [1, 2] })
+    end
+    assert_includes error.message, "Unsupported argument type: Array inside a Hash"
+
+    error = assert_raises TypeError do
+      @redis.call("HMSET", "hash", { "bar" => { 1 => 2 } })
+    end
+    assert_includes error.message, "Unsupported argument type: Hash inside a Hash"
+  end
+
+  def test_pipeline_argument_casting_numeric
+    assert_equal(["OK"], @redis.pipelined { |p| p.call("SET", "str", 42) })
+    assert_equal "42", @redis.call("GET", "str")
+
+    assert_equal(["OK"], @redis.pipelined { |p| p.call("SET", "str", 4.2) })
+    assert_equal "4.2", @redis.call("GET", "str")
+  end
+
+  def test_pipeline_argument_casting_symbol
+    assert_equal(["OK"], @redis.pipelined { |p| p.call("SET", :str, 42) })
+    assert_equal "42", @redis.call(:GET, "str")
+  end
+
+  def test_pipeline_argument_casting_arrays
+    assert_equal([3], @redis.pipelined { |p| p.call("LPUSH", "list", [1, 2, 3]) })
+    assert_equal ["1", "2", "3"], @redis.call("RPOP", "list", 3)
+
+    error = assert_raises TypeError do
+      @redis.pipelined { |p| p.call("LPUSH", "list", [1, [2, 3]]) }
+    end
+    assert_includes error.message, "Unsupported argument type: Array inside a Array"
+
+    error = assert_raises TypeError do
+      @redis.pipelined { |p| p.call("LPUSH", "list", [1, { 2 => 3 }]) }
+    end
+    assert_includes error.message, "Unsupported argument type: Hash inside a Array"
+  end
+
+  def test_pipeline_argument_casting_hashes
+    assert_equal(["OK"], @redis.pipelined { |p| p.call("HMSET", "hash", { "bar" => 1, "baz" => 2 }) })
+    assert_equal({ "bar" => "1", "baz" => "2" }, @redis.call("HGETALL", "hash"))
+
+    error = assert_raises TypeError do
+      @redis.pipelined { |p| p.call("HMSET", "hash", { "bar" => [1, 2] }) }
+    end
+    assert_includes error.message, "Unsupported argument type: Array inside a Hash"
+
+    error = assert_raises TypeError do
+      @redis.pipelined { |p| p.call("HMSET", "hash", { "bar" => { 1 => 2 } }) }
+    end
+    assert_includes error.message, "Unsupported argument type: Hash inside a Hash"
+  end
+
   def test_get_set
     string = "a" * 15_000
     assert_equal "OK", @redis.call("SET", "foo", string)

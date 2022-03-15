@@ -53,7 +53,39 @@ class RedisClient
       parse(io)
     end
 
+    def coerce_command!(command)
+      command.map! do |argument|
+        case argument
+        when Array, Set
+          argument.map { |i| coerce_scalar(i, argument) }
+        when Hash
+          list = argument.flatten
+          list.map! { |i| coerce_scalar(i, argument) }
+          list
+        else
+          coerce_scalar(argument, false)
+        end
+      end
+      command.flatten!(1)
+      command
+    end
+
     private
+
+    def coerce_scalar(argument, nested)
+      case argument
+      when String
+        argument
+      when Integer, Float, Symbol
+        argument.to_s
+      else
+        if nested
+          raise TypeError, "Unsupported argument type: #{argument.class} inside a #{nested.class}"
+        else
+          raise TypeError, "Unsupported argument type: #{argument.class}"
+        end
+      end
+    end
 
     def new_buffer
       String.new(encoding: Encoding::BINARY, capacity: 128)

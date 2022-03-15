@@ -68,7 +68,7 @@ class RedisClient
   end
 
   def call(*command)
-    query = RESP3.dump(command)
+    query = RESP3.dump(RESP3.coerce_command!(command))
     result = handle_network_errors do
       raw_connection.write(query)
       RESP3.load(raw_connection)
@@ -105,6 +105,7 @@ class RedisClient
 
   def call_pipelined(commands)
     exception = nil
+    commands.map! { |c| RESP3.coerce_command!(c) }
     query = RESP3.dump_all(commands)
 
     results = handle_network_errors do
@@ -131,7 +132,7 @@ class RedisClient
     end
 
     def call(*command)
-      @commands << command
+      @commands << RESP3.coerce_command!(command)
       nil
     end
   end
