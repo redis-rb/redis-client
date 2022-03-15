@@ -144,7 +144,7 @@ class RedisClient
       end
     end
     socket
-  rescue Errno::ETIMEDOUT
+  rescue Errno::ETIMEDOUT => error
     raise ConnectTimeoutError, error.message
   rescue SystemCallError => error
     raise ConnectionError, error.message
