@@ -97,7 +97,7 @@ class RedisClient
   def multi(watch: nil)
     call("WATCH", *watch) if watch
 
-    pipeline = Pipeline.new
+    pipeline = Multi.new
     pipeline.call("MULTI")
     yield pipeline
     pipeline.call("EXEC")
@@ -116,15 +116,23 @@ class RedisClient
     def call(*command)
       @buffer = RESP3.dump(command, @buffer)
       @commands << command
-      nil
+      @commands.size - 1
     end
 
     def _buffer
       @buffer
     end
 
-    def size
+    def _size
       @commands.size
+    end
+  end
+
+  class Multi < Pipeline
+    def call(*command)
+      @buffer = RESP3.dump(command, @buffer)
+      @commands << command
+      @commands.size - 2
     end
   end
 
@@ -133,11 +141,11 @@ class RedisClient
   def call_pipelined(pipeline)
     exception = nil
 
-    results = Array.new(pipeline.size)
+    results = Array.new(pipeline._size)
     handle_network_errors do
       raw_connection.write(pipeline._buffer)
 
-      pipeline.size.times do |index|
+      pipeline._size.times do |index|
         result = RESP3.load(raw_connection)
         if result.is_a?(CommandError)
           exception ||= result

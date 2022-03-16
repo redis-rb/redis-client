@@ -129,9 +129,9 @@ class RedisClientTest < Minitest::Test
 
   def test_pipelining
     result = @redis.pipelined do |pipeline|
-      assert_nil pipeline.call("SET", "foo", "42")
+      assert_equal 0, pipeline.call("SET", "foo", "42")
       assert_equal "OK", @redis.call("SET", "foo", "21") # Not pipelined
-      assert_nil pipeline.call("EXPIRE", "foo", "100")
+      assert_equal 1, pipeline.call("EXPIRE", "foo", "100")
     end
     assert_equal ["OK", 1], result
   end
@@ -172,8 +172,8 @@ class RedisClientTest < Minitest::Test
 
   def test_transaction
     result = @redis.multi do |transaction|
-      transaction.call("SET", "foo", "1")
-      transaction.call("EXPIRE", "foo", "42")
+      assert_equal 0, transaction.call("SET", "foo", "1")
+      assert_equal 1, transaction.call("EXPIRE", "foo", "42")
     end
     assert_equal ["OK", 1], result
   end
