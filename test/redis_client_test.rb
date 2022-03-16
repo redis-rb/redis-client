@@ -211,6 +211,15 @@ class RedisClientTest < Minitest::Test
     assert_equal "3", @redis.call("GET", "foo")
   end
 
+  def test_preselect_database
+    client = new_client(db: 5)
+    assert_includes client.call("CLIENT", "INFO"), " db=5 "
+    client.call("SELECT", 6)
+    assert_includes client.call("CLIENT", "INFO"), " db=6 "
+    client.close
+    assert_includes client.call("CLIENT", "INFO"), " db=5 "
+  end
+
   private
 
   def new_client(**overrides)

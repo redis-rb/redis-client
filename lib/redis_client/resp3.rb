@@ -22,6 +22,7 @@ class RedisClient
       '#' => :parse_boolean,
       '$' => :parse_blob,
       '+' => :parse_string,
+      '=' => :parse_verbatim_string,
       '-' => :parse_error,
       ':' => :parse_integer,
       '(' => :parse_integer,
@@ -183,6 +184,14 @@ class RedisClient
     def parse_blob(io)
       bytesize = parse_integer(io)
       blob = io.read(bytesize)
+      io.seek(EOL_SIZE, IO::SEEK_CUR)
+      blob
+    end
+
+    def parse_verbatim_string(io)
+      bytesize = parse_integer(io)
+      io.seek(4, IO::SEEK_CUR)
+      blob = io.read(bytesize - 4)
       io.seek(EOL_SIZE, IO::SEEK_CUR)
       blob
     end

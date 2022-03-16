@@ -102,6 +102,10 @@ class RedisClient
       assert_parses({ 'first' => 1, 'second' => 2 }, "%2\r\n+first\r\n:1\r\n+second\r\n:2\r\n")
     end
 
+    def test_load_verbatim_string
+      assert_parses "Some string", "=15\r\ntxt:Some string\r\n"
+    end
+
     private
 
     def assert_parses(expected, payload)

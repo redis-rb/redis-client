@@ -43,6 +43,7 @@ class RedisClient
     path: nil,
     username: nil,
     password: nil,
+    db: nil,
     timeout: DEFAULT_TIMEOUT,
     read_timeout: timeout,
     write_timeout: timeout,
@@ -55,6 +56,7 @@ class RedisClient
     @path = path
     @username = username || "default"
     @password = password
+    @db = db
     @ssl = ssl
     @ssl_params = ssl_params
     @raw_connection = nil
@@ -174,6 +176,10 @@ class RedisClient
       call("HELLO", "3", "AUTH", @username, @password)
     else
       call("HELLO", "3")
+    end
+
+    if @db
+      call("SELECT", @db)
     end
 
     @raw_connection
