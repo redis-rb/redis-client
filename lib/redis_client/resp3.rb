@@ -12,16 +12,11 @@ class RedisClient
 
     EOL = "\r\n".b.freeze
     EOL_SIZE = EOL.bytesize
-    TYPES = {
+    DUMP_TYPES = {
       String => :dump_string,
-      Integer => :dump_integer,
-      Float => :dump_float,
-      Array => :dump_array,
-      Set => :dump_set,
-      Hash => :dump_hash,
-      TrueClass => :dump_true,
-      FalseClass => :dump_false,
-      NilClass => :dump_nil,
+      Symbol => :dump_symbol,
+      Integer => :dump_numeric,
+      Float => :dump_numeric,
     }.freeze
     PARSER_TYPES = {
       '#' => :parse_boolean,
@@ -38,119 +33,80 @@ class RedisClient
     }.transform_keys(&:ord).freeze
     INTEGER_RANGE = ((((2**64) / 2) * -1)..(((2**64) / 2) - 1)).freeze
 
-    def dump(object, buffer = new_buffer)
-      send(TYPES.fetch(object.class), object, buffer)
-    end
-
-    def dump_all(objects, buffer = new_buffer)
-      objects.each do |object|
-        dump(object, buffer)
+    def dump(command, buffer = nil)
+      buffer ||= new_buffer
+      command = command.flat_map do |element|
+        case element
+        when Hash
+          element.flatten
+        when Set
+          element.to_a
+        else
+          element
+        end
       end
-      buffer
+      dump_array(command, buffer)
     end
 
     def load(io)
       parse(io)
     end
 
-    def coerce_command!(command)
-      command.map! do |argument|
-        case argument
-        when Array, Set
-          argument.map { |i| coerce_scalar(i, argument) }
-        when Hash
-          list = argument.flatten
-          list.map! { |i| coerce_scalar(i, argument) }
-          list
-        else
-          coerce_scalar(argument, false)
-        end
-      end
-      command.flatten!(1)
-      command
-    end
-
-    private
-
-    def coerce_scalar(argument, nested)
-      case argument
-      when String
-        argument
-      when Integer, Float, Symbol
-        argument.to_s
-      else
-        if nested
-          raise TypeError, "Unsupported argument type: #{argument.class} inside a #{nested.class}"
-        else
-          raise TypeError, "Unsupported argument type: #{argument.class}"
-        end
-      end
-    end
-
     def new_buffer
       String.new(encoding: Encoding::BINARY, capacity: 128)
     end
 
-    def dump_array(payload, buffer)
-      buffer << '*' << payload.size.to_s << EOL
-      payload.each do |item|
-        dump(item, buffer)
+    private
+
+    def dump_any(object, buffer)
+      method = DUMP_TYPES.fetch(object.class) do
+        raise TypeError, "Unsupported command argument type: #{object.class}"
+      end
+      send(method, object, buffer)
+    end
+
+    def dump_array(array, buffer)
+      buffer << '*' << array.size.to_s << EOL
+      array.each do |item|
+        dump_any(item, buffer)
       end
       buffer
     end
 
-    def dump_set(payload, buffer)
-      buffer << '~' << payload.size.to_s << EOL
-      payload.each do |item|
-        dump(item, buffer)
+    def dump_set(set, buffer)
+      buffer << '~' << set.size.to_s << EOL
+      set.each do |item|
+        dump_any(item, buffer)
       end
       buffer
     end
 
-    def dump_hash(payload, buffer)
-      buffer << '%' << payload.size.to_s << EOL
-      payload.each_pair do |key, value|
-        dump(key, buffer)
-        dump(value, buffer)
+    def dump_hash(hash, buffer)
+      buffer << '%' << hash.size.to_s << EOL
+      hash.each_pair do |key, value|
+        dump_any(key, buffer)
+        dump_any(value, buffer)
       end
       buffer
     end
 
-    def dump_integer(payload, buffer)
-      if INTEGER_RANGE.cover?(payload)
-        buffer << ':' << payload.to_s << EOL
-      else
-        buffer << '(' << payload.to_s << EOL
+    def dump_numeric(numeric, buffer)
+      dump_string(numeric.to_s, buffer)
+    end
+
+    def dump_string(string, buffer)
+      string = string.b unless string.ascii_only?
+      buffer << '$' << string.bytesize.to_s << EOL << string << EOL
+    end
+
+    if Symbol.method_defined?(:name)
+      def dump_symbol(symbol, buffer)
+        dump_string(symbol.name, buffer)
       end
-    end
-
-    def dump_float(payload, buffer)
-      buffer << ','
-      buffer << case payload
-      when Float::INFINITY
-        'inf'
-      when -Float::INFINITY
-        '-inf'
-      else
-        payload.to_s
+    else
+      def dump_symbol(symbol, buffer)
+        dump_string(symbol.to_s, buffer)
       end
-      buffer << EOL
-    end
-
-    def dump_string(payload, buffer)
-      buffer << '$' << payload.bytesize.to_s << EOL << payload << EOL
-    end
-
-    def dump_true(_payload, buffer)
-      buffer << '#t' << EOL
-    end
-
-    def dump_false(_payload, buffer)
-      buffer << '#f' << EOL
-    end
-
-    def dump_nil(_payload, buffer)
-      buffer << '_' << EOL
     end
 
     def parse(io)

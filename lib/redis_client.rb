@@ -68,7 +68,7 @@ class RedisClient
   end
 
   def call(*command)
-    query = RESP3.dump(RESP3.coerce_command!(command))
+    query = RESP3.dump(command)
     result = handle_network_errors do
       raw_connection.write(query)
       RESP3.load(raw_connection)
@@ -87,35 +87,60 @@ class RedisClient
   end
 
   def pipelined
-    commands = []
-    yield Pipeline.new(commands)
-    call_pipelined(commands)
+    pipeline = Pipeline.new
+    yield pipeline
+    call_pipelined(pipeline)
   end
 
   def multi(watch: nil)
     call("WATCH", *watch) if watch
 
-    commands = []
-    yield Pipeline.new(commands)
-    call_pipelined([["MULTI"], *commands, ["EXEC"]]).last
+    pipeline = Pipeline.new
+    pipeline.call("MULTI")
+    yield pipeline
+    pipeline.call("EXEC")
+    call_pipelined(pipeline).last
   rescue
     call("UNWATCH") if watch
     raise
   end
 
-  def call_pipelined(commands)
-    exception = nil
-    commands.map! { |c| RESP3.coerce_command!(c) }
-    query = RESP3.dump_all(commands)
+  class Pipeline
+    def initialize
+      @commands = []
+      @buffer = nil
+    end
 
-    results = handle_network_errors do
-      raw_connection.write(query)
-      commands.map do
+    def call(*command)
+      @buffer = RESP3.dump(command, @buffer)
+      @commands << command
+      nil
+    end
+
+    def _buffer
+      @buffer
+    end
+
+    def size
+      @commands.size
+    end
+  end
+
+  private
+
+  def call_pipelined(pipeline)
+    exception = nil
+
+    results = Array.new(pipeline.size)
+    handle_network_errors do
+      raw_connection.write(pipeline._buffer)
+
+      pipeline.size.times do |index|
         result = RESP3.load(raw_connection)
         if result.is_a?(CommandError)
           exception ||= result
         end
-        result
+        results[index] = result
       end
     end
 
@@ -125,25 +150,6 @@ class RedisClient
       results
     end
   end
-
-  class Pipeline
-    def initialize(commands)
-      @commands = commands
-    end
-
-    def call(*command)
-      @commands << RESP3.coerce_command!(command)
-      nil
-    end
-  end
-
-  class Transaction < Pipeline
-    def commands
-      [["MULTI"], *@commands, ["EXEC"]]
-    end
-  end
-
-  private
 
   def handle_network_errors
     yield

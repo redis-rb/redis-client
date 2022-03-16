@@ -50,12 +50,12 @@ class RedisClientTest < Minitest::Test
     error = assert_raises TypeError do
       @redis.call("LPUSH", "list", [1, [2, 3]])
     end
-    assert_includes error.message, "Unsupported argument type: Array inside a Array"
+    assert_includes error.message, "Unsupported command argument type: Array"
 
     error = assert_raises TypeError do
       @redis.call("LPUSH", "list", [1, { 2 => 3 }])
     end
-    assert_includes error.message, "Unsupported argument type: Hash inside a Array"
+    assert_includes error.message, "Unsupported command argument type: Hash"
   end
 
   def test_argument_casting_hashes
@@ -65,12 +65,12 @@ class RedisClientTest < Minitest::Test
     error = assert_raises TypeError do
       @redis.call("HMSET", "hash", { "bar" => [1, 2] })
     end
-    assert_includes error.message, "Unsupported argument type: Array inside a Hash"
+    assert_includes error.message, "Unsupported command argument type: Array"
 
     error = assert_raises TypeError do
       @redis.call("HMSET", "hash", { "bar" => { 1 => 2 } })
     end
-    assert_includes error.message, "Unsupported argument type: Hash inside a Hash"
+    assert_includes error.message, "Unsupported command argument type: Hash"
   end
 
   def test_pipeline_argument_casting_numeric
@@ -93,12 +93,12 @@ class RedisClientTest < Minitest::Test
     error = assert_raises TypeError do
       @redis.pipelined { |p| p.call("LPUSH", "list", [1, [2, 3]]) }
     end
-    assert_includes error.message, "Unsupported argument type: Array inside a Array"
+    assert_includes error.message, "Unsupported command argument type: Array"
 
     error = assert_raises TypeError do
       @redis.pipelined { |p| p.call("LPUSH", "list", [1, { 2 => 3 }]) }
     end
-    assert_includes error.message, "Unsupported argument type: Hash inside a Array"
+    assert_includes error.message, "Unsupported command argument type: Hash"
   end
 
   def test_pipeline_argument_casting_hashes
@@ -108,12 +108,12 @@ class RedisClientTest < Minitest::Test
     error = assert_raises TypeError do
       @redis.pipelined { |p| p.call("HMSET", "hash", { "bar" => [1, 2] }) }
     end
-    assert_includes error.message, "Unsupported argument type: Array inside a Hash"
+    assert_includes error.message, "Unsupported command argument type: Array"
 
     error = assert_raises TypeError do
       @redis.pipelined { |p| p.call("HMSET", "hash", { "bar" => { 1 => 2 } }) }
     end
-    assert_includes error.message, "Unsupported argument type: Hash inside a Hash"
+    assert_includes error.message, "Unsupported command argument type: Hash"
   end
 
   def test_get_set
