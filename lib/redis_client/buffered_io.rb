@@ -54,8 +54,9 @@ class RedisClient
 
     def gets(chomp: false)
       offset = 0
+      fill_buffer if @buffer.empty?
       until eol_index = @buffer.index(EOL, offset)
-        offset = @buffer.bytesize
+        offset = @buffer.bytesize - 1
         fill_buffer
       end
       line = @buffer.slice!(0, eol_index + 2)
