@@ -220,6 +220,39 @@ class RedisClientTest < Minitest::Test
     assert_includes client.call("CLIENT", "INFO"), " db=5 "
   end
 
+  def test_call_timeout
+    thr = Thread.start do
+      client = new_client
+      client.call("BRPOP", "list", "0", timeout: false)
+    end
+    assert_nil thr.join(0.3) # still blocking
+    @redis.call("LPUSH", "list", "token")
+    refute_nil thr.join(0.3)
+    assert_equal ["list", "token"], thr.value
+  end
+
+  def test_pipelined_call_timeout
+    thr = Thread.start do
+      client = new_client
+      client.pipelined do |pipeline|
+        pipeline.call("BRPOP", "list", "0", timeout: false)
+      end
+    end
+    assert_nil thr.join(0.3) # still blocking
+    @redis.call("LPUSH", "list", "token")
+    refute_nil thr.join(0.3)
+    assert_equal [["list", "token"]], thr.value
+  end
+
+  def test_multi_call_timeout
+    error = assert_raises ArgumentError do
+      @redis.multi do |transaction|
+        transaction.call("BRPOP", "list", "0", timeout: false)
+      end
+    end
+    assert_includes error.message, "Redis transactions don't support per command timeouts."
+  end
+
   private
 
   def new_client(**overrides)

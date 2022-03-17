@@ -155,5 +155,8 @@ Style/SymbolProc:
   Exclude:
     - 'test/**/*'
 
+Style/SoleNestedConditional:
+  Enabled: false
+
 Gemspec/RequireMFA:
   Enabled: false

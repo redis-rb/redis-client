@@ -69,11 +69,18 @@ class RedisClient
     @connect_timeout = @read_timeout = @write_timeout = timeout
   end
 
-  def call(*command)
+  def call(*command, timeout: nil)
     query = RESP3.dump(command)
     result = handle_network_errors do
       raw_connection.write(query)
-      RESP3.load(raw_connection)
+
+      if timeout.nil?
+        RESP3.load(raw_connection)
+      else
+        raw_connection.with_timeout(timeout) do
+          RESP3.load(raw_connection)
+        end
+      end
     end
     if result.is_a?(CommandError)
       raise result
@@ -97,11 +104,11 @@ class RedisClient
   def multi(watch: nil)
     call("WATCH", *watch) if watch
 
-    pipeline = Pipeline.new
-    pipeline.call("MULTI")
-    yield pipeline
-    pipeline.call("EXEC")
-    call_pipelined(pipeline).last
+    transaction = Multi.new
+    transaction.call("MULTI")
+    yield transaction
+    transaction.call("EXEC")
+    call_pipelined(transaction).last
   rescue
     call("UNWATCH") if watch
     raise
@@ -109,13 +116,18 @@ class RedisClient
 
   class Pipeline
     def initialize
-      @commands = []
+      @size = 0
+      @timeouts = nil
       @buffer = nil
     end
 
-    def call(*command)
+    def call(*command, timeout: nil)
       @buffer = RESP3.dump(command, @buffer)
-      @commands << command
+      unless timeout.nil?
+        @timeouts ||= []
+        @timeouts[@size] = timeout
+      end
+      @size += 1
       nil
     end
 
@@ -123,8 +135,22 @@ class RedisClient
       @buffer
     end
 
-    def size
-      @commands.size
+    def _size
+      @size
+    end
+
+    def _timeout(index)
+      @timeouts[index] if @timeouts
+    end
+  end
+
+  class Multi < Pipeline
+    def call(*commands, timeout: nil)
+      unless timeout.nil?
+        raise ArgumentError, "Redis transactions don't support per command timeouts."
+      end
+
+      super
     end
   end
 
@@ -133,12 +159,19 @@ class RedisClient
   def call_pipelined(pipeline)
     exception = nil
 
-    results = Array.new(pipeline.size)
+    results = Array.new(pipeline._size)
     handle_network_errors do
       raw_connection.write(pipeline._buffer)
 
-      pipeline.size.times do |index|
-        result = RESP3.load(raw_connection)
+      pipeline._size.times do |index|
+        timeout = pipeline._timeout(index)
+        result = if timeout.nil?
+          RESP3.load(raw_connection)
+        else
+          raw_connection.with_timeout(timeout) do
+            RESP3.load(raw_connection)
+          end
+        end
         if result.is_a?(CommandError)
           exception ||= result
         end

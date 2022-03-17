@@ -10,6 +10,25 @@ class RedisClient
       @chunk_size = chunk_size
       @read_timeout = read_timeout
       @write_timeout = write_timeout
+      @blocking_reads = false
+    end
+
+    def with_timeout(new_timeout)
+      previous_read_timeout = @read_timeout
+      previous_blocking_reads = @blocking_reads
+
+      if new_timeout
+        @read_timeout = new_timeout
+      else
+        @blocking_reads = true
+      end
+
+      begin
+        yield
+      ensure
+        @read_timeout = previous_read_timeout
+        @blocking_reads = previous_blocking_reads
+      end
     end
 
     def seek(offset, whence = IO::SEEK_SET)
@@ -92,7 +111,9 @@ class RedisClient
           remaining -= bytes.bytesize
           return if remaining < 0
         when :wait_readable
-          @io.to_io.wait_readable(@read_timeout) or raise ReadTimeoutError
+          unless @io.to_io.wait_readable(@read_timeout)
+            raise ReadTimeoutError unless @blocking_reads
+          end
         when :wait_writable
           @io.to_io.wait_writable(@write_timeout) or raise WriteTimeoutError
         when nil
