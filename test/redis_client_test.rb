@@ -73,6 +73,11 @@ class RedisClientTest < Minitest::Test
     assert_includes error.message, "Unsupported command argument type: Hash"
   end
 
+  def test_keyword_arguments_casting
+    assert_equal "OK", @redis.call("SET", "key", "val", ex: 5)
+    assert_equal 5, @redis.call("TTL", "key")
+  end
+
   def test_pipeline_argument_casting_numeric
     assert_equal(["OK"], @redis.pipelined { |p| p.call("SET", "str", 42) })
     assert_equal "42", @redis.call("GET", "str")
@@ -223,7 +228,7 @@ class RedisClientTest < Minitest::Test
   def test_call_timeout
     thr = Thread.start do
       client = new_client
-      client.call("BRPOP", "list", "0", timeout: false)
+      client.blocking_call(false, "BRPOP", "list", "0")
     end
     assert_nil thr.join(0.3) # still blocking
     @redis.call("LPUSH", "list", "token")
@@ -235,7 +240,7 @@ class RedisClientTest < Minitest::Test
     thr = Thread.start do
       client = new_client
       client.pipelined do |pipeline|
-        pipeline.call("BRPOP", "list", "0", timeout: false)
+        pipeline.blocking_call(false, "BRPOP", "list", "0")
       end
     end
     assert_nil thr.join(0.3) # still blocking
@@ -245,12 +250,11 @@ class RedisClientTest < Minitest::Test
   end
 
   def test_multi_call_timeout
-    error = assert_raises ArgumentError do
+    assert_raises NoMethodError do
       @redis.multi do |transaction|
-        transaction.call("BRPOP", "list", "0", timeout: false)
+        transaction.blocking_call(false, "BRPOP", "list", "0")
       end
     end
-    assert_includes error.message, "Redis transactions don't support per command timeouts."
   end
 
   private

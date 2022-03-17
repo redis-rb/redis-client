@@ -69,18 +69,17 @@ class RedisClient
     @connect_timeout = @read_timeout = @write_timeout = timeout
   end
 
-  def call(*command, timeout: nil)
+  def blocking_call(timeout, *command)
+    raw_connection.with_timeout(timeout) do
+      call(*command)
+    end
+  end
+
+  def call(*command)
     query = RESP3.dump(command)
     result = handle_network_errors do
       raw_connection.write(query)
-
-      if timeout.nil?
-        RESP3.load(raw_connection)
-      else
-        raw_connection.with_timeout(timeout) do
-          RESP3.load(raw_connection)
-        end
-      end
+      RESP3.load(raw_connection)
     end
     if result.is_a?(CommandError)
       raise result
@@ -114,19 +113,14 @@ class RedisClient
     raise
   end
 
-  class Pipeline
+  class Multi
     def initialize
       @size = 0
-      @timeouts = nil
       @buffer = nil
     end
 
-    def call(*command, timeout: nil)
+    def call(*command)
       @buffer = RESP3.dump(command, @buffer)
-      unless timeout.nil?
-        @timeouts ||= []
-        @timeouts[@size] = timeout
-      end
       @size += 1
       nil
     end
@@ -139,18 +133,25 @@ class RedisClient
       @size
     end
 
-    def _timeout(index)
-      @timeouts[index] if @timeouts
+    def _timeout(_index)
+      nil
     end
   end
 
-  class Multi < Pipeline
-    def call(*commands, timeout: nil)
-      unless timeout.nil?
-        raise ArgumentError, "Redis transactions don't support per command timeouts."
-      end
-
+  class Pipeline < Multi
+    def initialize
       super
+      @timeouts = nil
+    end
+
+    def blocking_call(timeout, *command)
+      @timeouts ||= []
+      @timeouts[@size] = timeout
+      call(*command)
+    end
+
+    def _timeout(index)
+      @timeouts[index] if @timeouts
     end
   end
 
