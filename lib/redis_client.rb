@@ -267,7 +267,10 @@ class RedisClient
     socket = if path
       UNIXSocket.new(path)
     else
-      Socket.tcp(host, port, connect_timeout: connect_timeout)
+      sock = Socket.tcp(host, port, connect_timeout: connect_timeout)
+      # disables Nagle's Algorithm, prevents multiple round trips with MULTI
+      sock.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
+      sock
     end
 
     if ssl
