@@ -7,12 +7,14 @@ GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.2)
+    benchmark-ips (2.10.0)
     minitest (5.15.0)
     parallel (1.21.0)
     parser (3.1.1.0)
       ast (~> 2.4.1)
     rainbow (3.1.1)
     rake (13.0.6)
+    redis (4.6.0)
     regexp_parser (2.2.1)
     rexml (3.2.5)
     rubocop (1.25.1)
@@ -38,8 +40,10 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
+  benchmark-ips
   minitest
   rake (~> 13.0)
+  redis (~> 4.6)
   redis-client!
   rubocop
   rubocop-minitest

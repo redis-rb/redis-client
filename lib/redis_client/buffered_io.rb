@@ -73,10 +73,10 @@ class RedisClient
 
     def gets(chomp: false)
       offset = 0
-      fill_buffer if @buffer.empty?
+      fill_buffer(false) if @buffer.empty?
       until eol_index = @buffer.index(EOL, offset)
         offset = @buffer.bytesize - 1
-        fill_buffer
+        fill_buffer(false)
       end
       line = @buffer.slice!(0, eol_index + 2)
       line.chomp! if chomp
@@ -97,11 +97,11 @@ class RedisClient
     def ensure_remaining(bytes)
       needed = bytes - @buffer.bytesize
       if needed > 0
-        fill_buffer(needed)
+        fill_buffer(true, needed)
       end
     end
 
-    def fill_buffer(size = @chunk_size)
+    def fill_buffer(strict, size = @chunk_size)
       remaining = size
       loop do
         bytes = @io.read_nonblock([remaining, @chunk_size].max, exception: false)
@@ -109,7 +109,7 @@ class RedisClient
         when String
           @buffer << bytes
           remaining -= bytes.bytesize
-          return if remaining < 0
+          return if !strict || remaining <= 0
         when :wait_readable
           unless @io.to_io.wait_readable(@read_timeout)
             raise ReadTimeoutError unless @blocking_reads

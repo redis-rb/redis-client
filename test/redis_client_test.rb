@@ -121,6 +121,15 @@ class RedisClientTest < Minitest::Test
     assert_includes error.message, "Unsupported command argument type: Hash"
   end
 
+  def test_large_pipelines
+    @redis.call("LPUSH", "list", *1000.times.to_a)
+    @redis.pipelined do |pipeline|
+      100.times do
+        pipeline.call("LRANGE", "list", 0, -1)
+      end
+    end
+  end
+
   def test_get_set
     string = "a" * 15_000
     assert_equal "OK", @redis.call("SET", "foo", string)
