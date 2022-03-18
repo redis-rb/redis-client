@@ -127,18 +127,14 @@ class RedisClient
       CommandError.parse(parse_string(io))
     end
 
-    TRUE_BYTE = 't'.ord
-    FALSE_BYTE = 'f'.ord
     def parse_boolean(io)
-      case value = io.getbyte
-      when TRUE_BYTE
-        io.skip(EOL_SIZE)
+      case value = io.gets(chomp: true)
+      when "t"
         true
-      when FALSE_BYTE
-        io.skip(EOL_SIZE)
+      when "f"
         false
       else
-        raise SyntaxError, "Expected `t` or `f` after `#`, got: #{value.chr.inspect}"
+        raise SyntaxError, "Expected `t` or `f` after `#`, got: #{value}"
       end
     end
 
@@ -171,10 +167,10 @@ class RedisClient
     end
 
     def parse_double(io)
-      case value = io.gets
-      when "inf\r\n"
+      case value = io.gets(chomp: true)
+      when "inf"
         Float::INFINITY
-      when "-inf\r\n"
+      when "-inf"
         -Float::INFINITY
       else
         Float(value)
@@ -188,17 +184,14 @@ class RedisClient
 
     def parse_blob(io)
       bytesize = parse_integer(io)
-      blob = io.read(bytesize)
-      io.skip(EOL_SIZE)
+      blob = io.read(bytesize + EOL_SIZE)
+      blob.chomp!(EOL)
       blob
     end
 
     def parse_verbatim_string(io)
-      bytesize = parse_integer(io)
-      io.skip(4)
-      blob = io.read(bytesize - 4)
-      io.skip(EOL_SIZE)
-      blob
+      blob = parse_blob(io)
+      blob.byteslice(4..-1)
     end
   end
 end

@@ -6,7 +6,7 @@ class RedisClient
 
     def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096)
       @io = io
-      @buffer = String.new(encoding: Encoding::BINARY)
+      @buffer = "".b
       @chunk_size = chunk_size
       @read_timeout = read_timeout
       @write_timeout = write_timeout
@@ -80,7 +80,13 @@ class RedisClient
 
     def read(bytes)
       ensure_remaining(bytes)
-      @buffer.slice!(0, bytes)
+      if @buffer.bytesize == bytes
+        str = @buffer
+        @buffer = "".b
+        str
+      else
+        @buffer.slice!(0, bytes)
+      end
     end
 
     def close
@@ -98,11 +104,20 @@ class RedisClient
 
     def fill_buffer(strict, size = @chunk_size)
       remaining = size
+      empty_buffer = @buffer.empty?
       loop do
-        bytes = @io.read_nonblock([remaining, @chunk_size].max, exception: false)
+        bytes = if empty_buffer
+          @io.read_nonblock([remaining, @chunk_size].max, @buffer, exception: false)
+        else
+          @io.read_nonblock([remaining, @chunk_size].max, exception: false)
+        end
         case bytes
         when String
-          @buffer << bytes
+          if empty_buffer
+            empty_buffer = false
+          else
+            @buffer << bytes
+          end
           remaining -= bytes.bytesize
           return if !strict || remaining <= 0
         when :wait_readable
