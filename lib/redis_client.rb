@@ -75,6 +75,12 @@ class RedisClient
     end
   end
 
+  def pubsub
+    sub = PubSub.new(raw_connection)
+    @raw_connection = nil
+    sub
+  end
+
   def call(*command)
     query = RESP3.dump(command)
     result = handle_network_errors do
@@ -111,6 +117,44 @@ class RedisClient
   rescue
     call("UNWATCH") if watch
     raise
+  end
+
+  class PubSub
+    def initialize(raw_connection)
+      @raw_connection = raw_connection
+    end
+
+    def call(*command)
+      query = RESP3.dump(command)
+      raw_connection.write(query)
+      nil
+    end
+
+    def close
+      raw_connection&.close
+      @raw_connection = nil
+      self
+    end
+
+    def next_event(timeout = nil)
+      unless raw_connection
+        raise ConnectionError, "Connection was closed or lost"
+      end
+
+      if timeout
+        raw_connection.with_timeout(timeout) do
+          RESP3.load(raw_connection)
+        end
+      else
+        RESP3.load(raw_connection)
+      end
+    rescue ReadTimeoutError
+      nil
+    end
+
+    private
+
+    attr_reader :raw_connection
   end
 
   class Multi

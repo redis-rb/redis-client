@@ -31,6 +31,7 @@ class RedisClient
       '*' => :parse_array,
       '%' => :parse_map,
       '~' => :parse_set,
+      '>' => :parse_array,
     }.transform_keys(&:ord).freeze
     INTEGER_RANGE = ((((2**64) / 2) * -1)..(((2**64) / 2) - 1)).freeze
 
@@ -151,6 +152,10 @@ class RedisClient
 
     def parse_map(io)
       Hash[*parse_sequence(io, parse_integer(io) * 2)]
+    end
+
+    def parse_push(io)
+      parse_array(io)
     end
 
     def parse_sequence(io, size)
