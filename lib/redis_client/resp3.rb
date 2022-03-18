@@ -132,10 +132,10 @@ class RedisClient
     def parse_boolean(io)
       case value = io.getbyte
       when TRUE_BYTE
-        io.seek(EOL_SIZE, IO::SEEK_CUR)
+        io.skip(EOL_SIZE)
         true
       when FALSE_BYTE
-        io.seek(EOL_SIZE, IO::SEEK_CUR)
+        io.skip(EOL_SIZE)
         false
       else
         raise SyntaxError, "Expected `t` or `f` after `#`, got: #{value.chr.inspect}"
@@ -182,22 +182,22 @@ class RedisClient
     end
 
     def parse_null(io)
-      io.seek(EOL_SIZE, IO::SEEK_CUR)
+      io.skip(EOL_SIZE)
       nil
     end
 
     def parse_blob(io)
       bytesize = parse_integer(io)
       blob = io.read(bytesize)
-      io.seek(EOL_SIZE, IO::SEEK_CUR)
+      io.skip(EOL_SIZE)
       blob
     end
 
     def parse_verbatim_string(io)
       bytesize = parse_integer(io)
-      io.seek(4, IO::SEEK_CUR)
+      io.skip(4)
       blob = io.read(bytesize - 4)
-      io.seek(EOL_SIZE, IO::SEEK_CUR)
+      io.skip(EOL_SIZE)
       blob
     end
   end

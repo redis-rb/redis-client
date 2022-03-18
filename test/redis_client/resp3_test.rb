@@ -4,6 +4,13 @@ require "test_helper"
 
 class RedisClient
   class RESP3Test < Minitest::Test
+    class StringIO < ::StringIO
+      def skip(offset)
+        seek(offset, IO::SEEK_CUR)
+        nil
+      end
+    end
+
     def test_dump_mixed_encoding
       assert_dumps ["SET", "fée", "\xC6bIJ"], "*3\r\n$3\r\nSET\r\n$4\r\nfée\r\n$4\r\n\xC6bIJ\r\n"
     end

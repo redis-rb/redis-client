@@ -31,14 +31,9 @@ class RedisClient
       end
     end
 
-    def seek(offset, whence = IO::SEEK_SET)
-      if whence != IO::SEEK_CUR
-        raise NotImplementedError, "Only IO::SEEK_CUR is supported"
-      end
-
-      ensure_remaining(offset)
-      @buffer.slice!(0, offset)
-      0
+    def skip(offset)
+      read(offset)
+      nil
     end
 
     def write(string)
