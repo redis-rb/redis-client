@@ -8,6 +8,7 @@ GEM
   specs:
     ast (2.4.2)
     benchmark-ips (2.10.0)
+    hiredis (0.6.3)
     minitest (5.15.0)
     parallel (1.21.0)
     parser (3.1.1.0)
@@ -41,6 +42,7 @@ PLATFORMS
 
 DEPENDENCIES
   benchmark-ips
+  hiredis
   minitest
   rake (~> 13.0)
   redis (~> 4.6)

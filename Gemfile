@@ -14,4 +14,5 @@ gem "toxiproxy"
 group :benchmark do
   gem "benchmark-ips"
   gem "redis", "~> 4.6"
+  gem "hiredis"
 end
