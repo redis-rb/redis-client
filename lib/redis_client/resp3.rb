@@ -184,9 +184,7 @@ class RedisClient
 
     def parse_blob(io)
       bytesize = parse_integer(io)
-      blob = io.read(bytesize)
-      io.skip(EOL_SIZE)
-      blob
+      io.read_chomp(bytesize)
     end
 
     def parse_verbatim_string(io)

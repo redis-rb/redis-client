@@ -3,6 +3,7 @@
 class RedisClient
   class BufferedIO
     EOL = "\r\n".b.freeze
+    EOL_SIZE = EOL.bytesize
 
     def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096)
       @io = io
@@ -79,14 +80,14 @@ class RedisClient
       end
 
       line = @buffer.byteslice(@offset, eol_index - @offset)
-      @offset = eol_index + 2
+      @offset = eol_index + EOL_SIZE
       line
     end
 
-    def read(bytes)
-      ensure_remaining(bytes)
+    def read_chomp(bytes)
+      ensure_remaining(bytes + EOL_SIZE)
       str = @buffer.byteslice(@offset, bytes)
-      @offset += bytes
+      @offset += bytes + EOL_SIZE
       str
     end
 
