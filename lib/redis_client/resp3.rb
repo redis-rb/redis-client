@@ -120,7 +120,7 @@ class RedisClient
     end
 
     def parse_string(io)
-      io.gets(chomp: true)
+      io.gets_chomp
     end
 
     def parse_error(io)
@@ -128,7 +128,7 @@ class RedisClient
     end
 
     def parse_boolean(io)
-      case value = io.gets(chomp: true)
+      case value = io.gets_chomp
       when "t"
         true
       when "f"
@@ -163,11 +163,11 @@ class RedisClient
     end
 
     def parse_integer(io)
-      Integer(io.gets)
+      Integer(io.gets_chomp)
     end
 
     def parse_double(io)
-      case value = io.gets(chomp: true)
+      case value = io.gets_chomp
       when "inf"
         Float::INFINITY
       when "-inf"
@@ -184,8 +184,8 @@ class RedisClient
 
     def parse_blob(io)
       bytesize = parse_integer(io)
-      blob = io.read(bytesize + EOL_SIZE)
-      blob.chomp!(EOL)
+      blob = io.read(bytesize)
+      io.skip(EOL_SIZE)
       blob
     end
 

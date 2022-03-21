@@ -7,10 +7,15 @@ class RedisClient
     def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096)
       @io = io
       @buffer = "".b
+      @offset = 0
       @chunk_size = chunk_size
       @read_timeout = read_timeout
       @write_timeout = write_timeout
       @blocking_reads = false
+    end
+
+    def eof?
+      @offset >= @buffer.bytesize && @io.eof?
     end
 
     def with_timeout(new_timeout)
@@ -32,7 +37,8 @@ class RedisClient
     end
 
     def skip(offset)
-      read(offset)
+      ensure_remaining(offset)
+      @offset += offset
       nil
     end
 
@@ -61,32 +67,27 @@ class RedisClient
 
     def getbyte
       ensure_remaining(1)
-      byte = @buffer.ord
-      @buffer.slice!(0, 1)
+      byte = @buffer.getbyte(@offset)
+      @offset += 1
       byte
     end
 
-    def gets(chomp: false)
-      offset = 0
-      fill_buffer(false) if @buffer.empty?
-      until eol_index = @buffer.index(EOL, offset)
-        offset = @buffer.bytesize - 1
+    def gets_chomp
+      fill_buffer(false) if @offset >= @buffer.bytesize
+      until eol_index = @buffer.index(EOL, @offset)
         fill_buffer(false)
       end
-      line = @buffer.slice!(0, eol_index + 2)
-      line.chomp! if chomp
+
+      line = @buffer.byteslice(@offset, eol_index - @offset)
+      @offset = eol_index + 2
       line
     end
 
     def read(bytes)
       ensure_remaining(bytes)
-      if @buffer.bytesize == bytes
-        str = @buffer
-        @buffer = "".b
-        str
-      else
-        @buffer.slice!(0, bytes)
-      end
+      str = @buffer.byteslice(@offset, bytes)
+      @offset += bytes
+      str
     end
 
     def close
@@ -96,7 +97,7 @@ class RedisClient
     private
 
     def ensure_remaining(bytes)
-      needed = bytes - @buffer.bytesize
+      needed = bytes - (@buffer.bytesize - @offset)
       if needed > 0
         fill_buffer(true, needed)
       end
@@ -104,9 +105,11 @@ class RedisClient
 
     def fill_buffer(strict, size = @chunk_size)
       remaining = size
-      empty_buffer = @buffer.empty?
+      empty_buffer = @offset >= @buffer.bytesize
+
       loop do
         bytes = if empty_buffer
+          @offset = 0
           @io.read_nonblock([remaining, @chunk_size].max, @buffer, exception: false)
         else
           @io.read_nonblock([remaining, @chunk_size].max, exception: false)

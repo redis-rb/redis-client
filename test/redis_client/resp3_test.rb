@@ -116,14 +116,15 @@ class RedisClient
     private
 
     def assert_parses(expected, payload)
-      io = StringIO.new(payload.b)
+      raw_io = StringIO.new(payload.b)
+      io = RedisClient::BufferedIO.new(raw_io, read_timeout: 1, write_timeout: 1)
       if expected.nil?
         assert_nil RESP3.load(io)
       else
         assert_equal(expected, RESP3.load(io))
       end
 
-      assert io.eof?, "Expected IO to be fully consumed: #{io.read.inspect}"
+      assert io.eof?, "Expected IO to be fully consumed: #{raw_io.read.inspect}"
     end
 
     def assert_dumps(payload, expected)
