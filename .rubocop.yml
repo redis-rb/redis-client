@@ -160,3 +160,6 @@ Style/SoleNestedConditional:
 
 Gemspec/RequireMFA:
   Enabled: false
+
+Style/StderrPuts:
+  Enabled: false

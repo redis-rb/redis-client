@@ -18,11 +18,11 @@ module ToxiproxyServerHelper
 
   def spawn
     if alive?
-      puts "toxiproxy-server already running with pid=#{pid}"
+      $stderr.puts "toxiproxy-server already running with pid=#{pid}"
     else
       PID_FILE.parent.mkpath
       system(ROOT.join("bin/install-toxiproxy").to_s) unless BIN.exist?
-      print "starting toxiproxy-server... "
+      $stderr.print "starting toxiproxy-server... "
       pid = Process.spawn(
         BIN.to_s,
         "-port", PORT.to_s,
@@ -30,9 +30,9 @@ module ToxiproxyServerHelper
         err: ROOT.join("tmp/toxiproxy.log").to_s,
       )
       PID_FILE.write(pid.to_s)
-      print "started with pid=#{pid}... "
+      $stderr.print "started with pid=#{pid}... "
       wait_until_ready
-      puts "ready."
+      $stderr.puts "ready."
     end
   end
 

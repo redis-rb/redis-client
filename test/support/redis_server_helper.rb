@@ -54,10 +54,10 @@ module RedisServerHelper
 
   def spawn
     if alive?
-      puts "redis-server already running with pid=#{pid}"
+      $stderr.puts "redis-server already running with pid=#{pid}"
     else
       PID_FILE.parent.mkpath
-      print "starting redis-server... "
+      $stderr.print "starting redis-server... "
       pid = Process.spawn(
         "redis-server",
         "--unixsocket", SOCKET_FILE.to_s,
@@ -73,9 +73,9 @@ module RedisServerHelper
         err: ROOT.join("tmp/redis.log").to_s,
       )
       PID_FILE.write(pid.to_s)
-      print "started with pid=#{pid}... "
+      $stderr.print "started with pid=#{pid}... "
       wait_until_ready
-      puts "ready."
+      $stderr.puts "ready."
     end
   end
 
