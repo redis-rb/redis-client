@@ -110,7 +110,6 @@ class RedisClient
 
       loop do
         bytes = if empty_buffer
-          @offset = 0
           @io.read_nonblock([remaining, @chunk_size].max, @buffer, exception: false)
         else
           @io.read_nonblock([remaining, @chunk_size].max, exception: false)
@@ -118,6 +117,7 @@ class RedisClient
         case bytes
         when String
           if empty_buffer
+            @offset = 0
             empty_buffer = false
           else
             @buffer << bytes
