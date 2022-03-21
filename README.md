@@ -99,8 +99,8 @@ These replies are returned by the `#pipelined` method.
 
 ```ruby
 redis.pipelined do |pipeline|
-  pipeline.call("SET", "foo", "bar")
-  pipeline.call("INCR", "baz")
+  pipeline.call("SET", "foo", "bar") # => nil
+  pipeline.call("INCR", "baz") # => nil
 end
 # => ["OK", 1]
 ```
@@ -115,8 +115,8 @@ the regular pipeline, the replies to the commands are returned by the
 
 ```ruby
 redis.multi do |transaction|
-  transaction.call("SET", "foo", "bar")
-  transaction.call("INCR", "baz")
+  transaction.call("SET", "foo", "bar") # => nil
+  transaction.call("INCR", "baz") # => nil
 end
 # => ["OK", 1]
 ```
