@@ -234,10 +234,21 @@ class RedisClientTest < Minitest::Test
     assert_includes client.call("CLIENT", "INFO"), " db=5 "
   end
 
-  def test_call_timeout
+  def test_call_timeout_false
     thr = Thread.start do
       client = new_client
       client.blocking_call(false, "BRPOP", "list", "0")
+    end
+    assert_nil thr.join(0.3) # still blocking
+    @redis.call("LPUSH", "list", "token")
+    refute_nil thr.join(0.3)
+    assert_equal ["list", "token"], thr.value
+  end
+
+  def test_call_timeout_zero
+    thr = Thread.start do
+      client = new_client
+      client.blocking_call(0, "BRPOP", "list", "0")
     end
     assert_nil thr.join(0.3) # still blocking
     @redis.call("LPUSH", "list", "token")
@@ -264,6 +275,11 @@ class RedisClientTest < Minitest::Test
         transaction.blocking_call(false, "BRPOP", "list", "0")
       end
     end
+  end
+
+  def test_blocking_call_timeout
+    assert_nil @redis.blocking_call(0.1, "BRPOP", "list", "0.5")
+    assert_equal "OK", @redis.call("SET", "foo", "bar")
   end
 
   private

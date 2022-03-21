@@ -73,6 +73,8 @@ class RedisClient
     raw_connection.with_timeout(timeout) do
       call(*command)
     end
+  rescue ReadTimeoutError
+    nil
   end
 
   def pubsub

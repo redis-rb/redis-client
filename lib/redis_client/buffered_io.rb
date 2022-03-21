@@ -20,6 +20,8 @@ class RedisClient
     end
 
     def with_timeout(new_timeout)
+      new_timeout = false if new_timeout == 0
+
       previous_read_timeout = @read_timeout
       previous_blocking_reads = @blocking_reads
 
