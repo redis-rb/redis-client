@@ -301,38 +301,52 @@ class RedisClientTest < Minitest::Test
     assert_equal "OK", @redis.call("SET", "foo", "bar")
   end
 
-  def test_scan_each
+  def test_scan
     @redis.call("MSET", *100.times.to_a)
     keys = []
-    @redis.scan_each("SCAN", "COUNT", "10") do |key|
+    @redis.scan("COUNT", "10") do |key|
       keys << key
     end
     expected_keys = 100.times.select(&:even?).map(&:to_s).sort
     assert_equal expected_keys, keys.sort
   end
 
-  def test_scan_each_iterator
+  def test_scan_iterator
     @redis.call("MSET", *100.times.to_a)
-    keys = @redis.scan_each("SCAN", "COUNT", "10").to_a
+    keys = @redis.scan(count: 10).to_a
     expected_keys = 100.times.select(&:even?).map(&:to_s).sort
     assert_equal expected_keys, keys.sort
   end
 
-  def test_scan_key_each
-    @redis.call("HMSET", "large-hash", *100.times.to_a)
-    keys = []
-    @redis.scan_key_each("HSCAN", "large-hash", "COUNT", "10") do |key|
-      keys << key
+  def test_sscan
+    @redis.call("SADD", "large-set", *100.times.to_a)
+    elements = []
+    @redis.sscan("large-set", "COUNT", "10") do |element|
+      elements << element
     end
-    expected_keys = 100.times.map(&:to_s).sort
-    assert_equal expected_keys, keys.sort
+    expected_elements = *100.times.map(&:to_s).sort
+    assert_equal expected_elements, elements.sort
   end
 
-  def test_scan_key_iterator
+  def test_zscan
+    @redis.call("ZADD", "large-set", *100.times.to_a)
+    elements = {}
+    @redis.zscan("large-set", "COUNT", "10") do |element, score|
+      elements[element] = score
+    end
+
+    expected_elements = Hash[*100.times.map(&:to_s)].invert
+    assert_equal expected_elements, elements
+  end
+
+  def test_hscan
     @redis.call("HMSET", "large-hash", *100.times.to_a)
-    keys = @redis.scan_key_each("HSCAN", "large-hash", "COUNT", "10").to_a
-    expected_keys = 100.times.map(&:to_s).sort
-    assert_equal expected_keys, keys.sort
+    pairs = []
+    @redis.hscan("large-hash", "COUNT", "10") do |key, value|
+      pairs << [key, value]
+    end
+    expected_pairs = Hash[*100.times.map(&:to_s)].to_a
+    assert_equal expected_pairs, pairs
   end
 
   private

@@ -98,30 +98,36 @@ class RedisClient
     nil
   end
 
-  def scan_each(command, *args, &block)
+  def scan(*args, &block)
     unless block_given?
-      return to_enum(:scan_each, command, *args)
+      return to_enum(__callee__, *args)
     end
 
-    cursor = 0
-    while cursor != "0"
-      cursor, elements = call(command, cursor, *args)
-      elements.each(&block)
-    end
-    nil
+    scan_list(1, ["SCAN", 0, *args], &block)
   end
 
-  def scan_key_each(command, key, *args, &block)
+  def sscan(key, *args, &block)
     unless block_given?
-      return to_enum(:scan_key_each, command, key, *args)
+      return to_enum(__callee__, key, *args)
     end
 
-    cursor = 0
-    while cursor != "0"
-      cursor, elements = call(command, key, cursor, *args)
-      elements.each(&block)
+    scan_list(2, ["SSCAN", key, 0, *args], &block)
+  end
+
+  def hscan(key, *args, &block)
+    unless block_given?
+      return to_enum(__callee__, key, *args)
     end
-    nil
+
+    scan_pairs(2, ["HSCAN", key, 0, *args], &block)
+  end
+
+  def zscan(key, *args, &block)
+    unless block_given?
+      return to_enum(__callee__, key, *args)
+    end
+
+    scan_pairs(2, ["ZSCAN", key, 0, *args], &block)
   end
 
   def close
@@ -235,6 +241,32 @@ class RedisClient
   end
 
   private
+
+  def scan_list(cursor_index, command, &block)
+    cursor = 0
+    while cursor != "0"
+      command[cursor_index] = cursor
+      cursor, elements = call(*command)
+      elements.each(&block)
+    end
+    nil
+  end
+
+  def scan_pairs(cursor_index, command)
+    cursor = 0
+    while cursor != "0"
+      command[cursor_index] = cursor
+      cursor, elements = call(*command)
+
+      index = 0
+      size = elements.size
+      while index < size
+        yield elements[index], elements[index + 1]
+        index += 2
+      end
+    end
+    nil
+  end
 
   def call_pipelined(pipeline)
     exception = nil

@@ -89,23 +89,35 @@ If `timeout` is reached, `#blocking_call` returns `nil`.
 
 ### Scan commands
 
-For easier use of the [`SCAN` command](https://redis.io/commands/scan), the `#scan_each` help method is provided:
+For easier use of the [`SCAN` family of commands](https://redis.io/commands/scan), `#scan`, `#sscan`, `#hscan` and `#zscan` methods are provided
 
 ```ruby
-redis.scan_each("SCAN", "MATCH", "pattern:*") do |key|
+redis.scan("MATCH", "pattern:*") do |key|
   ...
 end
 ```
 
-For `HSCAN`, `ZSCAN`, `SSCAN` you can use `scan_key_each`:
-
 ```ruby
-redis.scan_key_each("HSCAN", "myhash", "MATCH", "pattern:*") do |key|
+redis.sscan("myset", "MATCH", "pattern:*") do |key|
   ...
 end
 ```
 
-In both cases the `cursor` parameter must be omitted and starts at `0`.
+For `HSCAN` and `ZSCAN`, pairs are yielded
+
+```ruby
+redis.hscan("myhash", "MATCH", "pattern:*") do |key, value|
+  ...
+end
+```
+
+```ruby
+redis.zscan("myzset") do |element, score|
+  ...
+end
+```
+
+In all cases the `cursor` parameter must be omitted and starts at `0`.
 
 ### Pipelining
 
