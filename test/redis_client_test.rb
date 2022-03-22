@@ -282,6 +282,40 @@ class RedisClientTest < Minitest::Test
     assert_equal "OK", @redis.call("SET", "foo", "bar")
   end
 
+  def test_scan_each
+    @redis.call("MSET", *100.times.to_a)
+    keys = []
+    @redis.scan_each("SCAN", "COUNT", "10") do |key|
+      keys << key
+    end
+    expected_keys = 100.times.select(&:even?).map(&:to_s).sort
+    assert_equal expected_keys, keys.sort
+  end
+
+  def test_scan_each_iterator
+    @redis.call("MSET", *100.times.to_a)
+    keys = @redis.scan_each("SCAN", "COUNT", "10").to_a
+    expected_keys = 100.times.select(&:even?).map(&:to_s).sort
+    assert_equal expected_keys, keys.sort
+  end
+
+  def test_scan_key_each
+    @redis.call("HMSET", "large-hash", *100.times.to_a)
+    keys = []
+    @redis.scan_key_each("HSCAN", "large-hash", "COUNT", "10") do |key|
+      keys << key
+    end
+    expected_keys = 100.times.map(&:to_s).sort
+    assert_equal expected_keys, keys.sort
+  end
+
+  def test_scan_key_iterator
+    @redis.call("HMSET", "large-hash", *100.times.to_a)
+    keys = @redis.scan_key_each("HSCAN", "large-hash", "COUNT", "10").to_a
+    expected_keys = 100.times.map(&:to_s).sort
+    assert_equal expected_keys, keys.sort
+  end
+
   private
 
   def new_client(**overrides)

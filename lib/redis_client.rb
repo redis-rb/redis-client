@@ -69,14 +69,6 @@ class RedisClient
     @connect_timeout = @read_timeout = @write_timeout = timeout
   end
 
-  def blocking_call(timeout, *command)
-    raw_connection.with_timeout(timeout) do
-      call(*command)
-    end
-  rescue ReadTimeoutError
-    nil
-  end
-
   def pubsub
     sub = PubSub.new(raw_connection)
     @raw_connection = nil
@@ -94,6 +86,40 @@ class RedisClient
     else
       result
     end
+  end
+
+  def blocking_call(timeout, *command)
+    raw_connection.with_timeout(timeout) do
+      call(*command)
+    end
+  rescue ReadTimeoutError
+    nil
+  end
+
+  def scan_each(command, *args, &block)
+    unless block_given?
+      return to_enum(:scan_each, command, *args)
+    end
+
+    cursor = 0
+    while cursor != "0"
+      cursor, elements = call(command, cursor, *args)
+      elements.each(&block)
+    end
+    nil
+  end
+
+  def scan_key_each(command, key, *args, &block)
+    unless block_given?
+      return to_enum(:scan_key_each, command, key, *args)
+    end
+
+    cursor = 0
+    while cursor != "0"
+      cursor, elements = call(command, key, cursor, *args)
+      elements.each(&block)
+    end
+    nil
   end
 
   def close

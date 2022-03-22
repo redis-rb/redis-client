@@ -87,6 +87,26 @@ If `timeout` is reached, `#blocking_call` returns `nil`.
 
 `timeout` is expressed in seconds, you can pass `false` or `0` to mean no timeout.
 
+### Scan commands
+
+For easier use of the [`SCAN` command](https://redis.io/commands/scan), the `#scan_each` help method is provided:
+
+```ruby
+redis.scan_each("SCAN", "MATCH", "pattern:*") do |key|
+  ...
+end
+```
+
+For `HSCAN`, `ZSCAN`, `SSCAN` you can use `scan_key_each`:
+
+```ruby
+redis.scan_key_each("HSCAN", "myhash", "MATCH", "pattern:*") do |key|
+  ...
+end
+```
+
+In both cases the `cursor` parameter must be omitted and starts at `0`.
+
 ### Pipelining
 
 When multiple commands are executed sequentially, but are not dependent, the calls can be pipelined.
