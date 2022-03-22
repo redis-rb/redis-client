@@ -244,6 +244,15 @@ class RedisClientTest < Minitest::Test
     assert_includes client.call("CLIENT", "INFO"), " db=5 "
   end
 
+  def test_set_client_id
+    client = new_client(id: "peter")
+    assert_includes client.call("CLIENT", "INFO"), " name=peter "
+    client.call("CLIENT", "SETNAME", "steven")
+    assert_includes client.call("CLIENT", "INFO"), " name=steven "
+    client.close
+    assert_includes client.call("CLIENT", "INFO"), " name=peter "
+  end
+
   def test_call_timeout_false
     thr = Thread.start do
       client = new_client

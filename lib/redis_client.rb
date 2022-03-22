@@ -34,7 +34,7 @@ class RedisClient
     "NOPERM" => PermissionError,
   }.freeze
 
-  attr_reader :host, :port, :ssl, :path
+  attr_reader :host, :port, :id, :ssl, :path
   attr_accessor :connect_timeout, :read_timeout, :write_timeout
 
   def initialize(
@@ -44,6 +44,7 @@ class RedisClient
     username: nil,
     password: nil,
     db: nil,
+    id: nil,
     timeout: DEFAULT_TIMEOUT,
     read_timeout: timeout,
     write_timeout: timeout,
@@ -57,6 +58,7 @@ class RedisClient
     @username = username || "default"
     @password = password
     @db = db
+    @id = id
     @ssl = ssl
     @ssl_params = ssl_params
     @raw_connection = nil
@@ -283,14 +285,20 @@ class RedisClient
       write_timeout: write_timeout,
     )
 
-    if @password
-      call("HELLO", "3", "AUTH", @username, @password)
-    else
-      call("HELLO", "3")
-    end
+    pipelined do |pipeline|
+      if @password
+        pipeline.call("HELLO", "3", "AUTH", @username, @password)
+      else
+        pipeline.call("HELLO", "3")
+      end
 
-    if @db
-      call("SELECT", @db)
+      if @id
+        pipeline.call("CLIENT", "SETNAME", @id)
+      end
+
+      if @db
+        pipeline.call("SELECT", @db)
+      end
     end
 
     @raw_connection
