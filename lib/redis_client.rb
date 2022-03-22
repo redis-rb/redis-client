@@ -131,7 +131,12 @@ class RedisClient
   def pipelined
     pipeline = Pipeline.new
     yield pipeline
-    call_pipelined(pipeline)
+
+    if pipeline._size == 0
+      []
+    else
+      call_pipelined(pipeline)
+    end
   end
 
   def multi(watch: nil)

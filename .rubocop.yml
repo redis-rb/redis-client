@@ -26,6 +26,9 @@ Lint/UnifiedInteger:
 Lint/UnderscorePrefixedVariableName:
   Enabled: false
 
+Lint/EmptyBlock:
+  Enabled: false
+
 Lint/MissingSuper:
   Enabled: false
 

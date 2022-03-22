@@ -121,6 +121,10 @@ class RedisClientTest < Minitest::Test
     assert_includes error.message, "Unsupported command argument type: Hash"
   end
 
+  def test_empty_pipeline
+    assert_equal([], @redis.pipelined { |_p| })
+  end
+
   def test_large_pipelines
     @redis.call("LPUSH", "list", *1000.times.to_a)
     @redis.pipelined do |pipeline|
@@ -190,6 +194,12 @@ class RedisClientTest < Minitest::Test
       transaction.call("EXPIRE", "foo", "42")
     end
     assert_equal ["OK", 1], result
+  end
+
+  def test_empty_transaction
+    result = @redis.multi do |_transaction|
+    end
+    assert_equal [], result
   end
 
   def test_transaction_abort
