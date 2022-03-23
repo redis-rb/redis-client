@@ -11,6 +11,9 @@ Layout/LineLength:
 Layout/CaseIndentation:
   EnforcedStyle: end
 
+Layout/ArgumentAlignment:
+  EnforcedStyle: with_fixed_indentation
+
 Lint/RescueException:
   Enabled: false
 

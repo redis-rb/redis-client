@@ -34,37 +34,74 @@ class RedisClient
     "NOPERM" => PermissionError,
   }.freeze
 
-  attr_reader :host, :port, :id, :ssl, :path
+  class Config
+    attr_reader :host, :port, :db, :username, :password, :id, :ssl, :ssl_params, :path,
+      :connect_timeout, :read_timeout, :write_timeout
+
+    def initialize(
+      host: "localhost",
+      port: 6379,
+      path: nil,
+      username: nil,
+      password: nil,
+      db: nil,
+      id: nil,
+      timeout: DEFAULT_TIMEOUT,
+      read_timeout: timeout,
+      write_timeout: timeout,
+      connect_timeout: timeout,
+      ssl: false,
+      ssl_params: nil
+    )
+      @host = host
+      @port = port
+      @path = path
+      @username = username || "default"
+      @password = password
+      @db = db
+      @id = id
+      @ssl = ssl
+      @ssl_params = ssl_params
+      @connect_timeout = connect_timeout
+      @read_timeout = read_timeout
+      @write_timeout = write_timeout
+    end
+
+    def new_client(**kwargs)
+      RedisClient.new(self, **kwargs)
+    end
+  end
+
+  class << self
+    def config(**kwargs)
+      Config.new(**kwargs)
+    end
+
+    def new(arg = nil, **kwargs)
+      if arg.is_a?(Config)
+        super
+      else
+        super(config(**(arg || {}), **kwargs))
+      end
+    end
+  end
+
+  attr_reader :config, :id
   attr_accessor :connect_timeout, :read_timeout, :write_timeout
 
   def initialize(
-    host: "localhost",
-    port: 6379,
-    path: nil,
-    username: nil,
-    password: nil,
-    db: nil,
-    id: nil,
-    timeout: DEFAULT_TIMEOUT,
-    read_timeout: timeout,
-    write_timeout: timeout,
-    connect_timeout: timeout,
-    ssl: false,
-    ssl_params: nil
+    config,
+    id: config.id,
+    connect_timeout: config.connect_timeout,
+    read_timeout: config.read_timeout,
+    write_timeout: config.write_timeout
   )
-    @host = host
-    @port = port
-    @path = path
-    @username = username || "default"
-    @password = password
-    @db = db
+    @config = config
     @id = id
-    @ssl = ssl
-    @ssl_params = ssl_params
-    @raw_connection = nil
     @connect_timeout = connect_timeout
     @read_timeout = read_timeout
     @write_timeout = write_timeout
+    @raw_connection = nil
   end
 
   def timeout=(timeout)
@@ -318,18 +355,18 @@ class RedisClient
     )
 
     pipelined do |pipeline|
-      if @password
-        pipeline.call("HELLO", "3", "AUTH", @username, @password)
+      if config.password
+        pipeline.call("HELLO", "3", "AUTH", config.username, config.password)
       else
         pipeline.call("HELLO", "3")
       end
 
-      if @id
-        pipeline.call("CLIENT", "SETNAME", @id)
+      if id
+        pipeline.call("CLIENT", "SETNAME", id)
       end
 
-      if @db
-        pipeline.call("SELECT", @db)
+      if config.db
+        pipeline.call("SELECT", config.db)
       end
     end
 
@@ -337,26 +374,26 @@ class RedisClient
   end
 
   def new_socket
-    socket = if path
-      UNIXSocket.new(path)
+    socket = if config.path
+      UNIXSocket.new(config.path)
     else
-      sock = Socket.tcp(host, port, connect_timeout: connect_timeout)
+      sock = Socket.tcp(config.host, config.port, connect_timeout: connect_timeout)
       # disables Nagle's Algorithm, prevents multiple round trips with MULTI
       sock.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
       sock
     end
 
-    if ssl
+    if config.ssl
       ssl_context = OpenSSL::SSL::SSLContext.new
-      ssl_context.set_params(@ssl_params || {})
+      ssl_context.set_params(config.ssl_params || {})
       socket = OpenSSL::SSL::SSLSocket.new(socket, ssl_context)
-      socket.hostname = host
+      socket.hostname = config.host
       loop do
         case status = socket.connect_nonblock(exception: false)
         when :wait_readable
-          socket.to_io.wait_readable(@connect_timeout) or raise ReadTimeoutError
+          socket.to_io.wait_readable(connect_timeout) or raise ReadTimeoutError
         when :wait_writable
-          socket.to_io.wait_writable(@connect_timeout) or raise WriteTimeoutError
+          socket.to_io.wait_writable(connect_timeout) or raise WriteTimeoutError
         when socket
           break
         else

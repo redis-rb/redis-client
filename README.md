@@ -23,11 +23,23 @@ Or install it yourself as:
 
 ## Usage
 
+To use `RedisClient` you first define a connection configuration, from which you can create clients:
+
 ```ruby
-redis = RedisClient.new(host: "10.0.1.1", port: 6380, db: 15)
+redis_config = RedisClient.config(host: "10.0.1.1", port: 6380, db: 15)
+redis = redis_config.new_client
 redis.call("SET", "mykey", "hello world") # => "OK"
 redis.call("GET", "mykey") # => "hello world"
 ```
+
+For simple use cases where only a single connection is needed, you can use the `RedisClient.new` shortcut:
+
+```ruby
+redis = RedisClient.new
+redis.call("GET", "mykey")
+```
+
+NOTE: `RedisClient` instances must not be shared between threads. Make sure to read the section on [thread safety](#thread-safety).
 
 ### Type support
 
@@ -191,17 +203,17 @@ The client allows you to configure connect, read, and write timeouts.
 Passing a single `timeout` option will set all three values:
 
 ```ruby
-RedisClient.new(timeout: 1)
+RedisClient.config(timeout: 1).new
 ```
 
 But you can use specific values for each of them:
 
 ```ruby
-RedisClient.new(
+RedisClient.config(
   connect_timeout: 0.2,
   read_timeout: 1.0,
   write_timeout: 0.5,
-)
+).new
 ```
 
 All timeout values are specified in seconds.
@@ -209,7 +221,16 @@ All timeout values are specified in seconds.
 ### Thread Safety
 
 Contrary to the `redis` gem, `redis-client` doesn't protect against concurrent access.
-To use `redis-client` in concurrent environments, you MUST use a connection pool like [the `connection_pool` gem](https://rubygems.org/gems/connection_pool).
+To use `redis-client` in concurrent environments, you MUST use a connection pool like [the `connection_pool` gem](https://rubygems.org/gems/connection_pool), or
+have one client per Thread or Fiber.
+
+```ruby
+redis_config = RedisClient.config(host: "redis.example.com")
+pool = ConnectionPool.new { redis_config.new_client }
+pool.with do |redis|
+  redis.call("PING")
+end
+```
 
 ### Fork Safety
 

@@ -12,6 +12,12 @@ class RedisClientTest < Minitest::Test
     assert_instance_of String, RedisClient::VERSION
   end
 
+  def test_config
+    redis_config = RedisClient.config(**RedisServerHelper.tcp_config)
+    redis = redis_config.new_client
+    assert_equal "PONG", redis.call("PING")
+  end
+
   def test_ping
     assert_equal "PONG", @redis.call("PING")
   end
