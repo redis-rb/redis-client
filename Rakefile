@@ -21,6 +21,19 @@ Rake::TestTask.new(:test) do |t|
   t.test_files = FileList["test/**/*_test.rb"]
 end
 
+namespace :hiredis do
+  task :download do
+    version = "1.0.2"
+    archive_path = "tmp/hiredis-#{version}.tar.gz"
+    url = "https://github.com/redis/hiredis/archive/refs/tags/v#{version}.tar.gz"
+    system("curl", "-L", url, out: archive_path) or raise "Downloading of #{url} failed"
+    system("rm", "-rf", "ext/redis_client/hiredis/vendor/")
+    system("mkdir", "-p", "ext/redis_client/hiredis/vendor/")
+    system("tar", "xvzf", archive_path, "-C", "ext/redis_client/hiredis/vendor", "--strip-components", "1")
+    system("rm", "-rf", "ext/redis_client/hiredis/vendor/examples")
+  end
+end
+
 namespace :benchmark do
   task :record do
     system("rm -rf tmp/*.benchmark")
@@ -55,4 +68,4 @@ namespace :benchmark do
   end
 end
 
-task default: %i[test rubocop]
+task default: %i[compile test rubocop]
