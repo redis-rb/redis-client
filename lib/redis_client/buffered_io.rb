@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "io/wait" unless IO.method_defined?(:wait_readable) && IO.method_defined?(:wait_writable)
+
 class RedisClient
   class BufferedIO
     EOL = "\r\n".b.freeze
