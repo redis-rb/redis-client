@@ -3,11 +3,10 @@
 require "socket"
 require "openssl"
 require "redis_client/version"
+require "redis_client/config"
 require "redis_client/buffered_io"
 
 class RedisClient
-  DEFAULT_TIMEOUT = 3
-
   Error = Class.new(StandardError)
 
   ConnectionError = Class.new(Error)
@@ -33,44 +32,6 @@ class RedisClient
     "WRONGPASS" => AuthenticationError,
     "NOPERM" => PermissionError,
   }.freeze
-
-  class Config
-    attr_reader :host, :port, :db, :username, :password, :id, :ssl, :ssl_params, :path,
-      :connect_timeout, :read_timeout, :write_timeout
-
-    def initialize(
-      host: "localhost",
-      port: 6379,
-      path: nil,
-      username: nil,
-      password: nil,
-      db: nil,
-      id: nil,
-      timeout: DEFAULT_TIMEOUT,
-      read_timeout: timeout,
-      write_timeout: timeout,
-      connect_timeout: timeout,
-      ssl: false,
-      ssl_params: nil
-    )
-      @host = host
-      @port = port
-      @path = path
-      @username = username || "default"
-      @password = password
-      @db = db
-      @id = id
-      @ssl = ssl
-      @ssl_params = ssl_params
-      @connect_timeout = connect_timeout
-      @read_timeout = read_timeout
-      @write_timeout = write_timeout
-    end
-
-    def new_client(**kwargs)
-      RedisClient.new(self, **kwargs)
-    end
-  end
 
   class << self
     def config(**kwargs)
@@ -365,7 +326,7 @@ class RedisClient
         pipeline.call("CLIENT", "SETNAME", id)
       end
 
-      if config.db
+      if config.db && config.db != 0
         pipeline.call("SELECT", config.db)
       end
     end

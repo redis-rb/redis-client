@@ -59,6 +59,9 @@ Metrics/ParameterLists:
 Metrics/PerceivedComplexity:
   Enabled: false
 
+Style/Alias:
+  EnforcedStyle: prefer_alias_method
+
 Style/PercentLiteralDelimiters:
   Enabled: false
 
