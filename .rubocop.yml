@@ -167,6 +167,10 @@ Style/SymbolProc:
 Style/SoleNestedConditional:
   Enabled: false
 
+Style/GlobalVars:
+  Exclude:
+    - 'ext/**/*'
+
 Gemspec/RequireMFA:
   Enabled: false
 
