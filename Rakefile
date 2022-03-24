@@ -13,14 +13,34 @@ end
 
 namespace :benchmark do
   task :record do
+    system("rm -rf tmp/*.benchmark")
     %w(single pipelined).each do |suite|
-      File.open("benchmark/#{suite}.md", "w+") do |output|
-        output.puts("ruby: `#{RUBY_DESCRIPTION}`\n")
-        output.puts("redis-server: `#{`redis-server -v`.strip}`\n")
+      system(RbConfig.ruby, "benchmark/#{suite}.rb")
+
+      output_path = "benchmark/#{suite}.md"
+      File.open(output_path, "w+") do |output|
+        output.puts("ruby: `#{RUBY_DESCRIPTION}`\n\n")
+        output.puts("redis-server: `#{`redis-server -v`.strip}`\n\n")
         output.puts
         output.flush
-        system("ruby", "benchmark/#{suite}.rb", out: output)
+        system(RbConfig.ruby, "--yjit", "benchmark/#{suite}.rb", out: output)
       end
+
+      skipping = false
+      output = File.readlines(output_path).reject do |line|
+        if skipping
+          if line == "Comparison:\n"
+            skipping = false
+            true
+          else
+            skipping
+          end
+        else
+          skipping = true if line.start_with?("Warming up ---")
+          skipping
+        end
+      end
+      File.write(output_path, output.join)
     end
   end
 end

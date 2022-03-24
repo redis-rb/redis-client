@@ -12,6 +12,19 @@ RedisServerHelper.shutdown
 RedisServerHelper.spawn
 at_exit { RedisServerHelper.shutdown }
 
+class RedisBenchmark
+  def initialize(x)
+    @x = x
+  end
+
+  def report(name, &block)
+    if defined?(RubyVM::YJIT) && RubyVM::YJIT.enabled?
+      name = "(YJIT) #{name}"
+    end
+    @x.report(name, &block)
+  end
+end
+
 def benchmark(name)
   if $stdout.tty?
     puts "=== #{name} ==="
@@ -20,8 +33,9 @@ def benchmark(name)
   end
 
   Benchmark.ips do |x|
-    yield x
+    yield RedisBenchmark.new(x)
     x.compare!(order: :baseline)
+    x.save!(File.expand_path("../tmp/#{name.tr(' ', '_')}.benchmark", __dir__))
   end
 
   unless $stdout.tty?
