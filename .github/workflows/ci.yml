@@ -35,7 +35,7 @@ jobs:
       - name: Lint
         run: bundle exec rubocop
 
-  test:
+  ruby:
     name: Ruby ${{ matrix.ruby }} / Redis ${{ matrix.redis }}
     needs: build
     timeout-minutes: 5
@@ -66,3 +66,37 @@ jobs:
           bundler-cache: true
       - name: Test
         run: bundle exec rake test
+
+  hiredis:
+    name: Hiredis Ruby ${{ matrix.ruby }} / Redis ${{ matrix.redis }}
+    needs: build
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        redis: ["6.2"]
+        ruby: ["3.1", "3.0", "2.7", "2.6", "2.5"]
+    services:
+      redis:
+        image: ghcr.io/${{ github.repository_owner }}/redis-ci:${{ matrix.redis }}
+        ports:
+          - 16380:16380
+          - 26380:26380
+        volumes:
+          - /var/redis/:/var/redis
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Lower system timeout
+        run: sudo sysctl -w net.ipv4.tcp_syn_retries=2
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+      - name: Test
+        run: |
+          bundle exec rake compile
+          bundle exec rake test

@@ -35,7 +35,7 @@ class RedisClient
 
     def test_tcp_upstream_timeout
       Toxiproxy[/redis/].upstream(:timeout, timeout: 3_000).apply do
-        assert_raises RedisClient::ReadTimeoutError do
+        assert_raises RedisClient::TimeoutError do
           @redis.call("PING")
         end
       end
@@ -43,7 +43,7 @@ class RedisClient
 
     def test_tcp_upstream_latency
       Toxiproxy[/redis/].upstream(:latency, latency: 3_000).apply do
-        assert_raises RedisClient::ReadTimeoutError do
+        assert_raises RedisClient::TimeoutError do
           @redis.call("PING")
         end
       end
@@ -51,7 +51,7 @@ class RedisClient
 
     def test_tcp_downstream_timeout
       Toxiproxy[/redis/].downstream(:timeout, timeout: 3_000).apply do
-        assert_raises RedisClient::ReadTimeoutError do
+        assert_raises RedisClient::TimeoutError do
           @redis.call("PING")
         end
       end
@@ -59,8 +59,8 @@ class RedisClient
 
     def test_tcp_downstream_latency
       Toxiproxy[/redis/].downstream(:latency, latency: 3_000).apply do
-        assert_raises RedisClient::ReadTimeoutError do
-          @redis.call("PING")
+        assert_raises RedisClient::TimeoutError do
+          p [:ping, @redis.call("PING")]
         end
       end
     end

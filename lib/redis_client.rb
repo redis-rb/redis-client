@@ -282,7 +282,7 @@ class RedisClient
 
   def handle_network_errors
     yield
-  rescue SystemCallError => error
+  rescue SystemCallError, IOError => error
     close
     raise ConnectionError, error.message, error.backtrace
   rescue ConnectionError
@@ -293,7 +293,7 @@ class RedisClient
   def raw_connection
     return @raw_connection if @raw_connection
 
-    @raw_connection = Connection.create(
+    @raw_connection = config.driver.new(
       config,
       connect_timeout: connect_timeout,
       read_timeout: read_timeout,

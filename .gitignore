@@ -7,3 +7,7 @@
 /spec/reports/
 /tmp/
 /bin/toxiproxy-server
+*.so
+*.bundle
+*.dll
+

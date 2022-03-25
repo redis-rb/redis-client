@@ -3,10 +3,7 @@
 require "test_helper"
 
 class RedisClientTest < Minitest::Test
-  def setup
-    @redis = new_client
-    @redis.call("FLUSHDB")
-  end
+  include ClientTestHelper
 
   def test_has_version
     assert_instance_of String, RedisClient::VERSION
@@ -353,11 +350,5 @@ class RedisClientTest < Minitest::Test
     end
     expected_pairs = Hash[*100.times.map(&:to_s)].to_a
     assert_equal expected_pairs, pairs
-  end
-
-  private
-
-  def new_client(**overrides)
-    RedisClient.new(**RedisServerHelper.tcp_config.merge(overrides))
   end
 end
