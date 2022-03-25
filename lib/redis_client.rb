@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
-require "socket"
-require "openssl"
 require "redis_client/version"
 require "redis_client/config"
-require "redis_client/buffered_io"
+require "redis_client/connection"
 
 class RedisClient
   Error = Class.new(StandardError)
@@ -76,24 +74,11 @@ class RedisClient
   end
 
   def call(*command)
-    query = RESP3.dump(command)
-    result = handle_network_errors do
-      raw_connection.write(query)
-      RESP3.load(raw_connection)
-    end
-    if result.is_a?(CommandError)
-      raise result
-    else
-      result
-    end
+    _call(command, nil)
   end
 
   def blocking_call(timeout, *command)
-    raw_connection.with_timeout(timeout) do
-      call(*command)
-    end
-  rescue ReadTimeoutError
-    nil
+    _call(command, timeout)
   end
 
   def scan(*args, &block)
@@ -164,8 +149,7 @@ class RedisClient
     end
 
     def call(*command)
-      query = RESP3.dump(command)
-      raw_connection.write(query)
+      raw_connection.write(RESP3.coerce_command!(command))
       nil
     end
 
@@ -180,13 +164,7 @@ class RedisClient
         raise ConnectionError, "Connection was closed or lost"
       end
 
-      if timeout
-        raw_connection.with_timeout(timeout) do
-          RESP3.load(raw_connection)
-        end
-      else
-        RESP3.load(raw_connection)
-      end
+      raw_connection.read(timeout)
     rescue ReadTimeoutError
       nil
     end
@@ -199,21 +177,20 @@ class RedisClient
   class Multi
     def initialize
       @size = 0
-      @buffer = nil
+      @commands = []
     end
 
     def call(*command)
-      @buffer = RESP3.dump(command, @buffer)
-      @size += 1
+      @commands << RESP3.coerce_command!(command)
       nil
     end
 
-    def _buffer
-      @buffer
+    def _commands
+      @commands
     end
 
     def _size
-      @size
+      @commands.size
     end
 
     def _timeout(_index)
@@ -229,8 +206,8 @@ class RedisClient
 
     def blocking_call(timeout, *command)
       @timeouts ||= []
-      @timeouts[@size] = timeout
-      call(*command)
+      @timeouts[@commands.size] = timeout
+      @commands << RESP3.coerce_command!(command)
     end
 
     def _timeout(index)
@@ -266,22 +243,29 @@ class RedisClient
     nil
   end
 
+  def _call(command, timeout)
+    command = RESP3.coerce_command!(command)
+    result = handle_network_errors do
+      raw_connection.write(command)
+      raw_connection.read(timeout)
+    end
+    if result.is_a?(CommandError)
+      raise result
+    else
+      result
+    end
+  end
+
   def call_pipelined(pipeline)
     exception = nil
 
     results = Array.new(pipeline._size)
     handle_network_errors do
-      raw_connection.write(pipeline._buffer)
+      raw_connection.write_multi(pipeline._commands)
 
       pipeline._size.times do |index|
         timeout = pipeline._timeout(index)
-        result = if timeout.nil?
-          RESP3.load(raw_connection)
-        else
-          raw_connection.with_timeout(timeout) do
-            RESP3.load(raw_connection)
-          end
-        end
+        result = raw_connection.read(timeout)
         if result.is_a?(CommandError)
           exception ||= result
         end
@@ -309,8 +293,9 @@ class RedisClient
   def raw_connection
     return @raw_connection if @raw_connection
 
-    @raw_connection = BufferedIO.new(
-      new_socket,
+    @raw_connection = Connection.create(
+      config,
+      connect_timeout: connect_timeout,
       read_timeout: read_timeout,
       write_timeout: write_timeout,
     )
@@ -332,42 +317,6 @@ class RedisClient
     end
 
     @raw_connection
-  end
-
-  def new_socket
-    socket = if config.path
-      UNIXSocket.new(config.path)
-    else
-      sock = Socket.tcp(config.host, config.port, connect_timeout: connect_timeout)
-      # disables Nagle's Algorithm, prevents multiple round trips with MULTI
-      sock.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
-      sock
-    end
-
-    if config.ssl
-      ssl_context = OpenSSL::SSL::SSLContext.new
-      ssl_context.set_params(config.ssl_params || {})
-      socket = OpenSSL::SSL::SSLSocket.new(socket, ssl_context)
-      socket.hostname = config.host
-      loop do
-        case status = socket.connect_nonblock(exception: false)
-        when :wait_readable
-          socket.to_io.wait_readable(connect_timeout) or raise ReadTimeoutError
-        when :wait_writable
-          socket.to_io.wait_writable(connect_timeout) or raise WriteTimeoutError
-        when socket
-          break
-        else
-          raise "Unexpected `connect_nonblock` return: #{status.inspect}"
-        end
-      end
-    end
-
-    socket
-  rescue Errno::ETIMEDOUT => error
-    raise ConnectTimeoutError, error.message
-  rescue SystemCallError => error
-    raise ConnectionError, error.message
   end
 end
 

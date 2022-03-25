@@ -303,7 +303,7 @@ class RedisClientTest < Minitest::Test
   end
 
   def test_blocking_call_timeout
-    assert_nil @redis.blocking_call(0.1, "BRPOP", "list", "0.5")
+    assert_nil @redis.blocking_call(0.2, "BRPOP", "list", "0.1")
     assert_equal "OK", @redis.call("SET", "foo", "bar")
   end
 

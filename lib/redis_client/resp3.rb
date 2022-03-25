@@ -4,7 +4,7 @@ require "set"
 
 class RedisClient
   module RESP3
-    extend self
+    module_function
 
     Error = Class.new(RedisClient::Error)
     UnknownType = Class.new(Error)
@@ -58,7 +58,31 @@ class RedisClient
       String.new(encoding: Encoding::BINARY, capacity: 128)
     end
 
-    private
+    def coerce_command!(command)
+      command = command.flat_map do |element|
+        case element
+        when Hash
+          element.flatten
+        when Set
+          element.to_a
+        else
+          element
+        end
+      end
+
+      command.map! do |element|
+        case element
+        when String
+          element
+        when Integer, Float, Symbol
+          element.to_s
+        else
+          raise TypeError, "Unsupported command argument type: #{element.class}"
+        end
+      end
+
+      command
+    end
 
     def dump_any(object, buffer)
       method = DUMP_TYPES.fetch(object.class) do
