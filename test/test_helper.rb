@@ -6,11 +6,11 @@ require "toxiproxy"
 
 Dir[File.join(__dir__, "support/**/*.rb")].sort.each { |f| require f }
 
-ToxiproxyServerHelper.shutdown
+ToxiproxyServerHelper.shutdown unless ENV["REDIS_CLIENT_RESTART_SERVER"] == "0"
 ToxiproxyServerHelper.spawn
 
 unless ENV["CI"]
-  RedisServerHelper.shutdown
+  RedisServerHelper.shutdown unless ENV["REDIS_CLIENT_RESTART_SERVER"] == "0"
   RedisServerHelper.spawn
 end
 
@@ -30,5 +30,7 @@ Toxiproxy.populate([
 
 require "minitest/autorun"
 
-Minitest.after_run { ToxiproxyServerHelper.shutdown }
-Minitest.after_run { RedisServerHelper.shutdown }
+unless ENV["REDIS_CLIENT_RESTART_SERVER"] == "0"
+  Minitest.after_run { ToxiproxyServerHelper.shutdown }
+  Minitest.after_run { RedisServerHelper.shutdown }
+end

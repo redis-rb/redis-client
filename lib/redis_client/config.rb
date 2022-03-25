@@ -11,7 +11,7 @@ class RedisClient
     DEFAULT_DB = 0
 
     attr_reader :host, :port, :db, :username, :password, :id, :ssl, :ssl_params, :path,
-      :connect_timeout, :read_timeout, :write_timeout
+      :connect_timeout, :read_timeout, :write_timeout, :driver
 
     alias_method :ssl?, :ssl
 
@@ -29,7 +29,8 @@ class RedisClient
       write_timeout: timeout,
       connect_timeout: timeout,
       ssl: nil,
-      ssl_params: nil
+      ssl_params: nil,
+      driver: :ruby
     )
       uri = url && URI.parse(url)
 
@@ -74,10 +75,54 @@ class RedisClient
       @connect_timeout = connect_timeout
       @read_timeout = read_timeout
       @write_timeout = write_timeout
+
+      @driver = case driver
+      when :ruby
+        Connection
+      when :hiredis
+        unless defined?(RedisClient::HiredisConnection)
+          require "redis_client/hiredis_connection"
+        end
+        HiredisConnection
+      else
+        raise ArgumentError, "Unknown driver #{driver.inspect}, expected one of: `:ruby`, `:hiredis`"
+      end
     end
 
     def new_client(**kwargs)
       RedisClient.new(self, **kwargs)
+    end
+
+    def hiredis_ssl_context
+      @hiredis_ssl_context ||= HiredisConnection::SSLContext.new(
+        ca_file: @ssl_params[:ca_file],
+        ca_path: @ssl_params[:ca_path],
+        cert: @ssl_params[:cert],
+        key: @ssl_params[:key],
+        hostname: @ssl_params[:hostname],
+      )
+    end
+
+    def openssl_context
+      @openssl_context ||= begin
+        params = @ssl_params.dup || {}
+
+        cert = params[:cert]
+        if cert.is_a?(String)
+          cert = File.read(cert) if File.exist?(cert)
+          params[:cert] = OpenSSL::X509::Certificate.new(cert)
+        end
+
+        key = params[:key]
+        if key.is_a?(String)
+          key = File.read(key) if File.exist?(key)
+          params[:key] = OpenSSL::PKey.read(key)
+        end
+
+        context = OpenSSL::SSL::SSLContext.new
+        context.set_params(params)
+        context
+      end
     end
   end
 end

@@ -5,6 +5,7 @@ $LOAD_PATH.unshift(File.expand_path("../test/support", __dir__))
 
 require "redis"
 require "redis-client"
+require "redis_client/hiredis_connection"
 require "redis_server_helper"
 require "benchmark/ips"
 
@@ -18,9 +19,6 @@ class RedisBenchmark
   end
 
   def report(name, &block)
-    if defined?(RubyVM::YJIT) && RubyVM::YJIT.enabled?
-      name = "(YJIT) #{name}"
-    end
     @x.report(name, &block)
   end
 end
@@ -35,7 +33,6 @@ def benchmark(name)
   Benchmark.ips do |x|
     yield RedisBenchmark.new(x)
     x.compare!(order: :baseline)
-    x.save!(File.expand_path("../tmp/#{name.tr(' ', '_')}.benchmark", __dir__))
   end
 
   unless $stdout.tty?

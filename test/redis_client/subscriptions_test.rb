@@ -4,8 +4,10 @@ require "test_helper"
 
 class RedisClient
   class SubscriptionsTest < Minitest::Test
+    include ClientTestHelper
+
     def setup
-      @redis = new_client
+      super
       @subscription = @redis.pubsub
     end
 
@@ -70,12 +72,6 @@ class RedisClient
 
     def test_next_event_timeout
       assert_nil @subscription.next_event(0.01)
-    end
-
-    private
-
-    def new_client(**overrides)
-      RedisClient.new(**RedisServerHelper.tcp_config.merge(overrides))
     end
   end
 end

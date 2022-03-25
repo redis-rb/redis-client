@@ -27,6 +27,7 @@ module RedisServerHelper
       host: HOST,
       port: TCP_PORT,
       timeout: 0.1,
+      driver: ENV.fetch("DRIVER", "ruby").to_sym,
     }
   end
 
@@ -38,10 +39,11 @@ module RedisServerHelper
       ssl: true,
       ssl_params: {
         verify_hostname: false, # TODO: See if we could actually verify the hostname with our CI and dev setup
-        cert: OpenSSL::X509::Certificate.new(CERTS_PATH.join("client.crt").read),
-        key: OpenSSL::PKey.read(CERTS_PATH.join("client.key").read),
+        cert: CERTS_PATH.join("client.crt").to_s,
+        key: CERTS_PATH.join("client.key").to_s,
         ca_file: CERTS_PATH.join("ca.crt").to_s,
       },
+      driver: ENV.fetch("DRIVER", "ruby").to_sym,
     }
   end
 
@@ -49,6 +51,7 @@ module RedisServerHelper
     {
       path: SOCKET_FILE.to_s,
       timeout: 0.1,
+      driver: ENV.fetch("DRIVER", "ruby").to_sym,
     }
   end
 
