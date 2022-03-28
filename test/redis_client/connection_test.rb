@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "benchmark"
 require "test_helper"
 
 class RedisClient
@@ -33,36 +34,68 @@ class RedisClient
       end
     end
 
+    def test_tcp_connect_upstream_timeout
+      @redis.close
+      Toxiproxy[/redis/].upstream(:timeout, timeout: 2_000).apply do
+        assert_timeout RedisClient::TimeoutError do
+          @redis.call("PING")
+        end
+      end
+    end
+
+    def test_tcp_connect_downstream_timeout
+      @redis.close
+      Toxiproxy[/redis/].upstream(:timeout, timeout: 2_000).apply do
+        assert_timeout RedisClient::TimeoutError do
+          @redis.call("PING")
+        end
+      end
+    end
+
     def test_tcp_upstream_timeout
-      Toxiproxy[/redis/].upstream(:timeout, timeout: 3_000).apply do
-        assert_raises RedisClient::TimeoutError do
+      @redis.call("PING") # pre-connect
+      Toxiproxy[/redis/].upstream(:timeout, timeout: 2_000).apply do
+        assert_timeout RedisClient::TimeoutError do
           @redis.call("PING")
         end
       end
     end
 
     def test_tcp_upstream_latency
-      Toxiproxy[/redis/].upstream(:latency, latency: 3_000).apply do
-        assert_raises RedisClient::TimeoutError do
+      @redis.call("PING") # pre-connect
+      Toxiproxy[/redis/].upstream(:latency, latency: 2_000).apply do
+        assert_timeout RedisClient::TimeoutError do
           @redis.call("PING")
         end
       end
     end
 
     def test_tcp_downstream_timeout
-      Toxiproxy[/redis/].downstream(:timeout, timeout: 3_000).apply do
-        assert_raises RedisClient::TimeoutError do
+      @redis.call("PING") # pre-connect
+      Toxiproxy[/redis/].downstream(:timeout, timeout: 2_000).apply do
+        assert_timeout RedisClient::TimeoutError do
           @redis.call("PING")
         end
       end
     end
 
     def test_tcp_downstream_latency
-      Toxiproxy[/redis/].downstream(:latency, latency: 3_000).apply do
-        assert_raises RedisClient::TimeoutError do
-          p [:ping, @redis.call("PING")]
+      @redis.call("PING") # pre-connect
+      Toxiproxy[/redis/].downstream(:latency, latency: 2_000).apply do
+        assert_timeout RedisClient::TimeoutError do
+          @redis.call("PING")
         end
       end
+    end
+
+    private
+
+    def assert_timeout(error, faster_than = 0.5, &block)
+      realtime = Benchmark.realtime do
+        assert_raises(error, &block)
+      end
+
+      assert realtime < faster_than, "Took longer than #{faster_than}s to timeout (#{realtime})"
     end
   end
 
@@ -86,6 +119,16 @@ class RedisClient
     end
 
     include ConnectionTests
+
+    if ENV["DRIVER"] == "hiredis"
+      def test_tcp_connect_downstream_timeout
+        skip "TODO: Find the proper way to timeout SSL connections with hiredis"
+      end
+
+      def test_tcp_connect_upstream_timeout
+        skip "TODO: Find the proper way to timeout SSL connections with hiredis"
+      end
+    end
 
     private
 

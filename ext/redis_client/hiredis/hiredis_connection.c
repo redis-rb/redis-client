@@ -499,18 +499,18 @@ static VALUE hiredis_flush(VALUE self) {
     while (!wdone) {
         errno = 0;
         if (redisBufferWrite(connection->context, &wdone) == REDIS_ERR) {
-            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientWriteTimeoutError);
-        }
+            if (errno == EAGAIN) {
+                int writable = 0;
 
-        if (errno == EAGAIN) {
-            int writable = 0;
+                if (hiredis_wait_writable(connection->context->fd, &connection->write_timeout, &writable) < 0) {
+                    hiredis_raise_error_and_disconnect(connection, rb_eRedisClientWriteTimeoutError);
+                }
 
-            if (hiredis_wait_writable(connection->context->fd, &connection->write_timeout, &writable) < 0) {
-                hiredis_raise_error_and_disconnect(connection, rb_eRedisClientWriteTimeoutError);
-            }
-
-            if (!writable) {
-                errno = EAGAIN;
+                if (!writable) {
+                    errno = EAGAIN;
+                    hiredis_raise_error_and_disconnect(connection, rb_eRedisClientWriteTimeoutError);
+                }
+            } else {
                 hiredis_raise_error_and_disconnect(connection, rb_eRedisClientWriteTimeoutError);
             }
         }

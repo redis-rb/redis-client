@@ -128,11 +128,21 @@ class RedisClientTest < Minitest::Test
     assert_equal([], @redis.pipelined { |_p| })
   end
 
-  def test_large_pipelines
+  def test_large_read_pipelines
+    @redis.timeout = 5
     @redis.call("LPUSH", "list", *1000.times.to_a)
     @redis.pipelined do |pipeline|
       100.times do
         pipeline.call("LRANGE", "list", 0, -1)
+      end
+    end
+  end
+
+  def test_large_write_pipelines
+    @redis.timeout = 5
+    @redis.pipelined do |pipeline|
+      10.times do |i|
+        pipeline.call("SET", i, i.to_s * 10485760)
       end
     end
   end
