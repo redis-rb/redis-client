@@ -88,6 +88,19 @@ class RedisClient
       end
     end
 
+    def test_reconnect_on_next_try
+      value = "a" * 75
+      @redis.call("SET", "foo", value)
+      Toxiproxy[/redis/].downstream(:limit_data, bytes: 120).apply do
+        assert_equal value, @redis.call("GET", "foo")
+        assert_raises RedisClient::ConnectionError do
+          @redis.call("GET", "foo")
+        end
+      end
+      refute_predicate @redis, :connected?
+      assert_equal value, @redis.call("GET", "foo")
+    end
+
     private
 
     def assert_timeout(error, faster_than = 0.5, &block)

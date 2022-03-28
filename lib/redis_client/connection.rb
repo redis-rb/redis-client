@@ -44,12 +44,21 @@ class RedisClient
       raise ConnectionError, error.message
     end
 
+    def connected?
+      !@io.closed?
+    end
+
     def close
       @io.close
     end
 
     def write(command)
-      @io.write(RESP3.dump(command))
+      buffer = RESP3.dump(command)
+      begin
+        @io.write(buffer)
+      rescue SystemCallError, IOError => error
+        raise ConnectionError, error.message
+      end
     end
 
     def write_multi(commands)
@@ -57,7 +66,11 @@ class RedisClient
       commands.each do |command|
         buffer = RESP3.dump(command, buffer)
       end
-      @io.write(buffer)
+      begin
+        @io.write(buffer)
+      rescue SystemCallError, IOError => error
+        raise ConnectionError, error.message
+      end
     end
 
     def read(timeout = nil)
@@ -66,6 +79,8 @@ class RedisClient
       else
         @io.with_timeout(timeout) { RESP3.load(@io) }
       end
+    rescue SystemCallError, IOError => error
+      raise ConnectionError, error.message
     end
   end
 end

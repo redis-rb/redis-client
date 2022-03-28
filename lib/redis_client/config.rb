@@ -9,6 +9,7 @@ class RedisClient
     DEFAULT_PORT = 6379
     DEFAULT_USERNAME = "default"
     DEFAULT_DB = 0
+    DEFAULT_RECONNECT_ATTEMPTS = [0].freeze
 
     attr_reader :host, :port, :db, :username, :password, :id, :ssl, :ssl_params, :path,
       :connect_timeout, :read_timeout, :write_timeout, :driver
@@ -28,8 +29,10 @@ class RedisClient
       read_timeout: timeout,
       write_timeout: timeout,
       connect_timeout: timeout,
+      reconnect_attempts: DEFAULT_RECONNECT_ATTEMPTS,
       ssl: nil,
       ssl_params: nil,
+      middlewares: [],
       driver: :ruby
     )
       uri = url && URI.parse(url)
@@ -87,6 +90,14 @@ class RedisClient
       else
         raise ArgumentError, "Unknown driver #{driver.inspect}, expected one of: `:ruby`, `:hiredis`"
       end
+
+      if reconnect_attempts
+        middlewares << ReconnectMiddleware.new(reconnect_attempts)
+      end
+
+      @middlewares = unless middlewares.empty?
+        middlewares.reverse.inject(FinalMiddleware) { |memo, middleware| middleware.new(memo, self) }
+      end
     end
 
     def new_client(**kwargs)
@@ -122,6 +133,31 @@ class RedisClient
         context = OpenSSL::SSL::SSLContext.new
         context.set_params(params)
         context
+      end
+    end
+
+    module FinalMiddleware
+      extend self
+
+      def call(command)
+        yield command
+      end
+      alias_method :call_pipelined, :call
+    end
+
+    def around_call(command, &block)
+      if @middlewares
+        @middlewares.call(command, &block)
+      else
+        yield command
+      end
+    end
+
+    def around_call_pipelined(commands, &block)
+      if @middlewares
+        @middlewares.call_pipelined(commands, &block)
+      else
+        yield commands
       end
     end
   end

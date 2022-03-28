@@ -55,11 +55,15 @@ class RedisClient
           self.read_timeout = previous_timeout
         end
       end
+    rescue SystemCallError, IOError => error
+      raise ConnectionError, error.message
     end
 
     def write(command)
       _write(command)
       flush
+    rescue SystemCallError, IOError => error
+      raise ConnectionError, error.message
     end
 
     def write_multi(commands)
@@ -67,6 +71,8 @@ class RedisClient
         _write(command)
       end
       flush
+    rescue SystemCallError, IOError => error
+      raise ConnectionError, error.message
     end
   end
 end

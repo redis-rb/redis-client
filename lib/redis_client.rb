@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "redis_client/version"
+require "redis_client/middlewares"
 require "redis_client/config"
 require "redis_client/connection"
 
@@ -111,6 +112,10 @@ class RedisClient
     end
 
     scan_pairs(2, ["ZSCAN", key, 0, *args], &block)
+  end
+
+  def connected?
+    @raw_connection&.connected?
   end
 
   def close
@@ -249,9 +254,12 @@ class RedisClient
 
   def _call(command, timeout)
     command = RESP3.coerce_command!(command)
-    result = handle_network_errors do
-      raw_connection.write(command)
+    result = config.around_call(command) do |final_command|
+      raw_connection.write(final_command)
       raw_connection.read(timeout)
+    rescue ConnectionError
+      close
+      raise
     end
     if result.is_a?(CommandError)
       raise result
@@ -261,13 +269,13 @@ class RedisClient
   end
 
   def call_pipelined(pipeline)
-    exception = nil
+    results = exception = nil
 
-    results = Array.new(pipeline._size)
-    handle_network_errors do
-      raw_connection.write_multi(pipeline._commands)
+    config.around_call_pipelined(pipeline._commands) do |final_commands|
+      raw_connection.write_multi(final_commands)
 
-      pipeline._size.times do |index|
+      results = Array.new(final_commands.size)
+      final_commands.size.times do |index|
         timeout = pipeline._timeout(index)
         result = raw_connection.read(timeout)
         if result.is_a?(CommandError)
@@ -275,6 +283,9 @@ class RedisClient
         end
         results[index] = result
       end
+    rescue ConnectionError
+      close
+      raise
     end
 
     if exception
@@ -282,16 +293,6 @@ class RedisClient
     else
       results
     end
-  end
-
-  def handle_network_errors
-    yield
-  rescue SystemCallError, IOError => error
-    close
-    raise ConnectionError, error.message, error.backtrace
-  rescue ConnectionError
-    close
-    raise
   end
 
   def raw_connection

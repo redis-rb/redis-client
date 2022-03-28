@@ -171,6 +171,9 @@ Style/GlobalVars:
   Exclude:
     - 'ext/**/*'
 
+Style/ModuleFunction:
+  Enabled: false
+
 Gemspec/RequireMFA:
   Enabled: false
 

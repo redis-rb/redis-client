@@ -28,6 +28,7 @@ module RedisServerHelper
       port: TCP_PORT,
       timeout: 0.1,
       driver: ENV.fetch("DRIVER", "ruby").to_sym,
+      reconnect_attempts: false,
     }
   end
 
@@ -36,6 +37,7 @@ module RedisServerHelper
       host: HOST,
       port: TLS_PORT,
       timeout: 0.1,
+      reconnect_attempts: false,
       ssl: true,
       ssl_params: {
         verify_hostname: false, # TODO: See if we could actually verify the hostname with our CI and dev setup
@@ -51,6 +53,7 @@ module RedisServerHelper
     {
       path: SOCKET_FILE.to_s,
       timeout: 0.1,
+      reconnect_attempts: false,
       driver: ENV.fetch("DRIVER", "ruby").to_sym,
     }
   end

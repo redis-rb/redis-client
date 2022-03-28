@@ -467,6 +467,12 @@ static VALUE hiredis_init_ssl(VALUE self, VALUE ssl_param) {
     return Qtrue;
 }
 
+static VALUE hiredis_connected_p(VALUE self) {
+    CONNECTION(self, connection);
+
+    return connection->context ? Qtrue : Qfalse;
+}
+
 static VALUE hiredis_write(VALUE self, VALUE command) {
     Check_Type(command, T_ARRAY);
 
@@ -650,6 +656,7 @@ void Init_hiredis_connection(void) {
     rb_define_private_method(rb_cHiredisConnection, "connect_tcp", hiredis_connect_tcp, 2);
     rb_define_private_method(rb_cHiredisConnection, "connect_unix", hiredis_connect_unix, 1);
     rb_define_private_method(rb_cHiredisConnection, "init_ssl", hiredis_init_ssl, 1);
+    rb_define_private_method(rb_cHiredisConnection, "connected?", hiredis_connected_p, 0);
 
     rb_define_private_method(rb_cHiredisConnection, "_write", hiredis_write, 1);
     rb_define_private_method(rb_cHiredisConnection, "_read", hiredis_read, 0);
