@@ -136,8 +136,12 @@ class RedisClient
     transaction = Multi.new
     transaction.call("MULTI")
     yield transaction
-    transaction.call("EXEC")
-    call_pipelined(transaction).last
+    if transaction._size == 1
+      []
+    else
+      transaction.call("EXEC")
+      call_pipelined(transaction).last
+    end
   rescue
     call("UNWATCH") if watch
     raise
