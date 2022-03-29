@@ -248,6 +248,19 @@ class RedisClientTest < Minitest::Test
     assert_equal "3", @redis.call("GET", "foo")
   end
 
+  def test_empty_transaction_watch_reset
+    other_client = new_client
+
+    @redis.multi(watch: ["foo"]) { |_t| }
+
+    result = @redis.multi do |transaction|
+      other_client.call("SET", "foo", "2")
+      transaction.call("SET", "foo", "3")
+    end
+    assert_equal ["OK"], result
+    assert_equal "3", @redis.call("GET", "foo")
+  end
+
   def test_preselect_database
     client = new_client(db: 5)
     assert_includes client.call("CLIENT", "INFO"), " db=5 "

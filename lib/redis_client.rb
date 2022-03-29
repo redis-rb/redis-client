@@ -147,6 +147,7 @@ class RedisClient
           if commands = build_transaction(&block)
             call_pipelined(connection, commands).last
           else
+            call("UNWATCH")
             []
           end
         rescue
