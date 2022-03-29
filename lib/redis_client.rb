@@ -130,7 +130,7 @@ class RedisClient
     if pipeline._size == 0
       []
     else
-      call_pipelined(pipeline)
+      call_pipelined(pipeline._commands, pipeline._timeouts)
     end
   end
 
@@ -144,7 +144,7 @@ class RedisClient
       []
     else
       transaction.call("EXEC")
-      call_pipelined(transaction).last
+      call_pipelined(transaction._commands).last
     end
   rescue
     call("UNWATCH") if watch
@@ -201,7 +201,7 @@ class RedisClient
       @commands.size
     end
 
-    def _timeout(_index)
+    def _timeouts
       nil
     end
   end
@@ -218,8 +218,8 @@ class RedisClient
       @commands << RESP3.coerce_command!(command)
     end
 
-    def _timeout(index)
-      @timeouts[index] if @timeouts
+    def _timeouts
+      @timeouts
     end
   end
 
@@ -253,9 +253,9 @@ class RedisClient
 
   def _call(command, timeout)
     command = RESP3.coerce_command!(command)
-    result = handle_network_errors do
-      raw_connection.write(command)
-      raw_connection.read(timeout)
+    result = ensure_connected do |connection|
+      connection.write(command)
+      connection.read(timeout)
     end
     if result.is_a?(CommandError)
       raise result
@@ -264,16 +264,17 @@ class RedisClient
     end
   end
 
-  def call_pipelined(pipeline)
+  def call_pipelined(commands, timeouts = nil)
     exception = nil
 
-    results = Array.new(pipeline._size)
-    handle_network_errors do
-      raw_connection.write_multi(pipeline._commands)
+    size = commands.size
+    results = Array.new(commands.size)
+    ensure_connected do |connection|
+      connection.write_multi(commands)
 
-      pipeline._size.times do |index|
-        timeout = pipeline._timeout(index)
-        result = raw_connection.read(timeout)
+      size.times do |index|
+        timeout = timeouts && timeouts[index]
+        result = connection.read(timeout)
         if result.is_a?(CommandError)
           exception ||= result
         end
@@ -288,40 +289,44 @@ class RedisClient
     end
   end
 
-  def handle_network_errors
-    yield
-  rescue ConnectionError
-    close
-    raise
+  def ensure_connected
+    tries = 0
+    begin
+      yield raw_connection
+    rescue ConnectionError
+      close
+
+      if config.retry_connecting?(tries)
+        tries += 1
+        retry
+      else
+        raise
+      end
+    end
   end
 
   def raw_connection
-    return @raw_connection if @raw_connection
+    @raw_connection ||= begin
+      connection = config.driver.new(
+        config,
+        connect_timeout: connect_timeout,
+        read_timeout: read_timeout,
+        write_timeout: write_timeout,
+      )
 
-    @raw_connection = config.driver.new(
-      config,
-      connect_timeout: connect_timeout,
-      read_timeout: read_timeout,
-      write_timeout: write_timeout,
-    )
-
-    pipelined do |pipeline|
-      if config.password
-        pipeline.call("HELLO", "3", "AUTH", config.username, config.password)
-      else
-        pipeline.call("HELLO", "3")
-      end
-
+      prelude = config.connection_prelude
       if id
-        pipeline.call("CLIENT", "SETNAME", id)
+        prelude = prelude.dup
+        prelude << ["CLIENT", "SETNAME", id.to_s]
       end
 
-      if config.db && config.db != 0
-        pipeline.call("SELECT", config.db)
+      connection.write_multi(prelude)
+      prelude.size.times do
+        result = connection.read
+        raise result if result.is_a?(CommandError)
       end
+      connection
     end
-
-    @raw_connection
   end
 end
 

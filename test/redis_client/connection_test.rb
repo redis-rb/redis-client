@@ -113,7 +113,54 @@ class RedisClient
       assert_equal value, @redis.call("GET", "foo")
     end
 
+    module FlakyDriver
+      def self.included(base)
+        base.extend(ClassMethods)
+      end
+
+      module ClassMethods
+        attr_accessor :failures
+      end
+
+      def write(command)
+        if self.class.failures.first == command.first
+          self.class.failures.shift
+          raise ConnectionError, "simulated failure"
+        else
+          super
+        end
+      end
+    end
+
+    def test_reconnect_attempts_disabled
+      client = new_client(reconnect_attempts: false)
+      simulate_network_errors(client, ["PING"]) do
+        assert_raises ConnectionError do
+          client.call("PING")
+        end
+      end
+    end
+
+    def test_reconnect_attempts_enabled
+      client = new_client(reconnect_attempts: 1)
+      simulate_network_errors(client, ["PING"]) do
+        assert_equal "PONG", client.call("PING")
+      end
+    end
+
     private
+
+    def simulate_network_errors(client, failures)
+      client.close
+      original_driver = client.config.driver
+      flaky_driver = Class.new(original_driver)
+      flaky_driver.include(FlakyDriver)
+      flaky_driver.failures = failures
+      client.config.instance_variable_set(:@driver, flaky_driver)
+      yield
+    ensure
+      client.config.instance_variable_set(:@driver, original_driver)
+    end
 
     def assert_timeout(error, faster_than = 0.5, &block)
       realtime = Benchmark.realtime do

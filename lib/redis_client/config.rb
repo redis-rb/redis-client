@@ -11,7 +11,7 @@ class RedisClient
     DEFAULT_DB = 0
 
     attr_reader :host, :port, :db, :username, :password, :id, :ssl, :ssl_params, :path,
-      :connect_timeout, :read_timeout, :write_timeout, :driver
+      :connect_timeout, :read_timeout, :write_timeout, :driver, :connection_prelude
 
     alias_method :ssl?, :ssl
 
@@ -30,7 +30,8 @@ class RedisClient
       connect_timeout: timeout,
       ssl: nil,
       ssl_params: nil,
-      driver: :ruby
+      driver: :ruby,
+      reconnect_attempts: false
     )
       uri = url && URI.parse(url)
 
@@ -87,10 +88,27 @@ class RedisClient
       else
         raise ArgumentError, "Unknown driver #{driver.inspect}, expected one of: `:ruby`, `:hiredis`"
       end
+
+      reconnect_attempts = Array.new(reconnect_attempts, 0).freeze if reconnect_attempts.is_a?(Integer)
+      @reconnect_attempts = reconnect_attempts
+
+      @connection_prelude = build_connection_prelude
     end
 
     def new_client(**kwargs)
       RedisClient.new(self, **kwargs)
+    end
+
+    def retry_connecting?(attempt)
+      if @reconnect_attempts
+        if (pause = @reconnect_attempts[attempt])
+          if pause > 0
+            sleep(pause)
+          end
+          return true
+        end
+      end
+      false
     end
 
     def hiredis_ssl_context
@@ -123,6 +141,22 @@ class RedisClient
         context.set_params(params)
         context
       end
+    end
+
+    private
+
+    def build_connection_prelude
+      prelude = []
+      prelude <<  if @password
+        ["HELLO", "3", "AUTH", @username, @password]
+      else
+        ["HELLO", "3"]
+      end
+
+      if @db && @db != 0
+        prelude << ["SELECT", @db.to_s]
+      end
+      prelude.freeze
     end
   end
 end
