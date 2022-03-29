@@ -290,9 +290,6 @@ class RedisClient
 
   def handle_network_errors
     yield
-  rescue SystemCallError, IOError => error
-    close
-    raise ConnectionError, error.message, error.backtrace
   rescue ConnectionError
     close
     raise
