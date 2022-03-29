@@ -13,10 +13,18 @@ module ClientTestHelper
     def write(command)
       if self.class.failures.first == command.first
         self.class.failures.shift
-        raise ::RedisClient::ConnectionError, "simulated failure"
-      else
-        super
+        @fail_now = true
       end
+      super
+    end
+
+    def read(*)
+      @fail_now ||= false
+      if @fail_now
+        raise ::RedisClient::ConnectionError, "simulated failure"
+      end
+
+      super
     end
 
     def write_multi(commands)

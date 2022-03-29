@@ -4,7 +4,7 @@ require "uri"
 
 class RedisClient
   class Config
-    DEFAULT_TIMEOUT = 3
+    DEFAULT_TIMEOUT = 1.0
     DEFAULT_HOST = "localhost"
     DEFAULT_PORT = 6379
     DEFAULT_USERNAME = "default"

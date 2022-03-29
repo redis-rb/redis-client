@@ -41,6 +41,23 @@ redis.call("GET", "mykey")
 
 NOTE: `RedisClient` instances must not be shared between threads. Make sure to read the section on [thread safety](#thread-safety).
 
+### Configuration
+
+- `url`: A Redis connection URL, e.g. `redis://example.com:6379/5`, a `rediss://` scheme enable SSL, and the path is interpreted as a database number.
+  Note tht all other configurtions take precedence, e.g. `RedisClient.config(url: "redis://localhost:3000" port: 6380)` will connect on port `6380`.
+- `host`: The server hostname or IP address. Defaults to `"localhost"`.
+- `port`: The server port. Defaults to `6379`.
+- `path`: The path to a UNIX socket, if set `url`, `host` and `port` are ignored.
+- `db`: The database to select after connecting, defaults to `0`.
+- `id` ID for the client connection, assigns name to current connection by sending `CLIENT SETNAME`.
+- `username` Username to authenticate against server, defaults to `"default"`.
+- `password` Password to authenticate against server.
+- `timeout`: The general timeout in seconds, default to `1.0`.
+- `connect_timeout`: The connection timeout, takes precedence over the general timeout when connecting to the server.
+- `read_timeout`: The read timeout, takes precedence over the general timeout when reading responses from the server.
+- `write_timeout`: The write timeout, takes precedence over the general timeout when sending commands to the server.
+- `reconnect_attempts`: Specify how many times the client should retry to send queries. Defaults to `0`. Makes sure to read the [reconnection section](#reconnection) before enabling it.
+
 ### Type support
 
 Only a select few Ruby types are supported as arguments beside strings.
@@ -177,6 +194,8 @@ end
 
 If the transaction wasn't successful, `#multi` will return `nil`.
 
+Note that transactions using optimistic locking aren't automatically retried uppon connection errors.
+
 ### Publish / Subscribe
 
 Pub/Sub related commands must be called on a dedicated `PubSub` object:
@@ -217,6 +236,34 @@ RedisClient.config(
 ```
 
 All timeout values are specified in seconds.
+
+### Reconnection
+
+`redis-client` support automatic reconnection after network errors via the `reconnect_attempts:` configuration option.
+
+It can be set as a number of retries:
+
+```ruby
+redis_config = RedisClient.config(reconnect_attempts: 1)
+```
+
+Or as a list of sleep durations for implementing exponential backoff:
+
+```ruby
+redis_config = RedisClient.config(reconnect_attempts: [0, 0.05, 0.1])
+```
+
+**Important Note**: Retrying may cause commands to be issued more than once to the server, so in the case of
+non-idempotent commands such as `LPUSH` or `INCR`, it may cause consistency issues.
+
+To selectively disable automatic retries, you can use the `#call_once` method:
+
+```ruby
+redis_config = RedisClient.config(reconnect_attempts: [0, 0.05, 0.1])
+redis = redis_config.new_client
+redis.call("GET", "counter") # Will be retried up to 3 times.
+redis.call_once("INCR", "counter") # Won't be retried.
+```
 
 ### Thread Safety
 

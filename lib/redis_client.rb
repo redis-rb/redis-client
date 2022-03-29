@@ -75,11 +75,45 @@ class RedisClient
   end
 
   def call(*command)
-    _call(command, nil)
+    command = RESP3.coerce_command!(command)
+    result = ensure_connected do |connection|
+      connection.write(command)
+      connection.read
+    end
+
+    if result.is_a?(CommandError)
+      raise result
+    else
+      result
+    end
+  end
+
+  def call_once(*command)
+    command = RESP3.coerce_command!(command)
+    result = ensure_connected(retryable: false) do |connection|
+      connection.write(command)
+      connection.read
+    end
+
+    if result.is_a?(CommandError)
+      raise result
+    else
+      result
+    end
   end
 
   def blocking_call(timeout, *command)
-    _call(command, timeout)
+    command = RESP3.coerce_command!(command)
+    result = ensure_connected do |connection|
+      connection.write(command)
+      connection.read(timeout)
+    end
+
+    if result.is_a?(CommandError)
+      raise result
+    else
+      result
+    end
   end
 
   def scan(*args, &block)
@@ -131,7 +165,7 @@ class RedisClient
     if pipeline._size == 0
       []
     else
-      ensure_connected do |connection|
+      ensure_connected(retryable: pipeline._retryable?) do |connection|
         call_pipelined(connection, pipeline._commands, pipeline._timeouts)
       end
     end
@@ -141,11 +175,11 @@ class RedisClient
     if watch
       # WATCH is stateful, so we can't reconnect if it's used, the whole transaction
       # has to be redone.
-      prevent_reconnection do |connection|
+      ensure_connected(retryable: false) do |connection|
         call("WATCH", *watch)
         begin
-          if commands = build_transaction(&block)
-            call_pipelined(connection, commands).last
+          if transaction = build_transaction(&block)
+            call_pipelined(connection, transaction._commands).last
           else
             call("UNWATCH")
             []
@@ -155,12 +189,15 @@ class RedisClient
           raise
         end
       end
-    elsif commands = build_transaction(&block)
-      ensure_connected do |connection|
-        call_pipelined(connection, commands).last
-      end
     else
-      []
+      transaction = build_transaction(&block)
+      if transaction._empty?
+        []
+      else
+        ensure_connected(retryable: transaction._retryable?) do |connection|
+          call_pipelined(connection, transaction._commands).last
+        end
+      end
     end
   end
 
@@ -199,9 +236,16 @@ class RedisClient
     def initialize
       @size = 0
       @commands = []
+      @retryable = true
     end
 
     def call(*command)
+      @commands << RESP3.coerce_command!(command)
+      nil
+    end
+
+    def call_once(*command)
+      @retryable = false
       @commands << RESP3.coerce_command!(command)
       nil
     end
@@ -214,8 +258,16 @@ class RedisClient
       @commands.size
     end
 
+    def _empty?
+      @commands.size <= 2
+    end
+
     def _timeouts
       nil
+    end
+
+    def _retryable?
+      @retryable
     end
   end
 
@@ -229,10 +281,15 @@ class RedisClient
       @timeouts ||= []
       @timeouts[@commands.size] = timeout
       @commands << RESP3.coerce_command!(command)
+      nil
     end
 
     def _timeouts
       @timeouts
+    end
+
+    def _empty?
+      @commands.empty?
     end
   end
 
@@ -243,7 +300,7 @@ class RedisClient
     transaction.call("MULTI")
     yield transaction
     transaction.call("EXEC")
-    transaction._commands if transaction._size > 2
+    transaction
   end
 
   def scan_list(cursor_index, command, &block)
@@ -272,20 +329,6 @@ class RedisClient
     nil
   end
 
-  def _call(command, timeout)
-    command = RESP3.coerce_command!(command)
-    result = ensure_connected do |connection|
-      connection.write(command)
-      connection.read(timeout)
-    end
-
-    if result.is_a?(CommandError)
-      raise result
-    else
-      result
-    end
-  end
-
   def call_pipelined(connection, commands, timeouts = nil)
     exception = nil
 
@@ -309,38 +352,37 @@ class RedisClient
     end
   end
 
-  def ensure_connected
-    tries = 0
-    connection = nil
-    begin
-      connection = raw_connection
-      if block_given?
+  def ensure_connected(retryable: true)
+    if retryable
+      tries = 0
+      connection = nil
+      begin
+        connection = raw_connection
+        if block_given?
+          yield connection
+        else
+          connection
+        end
+      rescue ConnectionError
+        connection&.close
+        close
+
+        if !@disable_reconnection && config.retry_connecting?(tries)
+          tries += 1
+          retry
+        else
+          raise
+        end
+      end
+    else
+      previous_disable_reconnection = @disable_reconnection
+      connection = ensure_connected
+      begin
+        @disable_reconnection = true
         yield connection
-      else
-        connection
+      ensure
+        @disable_reconnection = previous_disable_reconnection
       end
-    rescue ConnectionError
-      connection&.close
-      close
-
-      if !@disable_reconnection && config.retry_connecting?(tries)
-        tries += 1
-        retry
-      else
-        raise
-      end
-    end
-  end
-
-  def prevent_reconnection
-    previous_disable_reconnection = @disable_reconnection
-
-    connection = ensure_connected
-    begin
-      @disable_reconnection = true
-      yield connection
-    ensure
-      @disable_reconnection = previous_disable_reconnection
     end
   end
 

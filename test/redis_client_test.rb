@@ -158,6 +158,20 @@ class RedisClientTest < Minitest::Test
     assert_equal({ "bar" => "1", "baz" => "2" }, @redis.call("HGETALL", "foo"))
   end
 
+  def test_call_once
+    assert_equal 1, @redis.call_once("INCR", "counter")
+
+    result = @redis.pipelined do |pipeline|
+      pipeline.call_once("INCR", "counter")
+    end
+    assert_equal [2], result
+
+    result = @redis.multi do |transaction|
+      transaction.call_once("INCR", "counter")
+    end
+    assert_equal [3], result
+  end
+
   def test_pipelining
     result = @redis.pipelined do |pipeline|
       assert_nil pipeline.call("SET", "foo", "42")

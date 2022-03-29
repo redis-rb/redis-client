@@ -171,6 +171,27 @@ class RedisClient
       end
     end
 
+    def test_reconnect_with_non_idempotent_commands
+      client = new_client(reconnect_attempts: 1)
+
+      simulate_network_errors(client, ["INCR"]) do
+        # The INCR command is retried, causing the counter to be incremented twice
+        assert_equal 2, client.call("INCR", "counter")
+      end
+      assert_equal "2", client.call("GET", "counter")
+    end
+
+    def test_reconnect_with_call_once
+      client = new_client(reconnect_attempts: 1)
+
+      simulate_network_errors(client, ["INCR"]) do
+        assert_raises ConnectionError do
+          client.call_once("INCR", "counter")
+        end
+      end
+      assert_equal "1", client.call("GET", "counter")
+    end
+
     private
 
     def assert_timeout(error, faster_than = 0.5, &block)
