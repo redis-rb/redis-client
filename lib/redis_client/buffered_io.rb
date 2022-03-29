@@ -17,6 +17,14 @@ class RedisClient
       @blocking_reads = false
     end
 
+    def close
+      @io.to_io.close
+    end
+
+    def closed?
+      @io.to_io.closed?
+    end
+
     def eof?
       @offset >= @buffer.bytesize && @io.eof?
     end
@@ -93,10 +101,6 @@ class RedisClient
       str = @buffer.byteslice(@offset, bytes)
       @offset += bytes + EOL_SIZE
       str
-    end
-
-    def close
-      @io.close
     end
 
     private

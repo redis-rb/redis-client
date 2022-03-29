@@ -19,3 +19,5 @@ group :benchmark do
   gem "redis", "~> 4.6"
   gem "stackprof"
 end
+
+gem "byebug"

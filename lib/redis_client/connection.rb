@@ -44,6 +44,10 @@ class RedisClient
       raise ConnectionError, error.message
     end
 
+    def connected?
+      !@io.closed?
+    end
+
     def close
       @io.close
     end

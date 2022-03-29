@@ -113,6 +113,10 @@ class RedisClient
     scan_pairs(2, ["ZSCAN", key, 0, *args], &block)
   end
 
+  def connected?
+    @raw_connection&.connected?
+  end
+
   def close
     @raw_connection&.close
     @raw_connection = nil

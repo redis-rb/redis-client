@@ -9,6 +9,18 @@ class RedisClient
       assert_equal "PONG", @redis.call("PING")
     end
 
+    def test_connected?
+      refute_predicate @redis, :connected?
+      @redis.call("PING")
+      assert_predicate @redis, :connected?
+      @redis.close
+      refute_predicate @redis, :connected?
+
+      @redis.call("PING")
+      @redis.instance_variable_get(:@raw_connection).close
+      refute_predicate @redis, :connected?
+    end
+
     def test_connect_failure
       client = new_client(host: "example.com")
       assert_raises RedisClient::ConnectionError do
@@ -86,6 +98,19 @@ class RedisClient
           @redis.call("PING")
         end
       end
+    end
+
+    def test_reconnect_on_next_try
+      value = "a" * 75
+      @redis.call("SET", "foo", value)
+      Toxiproxy[/redis/].downstream(:limit_data, bytes: 120).apply do
+        assert_equal value, @redis.call("GET", "foo")
+        assert_raises RedisClient::ConnectionError do
+          @redis.call("GET", "foo")
+        end
+      end
+      refute_predicate @redis, :connected?
+      assert_equal value, @redis.call("GET", "foo")
     end
 
     private
