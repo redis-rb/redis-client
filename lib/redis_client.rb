@@ -61,6 +61,7 @@ class RedisClient
     @read_timeout = read_timeout
     @write_timeout = write_timeout
     @raw_connection = nil
+    @disable_reconnection = false
   end
 
   def timeout=(timeout)
@@ -68,7 +69,7 @@ class RedisClient
   end
 
   def pubsub
-    sub = PubSub.new(raw_connection)
+    sub = PubSub.new(ensure_connected)
     @raw_connection = nil
     sub
   end
@@ -130,25 +131,36 @@ class RedisClient
     if pipeline._size == 0
       []
     else
-      call_pipelined(pipeline._commands, pipeline._timeouts)
+      ensure_connected do |connection|
+        call_pipelined(connection, pipeline._commands, pipeline._timeouts)
+      end
     end
   end
 
-  def multi(watch: nil)
-    call("WATCH", *watch) if watch
-
-    transaction = Multi.new
-    transaction.call("MULTI")
-    yield transaction
-    if transaction._size == 1
-      []
+  def multi(watch: nil, &block)
+    if watch
+      # WATCH is stateful, so we can't reconnect if it's used, the whole transaction
+      # has to be redone.
+      prevent_reconnection do |connection|
+        call("WATCH", *watch)
+        begin
+          if commands = build_transaction(&block)
+            call_pipelined(connection, commands).last
+          else
+            []
+          end
+        rescue
+          call("UNWATCH") if connected? && watch
+          raise
+        end
+      end
+    elsif commands = build_transaction(&block)
+      ensure_connected do |connection|
+        call_pipelined(connection, commands).last
+      end
     else
-      transaction.call("EXEC")
-      call_pipelined(transaction._commands).last
+      []
     end
-  rescue
-    call("UNWATCH") if watch
-    raise
   end
 
   class PubSub
@@ -225,6 +237,14 @@ class RedisClient
 
   private
 
+  def build_transaction
+    transaction = Multi.new
+    transaction.call("MULTI")
+    yield transaction
+    transaction.call("EXEC")
+    transaction._commands if transaction._size > 2
+  end
+
   def scan_list(cursor_index, command, &block)
     cursor = 0
     while cursor != "0"
@@ -257,6 +277,7 @@ class RedisClient
       connection.write(command)
       connection.read(timeout)
     end
+
     if result.is_a?(CommandError)
       raise result
     else
@@ -264,22 +285,20 @@ class RedisClient
     end
   end
 
-  def call_pipelined(commands, timeouts = nil)
+  def call_pipelined(connection, commands, timeouts = nil)
     exception = nil
 
     size = commands.size
     results = Array.new(commands.size)
-    ensure_connected do |connection|
-      connection.write_multi(commands)
+    connection.write_multi(commands)
 
-      size.times do |index|
-        timeout = timeouts && timeouts[index]
-        result = connection.read(timeout)
-        if result.is_a?(CommandError)
-          exception ||= result
-        end
-        results[index] = result
+    size.times do |index|
+      timeout = timeouts && timeouts[index]
+      result = connection.read(timeout)
+      if result.is_a?(CommandError)
+        exception ||= result
       end
+      results[index] = result
     end
 
     if exception
@@ -291,17 +310,36 @@ class RedisClient
 
   def ensure_connected
     tries = 0
+    connection = nil
     begin
-      yield raw_connection
+      connection = raw_connection
+      if block_given?
+        yield connection
+      else
+        connection
+      end
     rescue ConnectionError
+      connection&.close
       close
 
-      if config.retry_connecting?(tries)
+      if !@disable_reconnection && config.retry_connecting?(tries)
         tries += 1
         retry
       else
         raise
       end
+    end
+  end
+
+  def prevent_reconnection
+    previous_disable_reconnection = @disable_reconnection
+
+    connection = ensure_connected
+    begin
+      @disable_reconnection = true
+      yield connection
+    ensure
+      @disable_reconnection = previous_disable_reconnection
     end
   end
 
@@ -319,12 +357,7 @@ class RedisClient
         prelude = prelude.dup
         prelude << ["CLIENT", "SETNAME", id.to_s]
       end
-
-      connection.write_multi(prelude)
-      prelude.size.times do
-        result = connection.read
-        raise result if result.is_a?(CommandError)
-      end
+      call_pipelined(connection, prelude)
       connection
     end
   end

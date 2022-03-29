@@ -10,9 +10,12 @@ class RedisClient
     end
 
     def test_connected?
-      refute_predicate @redis, :connected?
-      @redis.call("PING")
+      client = new_client
+      refute_predicate client, :connected?
+
+      client.call("PING")
       assert_predicate @redis, :connected?
+
       @redis.close
       refute_predicate @redis, :connected?
 
@@ -113,25 +116,6 @@ class RedisClient
       assert_equal value, @redis.call("GET", "foo")
     end
 
-    module FlakyDriver
-      def self.included(base)
-        base.extend(ClassMethods)
-      end
-
-      module ClassMethods
-        attr_accessor :failures
-      end
-
-      def write(command)
-        if self.class.failures.first == command.first
-          self.class.failures.shift
-          raise ConnectionError, "simulated failure"
-        else
-          super
-        end
-      end
-    end
-
     def test_reconnect_attempts_disabled
       client = new_client(reconnect_attempts: false)
       simulate_network_errors(client, ["PING"]) do
@@ -148,19 +132,46 @@ class RedisClient
       end
     end
 
-    private
-
-    def simulate_network_errors(client, failures)
-      client.close
-      original_driver = client.config.driver
-      flaky_driver = Class.new(original_driver)
-      flaky_driver.include(FlakyDriver)
-      flaky_driver.failures = failures
-      client.config.instance_variable_set(:@driver, flaky_driver)
-      yield
-    ensure
-      client.config.instance_variable_set(:@driver, original_driver)
+    def test_reconnect_attempts_enabled_pipelines
+      client = new_client(reconnect_attempts: 1)
+      simulate_network_errors(client, ["PING"]) do
+        assert_equal(["PONG"], client.pipelined { |p| p.call("PING") })
+      end
     end
+
+    def test_reconnect_attempts_enabled_transactions
+      client = new_client(reconnect_attempts: 1)
+      simulate_network_errors(client, ["PING"]) do
+        assert_equal(["PONG"], client.multi { |p| p.call("PING") })
+      end
+    end
+
+    def test_reconnect_attempts_enabled_watching_transactions
+      client = new_client(reconnect_attempts: 1)
+      simulate_network_errors(client, ["PING"]) do
+        assert_raises ConnectionError do
+          client.multi(watch: ["foo"]) { |p| p.call("PING") }
+        end
+      end
+    end
+
+    def test_reconnect_attempts_enabled_inside_watching_transactions
+      client = new_client(reconnect_attempts: 1)
+      simulate_network_errors(client, ["GET"]) do
+        assert_raises ConnectionError do
+          client.multi(watch: ["foo"]) do |transaction|
+            # Since we called WATCH, the connection becomes stateful, so we can't
+            # simply reconnect on failure.
+            assert_raises ConnectionError do
+              client.call("GET", "foo")
+            end
+            transaction.call("SET", "foo", "2")
+          end
+        end
+      end
+    end
+
+    private
 
     def assert_timeout(error, faster_than = 0.5, &block)
       realtime = Benchmark.realtime do
@@ -172,10 +183,7 @@ class RedisClient
   end
 
   class TCPConnectionTest < Minitest::Test
-    def setup
-      @redis = new_client
-    end
-
+    include ClientTestHelper
     include ConnectionTests
 
     private
@@ -186,10 +194,7 @@ class RedisClient
   end
 
   class SSLConnectionTest < Minitest::Test
-    def setup
-      @redis = new_client
-    end
-
+    include ClientTestHelper
     include ConnectionTests
 
     if ENV["DRIVER"] == "hiredis"
@@ -210,13 +215,13 @@ class RedisClient
   end
 
   class UnixConnectionTest < Minitest::Test
-    def setup
-      @redis = new_client
-    end
+    include ClientTestHelper
 
     def test_connection_working
       assert_equal "PONG", @redis.call("PING")
     end
+
+    private
 
     def new_client(**overrides)
       RedisClient.new(**RedisServerHelper.unix_config.merge(overrides))
