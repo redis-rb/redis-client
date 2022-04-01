@@ -73,3 +73,9 @@ namespace :benchmark do
 end
 
 task default: %i[compile test rubocop]
+
+if ENV["DRIVER"] == "hiredis"
+  task ci: %i[compile test]
+else
+  task ci: %i[test]
+end

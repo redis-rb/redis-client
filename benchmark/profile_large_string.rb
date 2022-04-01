@@ -3,7 +3,7 @@
 require_relative "setup"
 require "stackprof"
 
-redis_client = RedisClient.new(host: "localhost", port: RedisServerHelper::REAL_TCP_PORT)
+redis_client = RedisClient.new(host: "localhost", port: Servers::REDIS.port)
 redis_client.call("SET", "large", "value" * 10_000)
 
 StackProf.run(out: "tmp/stackprof-large-string.dump", raw: true) do
