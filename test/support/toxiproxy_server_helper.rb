@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "net/http"
 require "pathname"
 
 module ToxiproxyServerHelper
@@ -30,17 +31,24 @@ module ToxiproxyServerHelper
         err: ROOT.join("tmp/toxiproxy.log").to_s,
       )
       PID_FILE.write(pid.to_s)
-      $stderr.print "started with pid=#{pid}... "
-      wait_until_ready
-      $stderr.puts "ready."
+      $stderr.puts "started with pid=#{pid}... "
+    end
+  end
+
+  def wait(timeout: 5)
+    $stderr.print "Waiting for toxiproxy-server..."
+    if wait_until_ready(timeout: timeout)
+      $stderr.puts " ready."
+    else
+      $stderr.puts " timedout."
     end
   end
 
   def wait_until_ready(timeout: 5)
     (timeout * 100).times do
-      TCPSocket.new(HOST, PORT)
+      Net::HTTP.get(URI("http://localhost:8474"))
       return true
-    rescue Errno::ECONNREFUSED
+    rescue SystemCallError
       sleep 0.01
     end
     false

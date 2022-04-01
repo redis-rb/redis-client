@@ -176,3 +176,6 @@ Gemspec/RequireMFA:
 
 Style/StderrPuts:
   Enabled: false
+
+Style/ModuleFunction:
+  Enabled: false

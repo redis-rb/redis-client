@@ -14,6 +14,9 @@ unless ENV["CI"]
   RedisServerHelper.spawn
 end
 
+RedisServerHelper.wait
+ToxiproxyServerHelper.wait
+
 Toxiproxy.host = ToxiproxyServerHelper.url
 Toxiproxy.populate([
   {

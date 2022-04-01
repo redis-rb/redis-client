@@ -76,15 +76,22 @@ module RedisServerHelper
         err: ROOT.join("tmp/redis.log").to_s,
       )
       PID_FILE.write(pid.to_s)
-      $stderr.print "started with pid=#{pid}... "
-      wait_until_ready
-      $stderr.puts "ready."
+      $stderr.puts "started with pid=#{pid}"
+    end
+  end
+
+  def wait(timeout: 5)
+    $stderr.print "Waiting for redis-server..."
+    if wait_until_ready(timeout: timeout)
+      $stderr.puts " ready."
+    else
+      $stderr.puts " timedout."
     end
   end
 
   def wait_until_ready(timeout: 5)
     (timeout * 100).times do
-      TCPSocket.new(HOST, TCP_PORT)
+      TCPSocket.new(HOST, REAL_TCP_PORT)
       return true
     rescue Errno::ECONNREFUSED
       sleep 0.01
