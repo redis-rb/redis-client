@@ -5,8 +5,8 @@ require "mkmf"
 if RUBY_ENGINE == "ruby"
   hiredis_dir = File.expand_path('vendor', __dir__)
 
-  RbConfig::CONFIG['configure_args'] =~ /with-make-prog=(\w+)/
-  make_program = case RUBY_PLATFORM
+  make_program = with_config("make-prog", ENV["MAKE"])
+  make_program ||= case RUBY_PLATFORM
   when /mswin/
     'nmake'
   when /(bsd|solaris)/
