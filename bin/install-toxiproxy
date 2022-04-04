@@ -9,6 +9,6 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     DOWNLOAD_TYPE="darwin-$(uname -m)"
 fi
 
-echo "[dowload toxiproxy for $DOWNLOAD_TYPE]"
+echo "[download toxiproxy for $DOWNLOAD_TYPE]"
 curl --silent -L https://github.com/Shopify/toxiproxy/releases/download/$VERSION/toxiproxy-server-$DOWNLOAD_TYPE -o ./bin/toxiproxy-server
 chmod +x ./bin/toxiproxy-server
