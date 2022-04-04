@@ -17,6 +17,14 @@ if RUBY_ENGINE == "ruby"
 
   openssl_include, openssl_lib = dir_config("openssl")
 
+  openssl_include ||= dir_config("opt").first
+    &.split(File::PATH_SEPARATOR)
+    &.detect { |dir| dir.include?("openssl") }
+
+  openssl_lib ||= dir_config("opt").last
+    &.split(File::PATH_SEPARATOR)
+    &.detect { |dir| dir.include?("openssl") }
+
   if !openssl_include || !openssl_lib
     raise "OpenSSL library could not be found. You might want to use --with-openssl-dir=<dir> option to specify the " \
       "prefix where OpenSSL is installed."
