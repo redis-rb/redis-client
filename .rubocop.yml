@@ -11,6 +11,9 @@ Layout/LineLength:
 Layout/CaseIndentation:
   EnforcedStyle: end
 
+Layout/LineEndStringConcatenationIndentation:
+  EnforcedStyle: indented
+
 Layout/ArgumentAlignment:
   EnforcedStyle: with_fixed_indentation
 

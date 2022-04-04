@@ -15,8 +15,15 @@ if RUBY_ENGINE == "ruby"
     'make'
   end
 
+  openssl_include, openssl_lib = dir_config("openssl")
+
+  if !openssl_include || !openssl_lib
+    raise "OpenSSL library could not be found. You might want to use --with-openssl-dir=<dir> option to specify the " \
+      "prefix where OpenSSL is installed."
+  end
+
   Dir.chdir(hiredis_dir) do
-    success = system("#{make_program} static USE_SSL=1")
+    success = system(%(#{make_program} static USE_SSL=1 CFLAGS="-I#{openssl_include}" SSL_LDFLAGS="-L#{openssl_lib}"))
     raise "Building hiredis failed" unless success
   end
 
