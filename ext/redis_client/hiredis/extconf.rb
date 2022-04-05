@@ -25,13 +25,14 @@ if RUBY_ENGINE == "ruby"
     &.split(File::PATH_SEPARATOR)
     &.detect { |dir| dir.include?("openssl") }
 
-  if !openssl_include || !openssl_lib
+  if (!openssl_include || !openssl_lib) && !have_header("openssl/ssl.h")
     raise "OpenSSL library could not be found. You might want to use --with-openssl-dir=<dir> option to specify the " \
       "prefix where OpenSSL is installed."
   end
 
   Dir.chdir(hiredis_dir) do
-    success = system(%(#{make_program} static USE_SSL=1 CFLAGS="-I#{openssl_include}" SSL_LDFLAGS="-L#{openssl_lib}"))
+    flags = %(CFLAGS="-I#{openssl_include}" SSL_LDFLAGS="-L#{openssl_lib}") if openssl_lib
+    success = system("#{make_program} static USE_SSL=1 #{flags}")
     raise "Building hiredis failed" unless success
   end
 
