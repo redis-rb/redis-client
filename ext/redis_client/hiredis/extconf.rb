@@ -5,8 +5,8 @@ require "mkmf"
 if RUBY_ENGINE == "ruby"
   hiredis_dir = File.expand_path('vendor', __dir__)
 
-  RbConfig::CONFIG['configure_args'] =~ /with-make-prog=(\w+)/
-  make_program = case RUBY_PLATFORM
+  make_program = with_config("make-prog", ENV["MAKE"])
+  make_program ||= case RUBY_PLATFORM
   when /mswin/
     'nmake'
   when /(bsd|solaris)/
@@ -15,8 +15,24 @@ if RUBY_ENGINE == "ruby"
     'make'
   end
 
+  openssl_include, openssl_lib = dir_config("openssl")
+
+  openssl_include ||= dir_config("opt").first
+    &.split(File::PATH_SEPARATOR)
+    &.detect { |dir| dir.include?("openssl") }
+
+  openssl_lib ||= dir_config("opt").last
+    &.split(File::PATH_SEPARATOR)
+    &.detect { |dir| dir.include?("openssl") }
+
+  if (!openssl_include || !openssl_lib) && !have_header("openssl/ssl.h")
+    raise "OpenSSL library could not be found. You might want to use --with-openssl-dir=<dir> option to specify the " \
+      "prefix where OpenSSL is installed."
+  end
+
   Dir.chdir(hiredis_dir) do
-    success = system("#{make_program} static USE_SSL=1")
+    flags = %(CFLAGS="-I#{openssl_include}" SSL_LDFLAGS="-L#{openssl_lib}") if openssl_lib
+    success = system("#{make_program} static USE_SSL=1 #{flags}")
     raise "Building hiredis failed" unless success
   end
 
