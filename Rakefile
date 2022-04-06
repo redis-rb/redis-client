@@ -13,6 +13,7 @@ Rake::ExtensionTask.new do |ext|
   ext.ext_dir = "ext/redis_client/hiredis"
   ext.lib_dir = "lib/redis_client"
   ext.gem_spec = gemspec
+  CLEAN.add("#{ext.ext_dir}/vendor/*.{a,o}")
 end
 
 Rake::TestTask.new(:test) do |t|
