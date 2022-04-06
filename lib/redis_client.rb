@@ -353,7 +353,9 @@ class RedisClient
   end
 
   def ensure_connected(retryable: true)
-    if retryable
+    if @disable_reconnection
+      yield @raw_connection
+    elsif retryable
       tries = 0
       connection = nil
       begin

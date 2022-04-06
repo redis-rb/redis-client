@@ -45,6 +45,8 @@ typedef struct {
 } hiredis_ssl_context_t;
 
 
+#define ENSURE_CONNECTED(connection) if (!connection->context) rb_raise(rb_eRuntimeError, "[BUG] not connected");
+
 #define SSL_CONTEXT(from, name) \
     hiredis_ssl_context_t *name = NULL; \
     TypedData_Get_Struct(from, hiredis_ssl_context_t, &hiredis_ssl_context_data_type, name); \
@@ -477,7 +479,7 @@ static VALUE hiredis_write(VALUE self, VALUE command) {
     Check_Type(command, T_ARRAY);
 
     CONNECTION(self, connection);
-    if (!connection->context) rb_raise(rb_eRuntimeError, "not connected");
+    ENSURE_CONNECTED(connection);
 
     long size = RARRAY_LEN(command);
     VALUE _argv_handle;
@@ -499,7 +501,7 @@ static VALUE hiredis_write(VALUE self, VALUE command) {
 
 static VALUE hiredis_flush(VALUE self) {
     CONNECTION(self, connection);
-    if (!connection->context) rb_raise(rb_eRuntimeError, "[BUG] not connected");
+    ENSURE_CONNECTED(connection);
 
     int wdone = 0;
     while (!wdone) {
@@ -601,7 +603,7 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
 
 static VALUE hiredis_read(VALUE self) {
     CONNECTION(self, connection);
-    if (!connection->context) rb_raise(rb_eRuntimeError, "[BUG] not connected");
+    ENSURE_CONNECTED(connection);
 
     VALUE reply = Qnil;
     if (hiredis_read_internal(connection, &reply)) {
