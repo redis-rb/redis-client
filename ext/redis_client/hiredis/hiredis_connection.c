@@ -30,11 +30,11 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "ruby.h"
 #include <errno.h>
 #include <sys/socket.h>
 #include "hiredis.h"
 #include "hiredis_ssl.h"
-#include "ruby.h"
 
 static VALUE rb_cSet, rb_eRedisClientCommandError, rb_eRedisClientConnectionError;
 static VALUE rb_eRedisClientConnectTimeoutError, rb_eRedisClientReadTimeoutError, rb_eRedisClientWriteTimeoutError;
