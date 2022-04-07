@@ -2,6 +2,7 @@
 
 require "redis_client/version"
 require "redis_client/config"
+require "redis_client/sentinel_config"
 require "redis_client/connection"
 
 class RedisClient
@@ -12,6 +13,7 @@ class RedisClient
   ReadTimeoutError = Class.new(TimeoutError)
   WriteTimeoutError = Class.new(TimeoutError)
   ConnectTimeoutError = Class.new(TimeoutError)
+  FailoverError = Class.new(ConnectionError)
 
   class CommandError < Error
     class << self
@@ -36,8 +38,12 @@ class RedisClient
       Config.new(**kwargs)
     end
 
+    def sentinel(**kwargs)
+      SentinelConfig.new(**kwargs)
+    end
+
     def new(arg = nil, **kwargs)
-      if arg.is_a?(Config)
+      if arg.is_a?(Config::Common)
         super
       else
         super(config(**(arg || {}), **kwargs))
@@ -365,11 +371,11 @@ class RedisClient
         else
           connection
         end
-      rescue ConnectionError
+      rescue ConnectionError => error
         connection&.close
         close
 
-        if !@disable_reconnection && config.retry_connecting?(tries)
+        if !@disable_reconnection && config.retry_connecting?(tries, error)
           tries += 1
           retry
         else
@@ -397,12 +403,20 @@ class RedisClient
         write_timeout: write_timeout,
       )
 
-      prelude = config.connection_prelude
+      prelude = config.connection_prelude.dup
+
       if id
-        prelude = prelude.dup
         prelude << ["CLIENT", "SETNAME", id.to_s]
       end
-      call_pipelined(connection, prelude)
+
+      if config.sentinel?
+        prelude << ["ROLE"]
+        role, = call_pipelined(connection, prelude).last
+        config.check_role!(role)
+      else
+        call_pipelined(connection, prelude)
+      end
+
       connection
     end
   end

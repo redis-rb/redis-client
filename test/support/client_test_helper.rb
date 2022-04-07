@@ -40,8 +40,41 @@ module ClientTestHelper
 
   private
 
+  def tcp_config
+    {
+      host: Servers::HOST,
+      port: Servers::REDIS_TCP_PORT,
+      timeout: 0.1,
+      driver: ENV.fetch("DRIVER", "ruby").to_sym,
+    }
+  end
+
+  def ssl_config
+    {
+      host: Servers::HOST,
+      port: Servers::REDIS_TLS_PORT,
+      timeout: 0.1,
+      ssl: true,
+      ssl_params: {
+        verify_hostname: false, # TODO: See if we could actually verify the hostname with our CI and dev setup
+        cert: Servers::CERTS_PATH.join("client.crt").to_s,
+        key: Servers::CERTS_PATH.join("client.key").to_s,
+        ca_file: Servers::CERTS_PATH.join("ca.crt").to_s,
+      },
+      driver: ENV.fetch("DRIVER", "ruby").to_sym,
+    }
+  end
+
+  def unix_config
+    {
+      path: Servers::REDIS_SOCKET_FILE.to_s,
+      timeout: 0.1,
+      driver: ENV.fetch("DRIVER", "ruby").to_sym,
+    }
+  end
+
   def new_client(**overrides)
-    RedisClient.new(**RedisServerHelper.tcp_config.merge(overrides))
+    RedisClient.new(**tcp_config.merge(overrides))
   end
 
   def simulate_network_errors(client, failures)

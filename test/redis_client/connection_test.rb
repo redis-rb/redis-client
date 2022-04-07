@@ -210,7 +210,7 @@ class RedisClient
     private
 
     def new_client(**overrides)
-      RedisClient.new(**RedisServerHelper.tcp_config.merge(overrides))
+      RedisClient.new(**tcp_config.merge(overrides))
     end
   end
 
@@ -231,7 +231,7 @@ class RedisClient
     private
 
     def new_client(**overrides)
-      RedisClient.new(**RedisServerHelper.ssl_config.merge(overrides))
+      RedisClient.new(**ssl_config.merge(overrides))
     end
   end
 
@@ -245,7 +245,7 @@ class RedisClient
     private
 
     def new_client(**overrides)
-      RedisClient.new(**RedisServerHelper.unix_config.merge(overrides))
+      RedisClient.new(**unix_config.merge(overrides))
     end
   end
 end

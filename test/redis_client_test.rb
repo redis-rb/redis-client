@@ -10,7 +10,7 @@ class RedisClientTest < Minitest::Test
   end
 
   def test_config
-    redis_config = RedisClient.config(**RedisServerHelper.tcp_config)
+    redis_config = RedisClient.config(**tcp_config)
     redis = redis_config.new_client
     assert_equal "PONG", redis.call("PING")
   end

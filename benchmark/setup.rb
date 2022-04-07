@@ -6,12 +6,11 @@ $LOAD_PATH.unshift(File.expand_path("../test/support", __dir__))
 require "redis"
 require "redis-client"
 require "redis_client/hiredis_connection"
-require "redis_server_helper"
+require "servers"
 require "benchmark/ips"
 
-RedisServerHelper.shutdown
-RedisServerHelper.spawn
-at_exit { RedisServerHelper.shutdown }
+Servers::BENCHMARK.prepare
+at_exit { Servers::BENCHMARK.shutdown }
 
 class RedisBenchmark
   def initialize(x)
