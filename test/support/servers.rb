@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative "redis_builder"
 require_relative "server_manager"
 
 module Servers
