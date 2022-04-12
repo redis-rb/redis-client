@@ -33,6 +33,7 @@
 #include "ruby.h"
 #include <errno.h>
 #include <sys/socket.h>
+#include <stdbool.h>
 #include "hiredis.h"
 #include "hiredis_ssl.h"
 
@@ -43,7 +44,6 @@ static ID id_parse, id_add, id_new;
 typedef struct {
     redisSSLContext *context;
 } hiredis_ssl_context_t;
-
 
 #define ENSURE_CONNECTED(connection) if (!connection->context) rb_raise(rb_eRuntimeError, "[BUG] not connected");
 
@@ -161,7 +161,7 @@ static void *reply_create_array(const redisReadTask *task, size_t elements) {
             value = rb_hash_new();
             break;
         case REDIS_REPLY_SET:
-            value = rb_funcall(rb_cSet, id_new, 0);
+            value = rb_funcallv(rb_cSet, id_new, 0, NULL);
             break;
         default:
             rb_bug("[hiredis] Unexpected create array type %d", task->parent->type);
@@ -183,8 +183,6 @@ static void *reply_create_bool(const redisReadTask *task, int bval) {
     reply_append(task, bval ? Qtrue : Qfalse);
     // Qfalse == NULL, so we can't return Qfalse as it would be interpreted as out of memory error.
     // So we return Qnil instead.
-    assert(Qfalse == NULL);
-    assert(Qnil != NULL);
     return (void*)(bval ? Qtrue : Qnil);
 }
 
@@ -380,10 +378,9 @@ static int hiredis_wait_writable(int fd, const struct timeval *timeout, int *iss
     struct timeval to;
     struct timeval *toptr = NULL;
 
-    rb_fdset_t fds;
-
     /* Be cautious: a call to rb_fd_init to initialize the rb_fdset_t structure
      * must be paired with a call to rb_fd_term to free it. */
+    rb_fdset_t fds;
     rb_fd_init(&fds);
     rb_fd_set(fd, &fds);
 
@@ -466,6 +463,24 @@ static VALUE hiredis_init_ssl(VALUE self, VALUE ssl_param) {
     if (redisInitiateSSLWithContext(connection->context, ssl_context->context) != REDIS_OK) {
         hiredis_raise_error_and_disconnect(connection, rb_eRedisClientConnectTimeoutError);
     }
+
+    redisSSL *redis_ssl = redisGetSSLSocket(connection->context);
+ 
+    if (redis_ssl->wantRead) {
+        int readable = 0;
+        if (hiredis_wait_readable(connection->context->fd, &connection->connect_timeout, &readable) < 0) {
+            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientConnectTimeoutError);
+        }
+        if (!readable) {
+            errno = EAGAIN;
+            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientConnectTimeoutError);
+        }
+
+        if (redisInitiateSSLContinue(connection->context) != REDIS_OK) {
+            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientConnectTimeoutError);
+        };
+    }
+
     return Qtrue;
 }
 
@@ -622,6 +637,12 @@ static VALUE hiredis_close(VALUE self) {
 }
 
 void Init_hiredis_connection(void) {
+#ifdef RUBY_ASSERT
+        // Qfalse == NULL, so we can't return Qfalse in `reply_create_bool()`
+        RUBY_ASSERT((void *)Qfalse == NULL);
+        RUBY_ASSERT((void *)Qnil != NULL);
+#endif
+
     redisInitOpenSSL();
 
     id_parse = rb_intern("parse");

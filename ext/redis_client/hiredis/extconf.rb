@@ -36,10 +36,16 @@ if RUBY_ENGINE == "ruby"
     raise "Building hiredis failed" unless success
   end
 
-  $CFLAGS << " -I#{hiredis_dir} "
-  $LDFLAGS << " #{hiredis_dir}/libhiredis.a #{hiredis_dir}/libhiredis_ssl.a -lssl -lcrypto "
-  $CFLAGS << " -O3 "
-  $CFLAGS << " -std=c99"
+  $CFLAGS << " -I#{hiredis_dir}"
+  $LDFLAGS << " #{hiredis_dir}/libhiredis.a #{hiredis_dir}/libhiredis_ssl.a -lssl -lcrypto"
+  $CFLAGS << " -O3"
+  $CFLAGS << " -std=c99 "
+
+  if ENV["EXT_PEDANTIC"]
+    $CFLAGS << " -Werror"
+  end
+
+  $CFLAGS << " -Wno-declaration-after-statement"
 
   create_makefile("redis_client/hiredis_connection")
 else

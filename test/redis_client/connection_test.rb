@@ -218,16 +218,6 @@ class RedisClient
     include ClientTestHelper
     include ConnectionTests
 
-    if ENV["DRIVER"] == "hiredis"
-      def test_tcp_connect_downstream_timeout
-        skip "TODO: Find the proper way to timeout SSL connections with hiredis"
-      end
-
-      def test_tcp_connect_upstream_timeout
-        skip "TODO: Find the proper way to timeout SSL connections with hiredis"
-      end
-    end
-
     private
 
     def new_client(**overrides)

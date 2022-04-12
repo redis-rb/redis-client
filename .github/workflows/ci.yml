@@ -51,3 +51,4 @@ jobs:
           bundle exec rake ci
         env:
           DRIVER: "${{ matrix.driver }}"
+          EXT_PEDANTIC: "1"

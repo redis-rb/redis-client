@@ -32,6 +32,8 @@
 #ifndef __HIREDIS_SSL_H
 #define __HIREDIS_SSL_H
 
+#include <openssl/ssl.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -45,6 +47,29 @@ struct ssl_st;
  * calling OpenSSL.
  */
 typedef struct redisSSLContext redisSSLContext;
+
+/* The SSL connection context is attached to SSL/TLS connections as a privdata. */
+typedef struct redisSSL {
+    /**
+     * OpenSSL SSL object.
+     */
+    SSL *ssl;
+
+    /**
+     * SSL_write() requires to be called again with the same arguments it was
+     * previously called with in the event of an SSL_read/SSL_write situation
+     */
+    size_t lastLen;
+
+    /** Whether the SSL layer requires read (possibly before a write) */
+    int wantRead;
+
+    /**
+     * Whether a write was requested prior to a read. If set, the write()
+     * should resume whenever a read takes place, if possible
+     */
+    int pendingWrite;
+} redisSSL;
 
 /**
  * Initialization errors that redisCreateSSLContext() may return.
@@ -114,11 +139,16 @@ void redisFreeSSLContext(redisSSLContext *redis_ssl_ctx);
 
 int redisInitiateSSLWithContext(redisContext *c, redisSSLContext *redis_ssl_ctx);
 
+int redisInitiateSSLContinue(redisContext *c);
+
 /**
  * Initiate SSL/TLS negotiation on a provided OpenSSL SSL object.
  */
 
 int redisInitiateSSL(redisContext *c, struct ssl_st *ssl);
+
+
+redisSSL *redisGetSSLSocket(redisContext *c);
 
 #ifdef __cplusplus
 }
