@@ -58,6 +58,36 @@ NOTE: `RedisClient` instances must not be shared between threads. Make sure to r
 - `write_timeout`: The write timeout, takes precedence over the general timeout when sending commands to the server.
 - `reconnect_attempts`: Specify how many times the client should retry to send queries. Defaults to `0`. Makes sure to read the [reconnection section](#reconnection) before enabling it.
 
+### Sentinel support
+
+The client is able to perform automatic failover by using [Redis Sentinel](https://redis.io/docs/manual/sentinel/).
+
+To connect using Sentinel, use:
+
+```ruby
+redis_config = RedisClient.sentinel(
+  name: "mymaster",
+  sentinels: [
+    { host: "127.0.0.1", port: 26380 },
+    { host: "127.0.0.1", port: 26381 },
+  ],
+  role: :master,
+)
+```
+
+* The name identifies a group of Redis instances composed of a master and one or more replicas (`mymaster` in the example).
+
+* It is possible to optionally provide a role. The allowed roles are `:master`
+and `:replica`. When the role is `:replica`, the client will try to connect to a
+random replica of the specified master. If a role is not specified, the client
+will connect to the master.
+
+* When using the Sentinel support you need to specify a list of sentinels to
+connect to. The list does not need to enumerate all your Sentinel instances,
+but a few so that if one is down the client will try the next one. The client
+is able to remember the last Sentinel that was able to reply correctly and will
+use it for the next requests.
+
 ### Type support
 
 Only a select few Ruby types are supported as arguments beside strings.
