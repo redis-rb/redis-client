@@ -56,7 +56,6 @@ module ClientTestHelper
       timeout: 0.1,
       ssl: true,
       ssl_params: {
-        verify_hostname: false, # TODO: See if we could actually verify the hostname with our CI and dev setup
         cert: Servers::CERTS_PATH.join("client.crt").to_s,
         key: Servers::CERTS_PATH.join("client.key").to_s,
         ca_file: Servers::CERTS_PATH.join("ca.crt").to_s,

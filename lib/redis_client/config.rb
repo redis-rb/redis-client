@@ -107,6 +107,7 @@ class RedisClient
 
           context = OpenSSL::SSL::SSLContext.new
           context.set_params(params)
+          context.verify_hostname
           context
         end
       end

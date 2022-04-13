@@ -40,7 +40,7 @@ class RedisClient
       )
     rescue Errno::ETIMEDOUT => error
       raise ConnectTimeoutError, error.message
-    rescue SystemCallError => error
+    rescue SystemCallError, OpenSSL::SSL::SSLError => error
       raise ConnectionError, error.message
     end
 
