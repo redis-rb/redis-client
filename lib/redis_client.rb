@@ -73,6 +73,10 @@ class RedisClient
     @disable_reconnection = false
   end
 
+  def size
+    1
+  end
+
   def with(_options = nil)
     yield self
   end

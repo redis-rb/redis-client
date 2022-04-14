@@ -31,6 +31,10 @@ class RedisClient
       nil
     end
 
+    def size
+      pool.size
+    end
+
     %w(pipelined).each do |method|
       class_eval <<~RUBY, __FILE__, __LINE__ + 1
         def #{method}(&block)
