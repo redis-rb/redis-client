@@ -32,7 +32,7 @@ redis = redis_config.new_pool(timeout: 0.5, size: Integer(ENV.fetch("RAILS_MAX_T
 redis.call("PING") # => "PONG"
 ```
 
-If you are issuing multiple commands in a raw, it's best to use `#with` to avoid going through the connection checkout
+If you are issuing multiple commands in a raw, but can't pipeline them, it's best to use `#with` to avoid going through the connection checkout
 several times:
 
 ```ruby
@@ -318,6 +318,8 @@ redis = redis_config.new_client
 redis.call("GET", "counter") # Will be retried up to 3 times.
 redis.call_once("INCR", "counter") # Won't be retried.
 ```
+
+## Notable differences with the `redis` gem
 
 ### Thread Safety
 
