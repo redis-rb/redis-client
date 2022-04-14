@@ -6,6 +6,8 @@ class RedisClient
   class Pooled
     EMPTY_HASH = {}.freeze
 
+    attr_reader :config
+
     def initialize(config, **kwargs)
       @config = config
       @pool_kwargs = kwargs
