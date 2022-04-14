@@ -144,7 +144,10 @@ class RedisClient
     end
 
     def parse_string(io)
-      io.gets_chomp
+      str = io.gets_chomp
+      str.force_encoding(Encoding.default_external)
+      str.force_encoding(Encoding::BINARY) unless str.valid_encoding?
+      str
     end
 
     def parse_error(io)
@@ -208,7 +211,10 @@ class RedisClient
 
     def parse_blob(io)
       bytesize = parse_integer(io)
-      io.read_chomp(bytesize)
+      str = io.read_chomp(bytesize)
+      str.force_encoding(Encoding.default_external)
+      str.force_encoding(Encoding::BINARY) unless str.valid_encoding?
+      str
     end
 
     def parse_verbatim_string(io)

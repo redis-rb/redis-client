@@ -6,48 +6,48 @@ redis-server: `Redis server v=6.2.6 sha=00000000:0 malloc=libc bits=64 build=c6f
 ### small string
 
 ```
-            redis-rb:     5572.2 i/s
-        redis-client:     7342.2 i/s - 1.32x  (± 0.00) faster
+            redis-rb:     5335.6 i/s
+        redis-client:     6823.6 i/s - 1.28x  (± 0.00) faster
 
 ```
 
 ### large string
 
 ```
-            redis-rb:      481.0 i/s
-        redis-client:      440.5 i/s - same-ish: difference falls within error
+            redis-rb:      479.0 i/s
+        redis-client:      397.0 i/s - 1.21x  (± 0.00) slower
 
 ```
 
 ### small list
 
 ```
-            redis-rb:     2931.6 i/s
-        redis-client:     4031.9 i/s - 1.38x  (± 0.00) faster
+            redis-rb:     2815.6 i/s
+        redis-client:     3766.3 i/s - 1.34x  (± 0.00) faster
 
 ```
 
 ### large list
 
 ```
-            redis-rb:       82.0 i/s
-        redis-client:      134.0 i/s - 1.63x  (± 0.00) faster
+            redis-rb:       79.6 i/s
+        redis-client:      113.8 i/s - 1.43x  (± 0.00) faster
 
 ```
 
 ### small hash
 
 ```
-            redis-rb:     2353.8 i/s
-        redis-client:     4662.5 i/s - 1.98x  (± 0.00) faster
+            redis-rb:     2365.3 i/s
+        redis-client:     4149.7 i/s - 1.75x  (± 0.00) faster
 
 ```
 
 ### large hash
 
 ```
-            redis-rb:       46.3 i/s
-        redis-client:       96.5 i/s - 2.08x  (± 0.00) faster
+            redis-rb:       45.8 i/s
+        redis-client:       76.6 i/s - 1.67x  (± 0.00) faster
 
 ```
 

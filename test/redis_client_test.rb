@@ -384,6 +384,23 @@ module RedisClientTests
     client.close
     assert_includes client.call("CLIENT", "INFO"), " name=peter "
   end
+
+  def test_encoding
+    @redis.call("SET", "str", "fée")
+    str = @redis.call("GET", "str")
+
+    assert_equal Encoding.default_external, str.encoding
+    assert_predicate str, :valid_encoding?
+
+    bytes = "\xFF\00"
+    refute_predicate bytes, :valid_encoding?
+
+    @redis.call("SET", "str", bytes.b)
+    str = @redis.call("GET", "str")
+
+    assert_equal Encoding::BINARY, str.encoding
+    assert_predicate str, :valid_encoding?
+  end
 end
 
 class RedisClientTest < Minitest::Test

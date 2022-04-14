@@ -31,6 +31,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ruby.h"
+#include "ruby/encoding.h"
 #include <errno.h>
 #include <sys/socket.h>
 #include <stdbool.h>
@@ -114,7 +115,7 @@ static VALUE hiredis_ssl_context_init(VALUE self, VALUE ca_file, VALUE ca_path, 
 
 static void *reply_append(const redisReadTask *task, VALUE value) {
     if (task && task->parent) {
-        volatile VALUE parent = (VALUE)task->parent->obj;
+        VALUE parent = (VALUE)task->parent->obj;
 
         switch (task->parent->type) {
             case REDIS_REPLY_ARRAY:
@@ -123,7 +124,7 @@ static void *reply_append(const redisReadTask *task, VALUE value) {
                 break;
             case REDIS_REPLY_MAP:
                 if (task->idx % 2) {
-                    volatile VALUE key = (VALUE)task->parent->privdata;
+                    VALUE key = (VALUE)task->parent->privdata;
                     task->parent->privdata = NULL;
                     rb_hash_aset(parent, key, value);
                 } else {
@@ -142,7 +143,10 @@ static void *reply_append(const redisReadTask *task, VALUE value) {
 }
 
 static void *reply_create_string(const redisReadTask *task, char *cstr, size_t len) {
-    volatile VALUE string = rb_str_new(cstr, len);
+    VALUE string = rb_external_str_new(cstr, len);
+    if (rb_enc_str_coderange(string) == ENC_CODERANGE_BROKEN) {
+        rb_enc_associate(string, rb_ascii8bit_encoding());
+    }
 
     if (task->type == REDIS_REPLY_ERROR) {
         string = rb_funcall(rb_eRedisClientCommandError, id_parse, 1, string);
@@ -151,7 +155,7 @@ static void *reply_create_string(const redisReadTask *task, char *cstr, size_t l
     return reply_append(task, string);
 }
 static void *reply_create_array(const redisReadTask *task, size_t elements) {
-    volatile VALUE value = Qnil;
+    VALUE value = Qnil;
     switch (task->type) {
         case REDIS_REPLY_PUSH:
         case REDIS_REPLY_ARRAY:
