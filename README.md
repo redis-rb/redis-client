@@ -48,6 +48,11 @@ NOTE: `RedisClient` instances must not be shared between threads. Make sure to r
 - `host`: The server hostname or IP address. Defaults to `"localhost"`.
 - `port`: The server port. Defaults to `6379`.
 - `path`: The path to a UNIX socket, if set `url`, `host` and `port` are ignored.
+- `ssl`: Wether to connect using SSL or not.
+- `ssl_params`: A configuration Hash passed to [`OpenSSL::SSL::SSLContext#set_params`](https://www.rubydoc.info/stdlib/openssl/OpenSSL%2FSSL%2FSSLContext:set_params), notable options include:
+  - `cert`: The path to the client certificate (e.g. `client.crt`).
+  - `key`: The path to the client key (e.g. `client.key`).
+  - `ca_file`: The certificate authority to use, useful for self signed certificates (e.g. `ca.crt`),
 - `db`: The database to select after connecting, defaults to `0`.
 - `id` ID for the client connection, assigns name to current connection by sending `CLIENT SETNAME`.
 - `username` Username to authenticate against server, defaults to `"default"`.
