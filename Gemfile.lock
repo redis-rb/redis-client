@@ -2,6 +2,7 @@ PATH
   remote: .
   specs:
     redis-client (0.0.0)
+      connection_pool
 
 GEM
   remote: https://rubygems.org/

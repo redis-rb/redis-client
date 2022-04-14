@@ -29,4 +29,6 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
   spec.extensions = ["ext/redis_client/hiredis/extconf.rb"]
+
+  spec.add_runtime_dependency "connection_pool"
 end

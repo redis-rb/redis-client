@@ -185,3 +185,6 @@ Style/ModuleFunction:
 
 Style/CombinableLoops:
   Enabled: false
+
+Style/DocumentDynamicEvalDefinition:
+  Enabled: false

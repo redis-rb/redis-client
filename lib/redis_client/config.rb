@@ -63,6 +63,11 @@ class RedisClient
         false
       end
 
+      def new_pool(**kwargs)
+        kwargs[:timeout] ||= DEFAULT_TIMEOUT
+        Pooled.new(self, **kwargs)
+      end
+
       def new_client(**kwargs)
         RedisClient.new(self, **kwargs)
       end

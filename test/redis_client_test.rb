@@ -2,9 +2,7 @@
 
 require "test_helper"
 
-class RedisClientTest < Minitest::Test
-  include ClientTestHelper
-
+module RedisClientTests
   def test_has_version
     assert_instance_of String, RedisClient::VERSION
   end
@@ -129,7 +127,6 @@ class RedisClientTest < Minitest::Test
   end
 
   def test_large_read_pipelines
-    @redis.timeout = 5
     @redis.call("LPUSH", "list", *1000.times.to_a)
     @redis.pipelined do |pipeline|
       100.times do
@@ -139,7 +136,6 @@ class RedisClientTest < Minitest::Test
   end
 
   def test_large_write_pipelines
-    @redis.timeout = 5
     @redis.pipelined do |pipeline|
       10.times do |i|
         pipeline.call("SET", i, i.to_s * 10485760)
@@ -275,24 +271,6 @@ class RedisClientTest < Minitest::Test
     assert_equal "3", @redis.call("GET", "foo")
   end
 
-  def test_preselect_database
-    client = new_client(db: 5)
-    assert_includes client.call("CLIENT", "INFO"), " db=5 "
-    client.call("SELECT", 6)
-    assert_includes client.call("CLIENT", "INFO"), " db=6 "
-    client.close
-    assert_includes client.call("CLIENT", "INFO"), " db=5 "
-  end
-
-  def test_set_client_id
-    client = new_client(id: "peter")
-    assert_includes client.call("CLIENT", "INFO"), " name=peter "
-    client.call("CLIENT", "SETNAME", "steven")
-    assert_includes client.call("CLIENT", "INFO"), " name=steven "
-    client.close
-    assert_includes client.call("CLIENT", "INFO"), " name=peter "
-  end
-
   def test_call_timeout_false
     thr = Thread.start do
       client = new_client
@@ -387,5 +365,49 @@ class RedisClientTest < Minitest::Test
     end
     expected_pairs = Hash[*100.times.map(&:to_s)].to_a
     assert_equal expected_pairs, pairs
+  end
+
+  def test_preselect_database
+    client = new_client(db: 5)
+    assert_includes client.call("CLIENT", "INFO"), " db=5 "
+    client.call("SELECT", 6)
+    assert_includes client.call("CLIENT", "INFO"), " db=6 "
+    client.close
+    assert_includes client.call("CLIENT", "INFO"), " db=5 "
+  end
+
+  def test_set_client_id
+    client = new_client(id: "peter")
+    assert_includes client.call("CLIENT", "INFO"), " name=peter "
+    client.call("CLIENT", "SETNAME", "steven")
+    assert_includes client.call("CLIENT", "INFO"), " name=steven "
+    client.close
+    assert_includes client.call("CLIENT", "INFO"), " name=peter "
+  end
+end
+
+class RedisClientTest < Minitest::Test
+  include ClientTestHelper
+  include RedisClientTests
+end
+
+class RedisPooledClientTest < Minitest::Test
+  include ClientTestHelper
+  include RedisClientTests
+
+  def test_checkout_timeout
+    pool = RedisClient.config(**tcp_config).new_pool(size: 1, timeout: 0.01)
+    Thread.new { pool.instance_variable_get(:@pool).checkout }.join
+
+    error = assert_raises RedisClient::ConnectionError do
+      pool.with {}
+    end
+    assert_includes error.message, "Couldn't checkout a connection in time: Waited 0.01 sec"
+  end
+
+  private
+
+  def new_client(**overrides)
+    RedisClient.config(**tcp_config.merge(overrides)).new_pool
   end
 end
