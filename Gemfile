@@ -17,7 +17,7 @@ group :benchmark do
   gem "benchmark-ips"
   gem "hiredis"
   gem "redis", "~> 4.6"
-  gem "stackprof"
+  gem "stackprof", platform: :mri
 end
 
-gem "byebug"
+gem "byebug", platform: :mri

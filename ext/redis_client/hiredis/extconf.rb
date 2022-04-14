@@ -45,7 +45,8 @@ if RUBY_ENGINE == "ruby"
     $CFLAGS << " -Werror"
   end
 
-  $CFLAGS << " -Wno-declaration-after-statement"
+  $CFLAGS << " -Wno-declaration-after-statement" # Older compilers
+  $CFLAGS << " -Wno-compound-token-split-by-macro" # Older rubies on macos
 
   create_makefile("redis_client/hiredis_connection")
 else

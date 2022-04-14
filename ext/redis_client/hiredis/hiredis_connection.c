@@ -496,14 +496,14 @@ static VALUE hiredis_write(VALUE self, VALUE command) {
     CONNECTION(self, connection);
     ENSURE_CONNECTED(connection);
 
-    long size = RARRAY_LEN(command);
+    int size = (int)RARRAY_LEN(command);
     VALUE _argv_handle;
     char **argv = RB_ALLOCV_N(char *, _argv_handle, size);
 
     VALUE _argv_len_handle;
     size_t *argv_len = RB_ALLOCV_N(size_t, _argv_len_handle, size);
 
-    for (long index = 0; index < size; index++) {
+    for (int index = 0; index < size; index++) {
         VALUE arg = rb_ary_entry(command, index);
         Check_Type(arg, T_STRING);
         argv[index] = RSTRING_PTR(arg);

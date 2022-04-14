@@ -73,7 +73,11 @@ namespace :benchmark do
   end
 end
 
-task default: %i[compile test rubocop]
+if RUBY_PLATFORM == "java"
+  task default: %i[test rubocop]
+else
+  task default: %i[compile test rubocop]
+end
 
 if ENV["DRIVER"] == "hiredis"
   task ci: %i[compile test]

@@ -79,7 +79,7 @@ class RedisClient
       else
         @io.with_timeout(timeout) { RESP3.load(@io) }
       end
-    rescue SystemCallError, IOError => error
+    rescue SystemCallError, IOError, OpenSSL::SSL::SSLError => error
       raise ConnectionError, error.message
     end
   end
