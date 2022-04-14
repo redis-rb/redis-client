@@ -9,11 +9,14 @@ class RedisClient
   Error = Class.new(StandardError)
 
   ConnectionError = Class.new(Error)
+
+  FailoverError = Class.new(ConnectionError)
+
   TimeoutError = Class.new(ConnectionError)
   ReadTimeoutError = Class.new(TimeoutError)
   WriteTimeoutError = Class.new(TimeoutError)
   ConnectTimeoutError = Class.new(TimeoutError)
-  FailoverError = Class.new(ConnectionError)
+  CheckoutTimeoutError = Class.new(ConnectTimeoutError)
 
   class CommandError < Error
     class << self
@@ -69,6 +72,11 @@ class RedisClient
     @raw_connection = nil
     @disable_reconnection = false
   end
+
+  def with(_options = nil)
+    yield self
+  end
+  alias_method :then, :with
 
   def timeout=(timeout)
     @connect_timeout = @read_timeout = @write_timeout = timeout
@@ -423,3 +431,4 @@ class RedisClient
 end
 
 require "redis_client/resp3"
+require "redis_client/pooled"
