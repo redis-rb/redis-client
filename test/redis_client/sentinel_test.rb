@@ -12,11 +12,7 @@ class RedisClient
     end
 
     def teardown
-      unless healthy_master?
-        puts
-        puts "Restarting services"
-        Servers::ALL.reset
-      end
+      Servers::ALL.reset
     end
 
     def test_new_client
@@ -165,18 +161,6 @@ class RedisClient
         driver: ENV.fetch("DRIVER", "ruby").to_sym,
         **kwargs,
       )
-    end
-
-    def healthy_master?
-      Servers::SENTINELS.each do |sentinel|
-        sentinel_client = RedisClient.new(host: sentinel.host, port: sentinel.port)
-        return false unless sentinel_client.call("SENTINEL", "get-master-addr-by-name", "cache") == [Servers::REDIS.host, Servers::REDIS.port.to_s]
-      end
-
-      client = RedisClient.new(host: Servers::REDIS.host, port: Servers::REDIS.port)
-      return false unless client.call("ROLE")&.first == "master"
-
-      true
     end
   end
 end

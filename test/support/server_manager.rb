@@ -3,9 +3,22 @@
 require "pathname"
 
 class ServerManager
+  module NullIO
+    extend self
+
+    def puts(_str)
+      nil
+    end
+
+    def print(_str)
+      nil
+    end
+  end
+
   ROOT = Pathname.new(File.expand_path("../../", __dir__))
 
   attr_reader :name, :host, :port, :real_port, :command
+  attr_accessor :out
 
   def initialize(name, port:, command: nil, real_port: port, host: "127.0.0.1")
     @name = name
@@ -13,26 +26,27 @@ class ServerManager
     @port = port
     @real_port = real_port
     @command = command
+    @out = $stderr
   end
 
   def spawn
     if alive?
-      $stderr.puts "#{name} already running with pid=#{pid}"
+      @out.puts "#{name} already running with pid=#{pid}"
     else
       pid_file.parent.mkpath
-      $stderr.print "starting #{name}... "
+      @out.print "starting #{name}... "
       pid = Process.spawn(*command, out: log_file.to_s, err: log_file.to_s)
       pid_file.write(pid.to_s)
-      $stderr.puts "started with pid=#{pid}"
+      @out.puts "started with pid=#{pid}"
     end
   end
 
   def wait(timeout: 5)
-    $stderr.print "Waiting for #{name} (port #{real_port})..."
+    @out.print "Waiting for #{name} (port #{real_port})..."
     if wait_until_ready(timeout: timeout)
-      $stderr.puts " ready."
+      @out.puts " ready."
     else
-      $stderr.puts " timedout."
+      @out.puts " timedout."
     end
   end
 
@@ -102,12 +116,22 @@ class ServerList
     @servers = servers
   end
 
+  def silence
+    @servers.each { |s| s.out = ServerManager::NullIO }
+    yield
+  ensure
+    @servers.each { |s| s.out = $stderr }
+  end
+
   def prepare
     shutdown
     @servers.each(&:spawn)
     @servers.each(&:wait)
   end
-  alias_method :reset, :prepare
+
+  def reset
+    silence { prepare }
+  end
 
   def shutdown
     @servers.reverse_each(&:shutdown)
