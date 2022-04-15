@@ -56,7 +56,7 @@ NOTE: Raw `RedisClient` instances must not be shared between threads. Make sure 
 For simple use cases where only a single connection is needed, you can use the `RedisClient.new` shortcut:
 
 ```ruby
-redis = RedisClient.new(host: "10.0.1.1", port: 6380, db: 15)
+redis = RedisClient.new
 redis.call("GET", "mykey")
 ```
 
