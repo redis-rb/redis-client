@@ -155,6 +155,10 @@ static void *reply_create_string(const redisReadTask *task, char *cstr, size_t l
         rb_enc_associate(string, rb_ascii8bit_encoding());
     }
 
+    if (task->type == REDIS_REPLY_STATUS) {
+      rb_str_freeze(string);
+    }
+
     if (task->type == REDIS_REPLY_ERROR) {
         string = rb_funcall(rb_eRedisClientCommandError, id_parse, 1, string);
     }

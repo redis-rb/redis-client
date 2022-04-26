@@ -17,6 +17,11 @@ module RedisClientTests
     assert_equal "PONG", @redis.call("PING")
   end
 
+  def test_status_strings_are_frozen
+    assert_predicate @redis.call("SET", "str", "42"), :frozen?
+    assert_predicate @redis.call("PING"), :frozen?
+  end
+
   def test_argument_casting_numeric
     assert_equal "OK", @redis.call("SET", "str", 42)
     assert_equal "42", @redis.call("GET", "str")

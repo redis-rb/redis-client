@@ -147,7 +147,7 @@ class RedisClient
       str = io.gets_chomp
       str.force_encoding(Encoding.default_external)
       str.force_encoding(Encoding::BINARY) unless str.valid_encoding?
-      str
+      str.freeze
     end
 
     def parse_error(io)
