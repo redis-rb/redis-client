@@ -38,6 +38,13 @@
 #include "hiredis.h"
 #include "hiredis_ssl.h"
 
+#if !defined(HAVE_RB_HASH_NEW_CAPA)
+static inline VALUE rb_hash_new_capa(long capa)
+{
+  return rb_hash_new();
+}
+#endif
+
 static VALUE rb_cSet, rb_eRedisClientCommandError, rb_eRedisClientConnectionError;
 static VALUE rb_eRedisClientConnectTimeoutError, rb_eRedisClientReadTimeoutError, rb_eRedisClientWriteTimeoutError;
 static ID id_parse, id_add, id_new;
@@ -162,7 +169,7 @@ static void *reply_create_array(const redisReadTask *task, size_t elements) {
             value = rb_ary_new_capa(elements);
             break;
         case REDIS_REPLY_MAP:
-            value = rb_hash_new();
+            value = rb_hash_new_capa(elements / 2);
             break;
         case REDIS_REPLY_SET:
             value = rb_funcallv(rb_cSet, id_new, 0, NULL);

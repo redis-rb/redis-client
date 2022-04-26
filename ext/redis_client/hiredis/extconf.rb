@@ -3,6 +3,8 @@
 require "mkmf"
 
 if RUBY_ENGINE == "ruby"
+  have_func("rb_hash_new_capa", "ruby.h")
+
   hiredis_dir = File.expand_path('vendor', __dir__)
 
   make_program = with_config("make-prog", ENV["MAKE"])
