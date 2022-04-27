@@ -58,6 +58,14 @@ class RedisClient
       @io.close
     end
 
+    def read_timeout=(timeout)
+      @io.read_timeout = timeout if @io
+    end
+
+    def write_timeout=(timeout)
+      @io.write_timeout = timeout if @io
+    end
+
     def write(command)
       buffer = RESP3.dump(command)
       begin

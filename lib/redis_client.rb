@@ -6,6 +6,29 @@ require "redis_client/sentinel_config"
 require "redis_client/connection"
 
 class RedisClient
+  module Common
+    attr_reader :config, :id
+    attr_accessor :connect_timeout, :read_timeout, :write_timeout
+
+    def initialize(
+      config,
+      id: config.id,
+      connect_timeout: config.connect_timeout,
+      read_timeout: config.read_timeout,
+      write_timeout: config.write_timeout
+    )
+      @config = config
+      @id = id
+      @connect_timeout = connect_timeout
+      @read_timeout = read_timeout
+      @write_timeout = write_timeout
+    end
+
+    def timeout=(timeout)
+      @connect_timeout = @read_timeout = @write_timeout = timeout
+    end
+  end
+
   Error = Class.new(StandardError)
 
   ConnectionError = Class.new(Error)
@@ -54,21 +77,10 @@ class RedisClient
     end
   end
 
-  attr_reader :config, :id
-  attr_accessor :connect_timeout, :read_timeout, :write_timeout
+  include Common
 
-  def initialize(
-    config,
-    id: config.id,
-    connect_timeout: config.connect_timeout,
-    read_timeout: config.read_timeout,
-    write_timeout: config.write_timeout
-  )
-    @config = config
-    @id = id
-    @connect_timeout = connect_timeout
-    @read_timeout = read_timeout
-    @write_timeout = write_timeout
+  def initialize(config, **)
+    super
     @raw_connection = nil
     @disable_reconnection = false
   end
@@ -83,7 +95,18 @@ class RedisClient
   alias_method :then, :with
 
   def timeout=(timeout)
-    @connect_timeout = @read_timeout = @write_timeout = timeout
+    super
+    raw_connection.read_timeout = raw_connection.write_timeout = timeout if connected?
+  end
+
+  def read_timeout=(timeout)
+    super
+    raw_connection.read_timeout = timeout if connected?
+  end
+
+  def write_timeout=(timeout)
+    super
+    raw_connection.write_timeout = timeout if connected?
   end
 
   def pubsub

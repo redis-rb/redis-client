@@ -7,6 +7,8 @@ class RedisClient
     EOL = "\r\n".b.freeze
     EOL_SIZE = EOL.bytesize
 
+    attr_accessor :read_timeout, :write_timeout
+
     def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096)
       @io = io
       @buffer = "".b

@@ -6,17 +6,29 @@ class RedisClient
   class Pooled
     EMPTY_HASH = {}.freeze
 
-    attr_reader :config
+    include Common
 
-    def initialize(config, **kwargs)
-      @config = config
+    def initialize(
+      config,
+      id: config.id,
+      connect_timeout: config.connect_timeout,
+      read_timeout: config.read_timeout,
+      write_timeout: config.write_timeout,
+      **kwargs
+    )
+      super(config, id: id, connect_timeout: connect_timeout, read_timeout: read_timeout, write_timeout: write_timeout)
       @pool_kwargs = kwargs
       @pool = new_pool
       @mutex = Mutex.new
     end
 
-    def with(options = EMPTY_HASH, &block)
-      pool.with(options, &block)
+    def with(options = EMPTY_HASH)
+      pool.with(options) do |client|
+        client.connect_timeout = connect_timeout
+        client.read_timeout = read_timeout
+        client.write_timeout = write_timeout
+        yield client
+      end
     rescue ConnectionPool::TimeoutError => error
       raise CheckoutTimeoutError, "Couldn't checkout a connection in time: #{error.message}"
     end

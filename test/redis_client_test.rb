@@ -413,6 +413,18 @@ module RedisClientTests
       client.call("PING")
     end
   end
+
+  def test_timeouts_are_adjustable_on_the_client
+    @redis.close
+    @redis.connect_timeout = 1
+    @redis.read_timeout = 1
+    @redis.write_timeout = 1
+
+    @redis.call("PING")
+    @redis.connect_timeout = 2
+    @redis.read_timeout = 2
+    @redis.write_timeout = 2
+  end
 end
 
 class RedisClientTest < Minitest::Test

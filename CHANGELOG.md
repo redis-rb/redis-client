@@ -1,5 +1,6 @@
 # Unreleased
 
+- Fix `read_timeout=` and `write_timeout=` to apply even when the client or pool is already connected.
 - Properly convert DNS resolution errors into `RedisClient::ConnectionError`. Previously it would raise `SocketError`
 
 # 0.1.0
