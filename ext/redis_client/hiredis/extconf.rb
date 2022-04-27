@@ -39,9 +39,17 @@ if RUBY_ENGINE == "ruby"
   end
 
   $CFLAGS << " -I#{hiredis_dir}"
-  $LDFLAGS << " #{hiredis_dir}/libhiredis.a #{hiredis_dir}/libhiredis_ssl.a -lssl -lcrypto"
+  $LDFLAGS << " -lssl -lcrypto"
+  $libs << " #{hiredis_dir}/libhiredis.a #{hiredis_dir}/libhiredis_ssl.a "
   $CFLAGS << " -O3"
   $CFLAGS << " -std=c99 "
+
+  case RbConfig::CONFIG['CC']
+  when /gcc/i
+    $LDFLAGS << ' -Wl,--version-script="' << File.join(__dir__, 'export.gcc') << '"'
+  when /clang/i
+    $LDFLAGS << ' -Wl,-exported_symbols_list,"' << File.join(__dir__, 'export.clang') << '"'
+  end
 
   if ENV["EXT_PEDANTIC"]
     $CFLAGS << " -Werror"
