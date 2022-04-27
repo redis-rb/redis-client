@@ -439,6 +439,7 @@ static VALUE hiredis_connect_finish(hiredis_connection_t *connection, redisConte
 
     /* Check for socket error */
     if (getsockopt(context->fd, SOL_SOCKET, SO_ERROR, &optval, &optlen) < 0) {
+        context->err = REDIS_ERR_IO;
         redis_raise_error_and_disconnect(context, rb_eRedisClientConnectTimeoutError);
     }
 
