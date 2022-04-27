@@ -407,30 +407,32 @@ class RedisClient
   end
 
   def raw_connection
-    @raw_connection ||= begin
-      connection = config.driver.new(
-        config,
-        connect_timeout: connect_timeout,
-        read_timeout: read_timeout,
-        write_timeout: write_timeout,
-      )
+    @raw_connection ||= connect
+  end
 
-      prelude = config.connection_prelude.dup
+  def connect
+    connection = config.driver.new(
+      config,
+      connect_timeout: connect_timeout,
+      read_timeout: read_timeout,
+      write_timeout: write_timeout,
+    )
 
-      if id
-        prelude << ["CLIENT", "SETNAME", id.to_s]
-      end
+    prelude = config.connection_prelude.dup
 
-      if config.sentinel?
-        prelude << ["ROLE"]
-        role, = call_pipelined(connection, prelude).last
-        config.check_role!(role)
-      else
-        call_pipelined(connection, prelude)
-      end
-
-      connection
+    if id
+      prelude << ["CLIENT", "SETNAME", id.to_s]
     end
+
+    if config.sentinel?
+      prelude << ["ROLE"]
+      role, = call_pipelined(connection, prelude).last
+      config.check_role!(role)
+    else
+      call_pipelined(connection, prelude)
+    end
+
+    connection
   end
 end
 
