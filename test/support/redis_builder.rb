@@ -12,7 +12,7 @@ class RedisBuilder
   def initialize(redis_branch, tmp_dir)
     @redis_branch = redis_branch
     @tmp_dir = tmp_dir
-    @build_dir = File.join(@tmp_dir, "cache", "redis-#{redis_branch}")
+    @build_dir = Servers::CACHE_DIR.join("redis-#{redis_branch}").to_s
   end
 
   def bin_path

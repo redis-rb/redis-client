@@ -5,6 +5,9 @@ require_relative "server_manager"
 
 module Servers
   ROOT = Pathname.new(File.expand_path("../../", __dir__))
+  platform = `echo $(uname -m)-$(uname -s | tr '[:upper:]' '[:lower:]')`.strip
+  CACHE_DIR = ROOT.join("tmp/cache", platform)
+
   HOST = "127.0.0.1"
   CERTS_PATH = ServerManager::ROOT.join("test/fixtures/certs")
 
@@ -149,7 +152,7 @@ module Servers
   ].freeze
 
   class ToxiproxyManager < ServerManager
-    BIN = ROOT.join("bin/toxiproxy-server")
+    BIN = CACHE_DIR.join("toxiproxy-server")
 
     def spawn
       system(ROOT.join("bin/install-toxiproxy").to_s) unless BIN.exist?

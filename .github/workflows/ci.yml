@@ -43,7 +43,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: tmp/cache
-          key: "local-tmp-redis-${{ matrix.redis }}-on-${{ matrix.os }}"
+          key: "local-tmp-cache-${{ matrix.redis }}-on-${{ matrix.os }}"
       - name: Lower system timeout
         run: sudo sysctl -w net.ipv4.tcp_syn_retries=2
       - name: Test
@@ -76,7 +76,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: tmp/cache
-          key: "local-tmp-redis-${{ matrix.redis }}-on-${{ matrix.os }}"
+          key: "local-tmp-cache-${{ matrix.redis }}-on-${{ matrix.os }}"
       - name: Lower system timeout
         run: sudo sysctl -w net.ipv4.tcp_syn_retries=2
       - name: Test
