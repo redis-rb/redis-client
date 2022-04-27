@@ -6,11 +6,17 @@ require "redis_client/buffered_io"
 
 class RedisClient
   class Connection
+    SUPPORTS_RESOLV_TIMEOUT = Socket.method(:tcp).parameters.any? { |p| p.last == :resolv_timeout }
+
     def initialize(config, connect_timeout:, read_timeout:, write_timeout:)
       socket = if config.path
         UNIXSocket.new(config.path)
       else
-        sock = Socket.tcp(config.host, config.port, connect_timeout: connect_timeout)
+        sock = if SUPPORTS_RESOLV_TIMEOUT
+          Socket.tcp(config.host, config.port, connect_timeout: connect_timeout, resolv_timeout: connect_timeout)
+        else
+          Socket.tcp(config.host, config.port, connect_timeout: connect_timeout)
+        end
         # disables Nagle's Algorithm, prevents multiple round trips with MULTI
         sock.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
         sock
@@ -40,7 +46,7 @@ class RedisClient
       )
     rescue Errno::ETIMEDOUT => error
       raise ConnectTimeoutError, error.message
-    rescue SystemCallError, OpenSSL::SSL::SSLError => error
+    rescue SystemCallError, OpenSSL::SSL::SSLError, SocketError => error
       raise ConnectionError, error.message
     end
 

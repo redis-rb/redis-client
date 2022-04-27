@@ -406,6 +406,13 @@ module RedisClientTests
     assert_equal Encoding::BINARY, str.encoding
     assert_predicate str, :valid_encoding?
   end
+
+  def test_dns_resolution_failure
+    client = RedisClient.new(host: "does-not-exist.localhost")
+    assert_raises RedisClient::ConnectionError do
+      client.call("PING")
+    end
+  end
 end
 
 class RedisClientTest < Minitest::Test
