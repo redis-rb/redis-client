@@ -4,6 +4,7 @@ require "redis_client/version"
 require "redis_client/config"
 require "redis_client/sentinel_config"
 require "redis_client/connection"
+require "redis_client/middlewares"
 
 class RedisClient
   module Common
@@ -75,6 +76,10 @@ class RedisClient
         super(config(**(arg || {}), **kwargs))
       end
     end
+
+    def register(middleware)
+      Middlewares.extend(middleware)
+    end
   end
 
   include Common
@@ -117,43 +122,28 @@ class RedisClient
 
   def call(*command)
     command = RESP3.coerce_command!(command)
-    result = ensure_connected do |connection|
-      connection.write(command)
-      connection.read
-    end
-
-    if result.is_a?(CommandError)
-      raise result
-    else
-      result
+    ensure_connected do |connection|
+      Middlewares.call(command, config) do
+        connection.call(command, nil)
+      end
     end
   end
 
   def call_once(*command)
     command = RESP3.coerce_command!(command)
-    result = ensure_connected(retryable: false) do |connection|
-      connection.write(command)
-      connection.read
-    end
-
-    if result.is_a?(CommandError)
-      raise result
-    else
-      result
+    ensure_connected(retryable: false) do |connection|
+      Middlewares.call(command, config) do
+        connection.call(command, nil)
+      end
     end
   end
 
   def blocking_call(timeout, *command)
     command = RESP3.coerce_command!(command)
-    result = ensure_connected do |connection|
-      connection.write(command)
-      connection.read(timeout)
-    end
-
-    if result.is_a?(CommandError)
-      raise result
-    else
-      result
+    ensure_connected do |connection|
+      Middlewares.call(command, config) do
+        connection.call(command, timeout)
+      end
     end
   end
 
@@ -207,7 +197,10 @@ class RedisClient
       []
     else
       ensure_connected(retryable: pipeline._retryable?) do |connection|
-        call_pipelined(connection, pipeline._commands, pipeline._timeouts)
+        commands = pipeline._commands
+        Middlewares.call_pipelined(commands, config) do
+          connection.call_pipelined(commands, pipeline._timeouts)
+        end
       end
     end
   end
@@ -220,7 +213,10 @@ class RedisClient
         call("WATCH", *watch)
         begin
           if transaction = build_transaction(&block)
-            call_pipelined(connection, transaction._commands).last
+            commands = transaction._commands
+            Middlewares.call_pipelined(commands, config) do
+              connection.call_pipelined(commands, nil)
+            end.last
           else
             call("UNWATCH")
             []
@@ -236,7 +232,10 @@ class RedisClient
         []
       else
         ensure_connected(retryable: transaction._retryable?) do |connection|
-          call_pipelined(connection, transaction._commands).last
+          commands = transaction._commands
+          Middlewares.call_pipelined(commands, config) do
+            connection.call_pipelined(commands, nil)
+          end.last
         end
       end
     end
@@ -370,29 +369,6 @@ class RedisClient
     nil
   end
 
-  def call_pipelined(connection, commands, timeouts = nil)
-    exception = nil
-
-    size = commands.size
-    results = Array.new(commands.size)
-    connection.write_multi(commands)
-
-    size.times do |index|
-      timeout = timeouts && timeouts[index]
-      result = connection.read(timeout)
-      if result.is_a?(CommandError)
-        exception ||= result
-      end
-      results[index] = result
-    end
-
-    if exception
-      raise exception
-    else
-      results
-    end
-  end
-
   def ensure_connected(retryable: true)
     if @disable_reconnection
       yield @raw_connection
@@ -447,12 +423,13 @@ class RedisClient
       prelude << ["CLIENT", "SETNAME", id.to_s]
     end
 
+    # The connection prelude is deliberately not sent to Middlewares
     if config.sentinel?
       prelude << ["ROLE"]
-      role, = call_pipelined(connection, prelude).last
+      role, = connection.call_pipelined(prelude, nil).last
       config.check_role!(role)
     else
-      call_pipelined(connection, prelude)
+      connection.call_pipelined(prelude, nil)
     end
 
     connection

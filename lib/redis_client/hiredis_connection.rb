@@ -4,6 +4,8 @@ require "redis_client/hiredis_connection.so"
 
 class RedisClient
   class HiredisConnection
+    include Connection::Common
+
     class SSLContext
       def initialize(ca_file: nil, ca_path: nil, cert: nil, key: nil, hostname: nil)
         if (error = init(ca_file, ca_path, cert, key, hostname))

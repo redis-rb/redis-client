@@ -270,6 +270,25 @@ end
 
 ## Production
 
+### Instrumentation
+
+`redis-client` offers a public instrumentation API monitoring tools.
+
+```ruby
+module MyRedisInstrumentation
+  def call(command, redis_config)
+    MyMonitoringService.instrument("redis.query") { super }
+  end
+
+  def call_pipelined(commands, redis_config)
+    MyMonitoringService.instrument("redis.pipeline") { super }
+  end
+end
+RedisClient.register(MyRedisInstrumentation)
+```
+
+Note that this instrumentation is global.
+
 ### Timeouts
 
 The client allows you to configure connect, read, and write timeouts.
