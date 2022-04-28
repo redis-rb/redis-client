@@ -19,7 +19,15 @@ end
 Rake::TestTask.new(:test) do |t|
   t.libs << "test"
   t.libs << "lib"
-  t.test_files = FileList["test/**/*_test.rb"]
+  t.test_files = FileList["test/**/*_test.rb"].exclude("test/sentinel/*_test.rb")
+end
+
+namespace :test do
+  Rake::TestTask.new(:sentinel) do |t|
+    t.libs << "test"
+    t.libs << "lib"
+    t.test_files = FileList["test/sentinel/*_test.rb"]
+  end
 end
 
 namespace :hiredis do
@@ -74,13 +82,13 @@ namespace :benchmark do
 end
 
 if RUBY_PLATFORM == "java"
-  task default: %i[test rubocop]
+  task default: %i[test test:sentinel rubocop]
 else
-  task default: %i[compile test rubocop]
+  task default: %i[compile test test:sentinel rubocop]
 end
 
 if ENV["DRIVER"] == "hiredis"
-  task ci: %i[compile test]
+  task ci: %i[compile test test:sentinel]
 else
-  task ci: %i[test]
+  task ci: %i[test test:sentinel]
 end
