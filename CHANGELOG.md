@@ -1,5 +1,9 @@
 # Unreleased
 
+# 0.2.1
+
+- Use a more robust way to detect the current compiler.
+
 # 0.2.0
 - Added `RedisClient.register` as a public instrumentation API.
 - Fix `read_timeout=` and `write_timeout=` to apply even when the client or pool is already connected.
