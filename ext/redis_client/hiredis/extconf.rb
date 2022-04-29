@@ -42,11 +42,10 @@ if RUBY_ENGINE == "ruby" && !RUBY_ENGINE.match?(/mswin/)
   $CFLAGS << " -O3"
   $CFLAGS << " -std=c99 "
 
-  case RbConfig::CONFIG['CC']
-  when /gcc/i
-    $LDFLAGS << ' -Wl,--version-script="' << File.join(__dir__, 'export.gcc') << '"'
-  when /clang/i
+  if `cc --version`.match?(/ clang /i) || RbConfig::CONFIG['CC'].match?(/clang/i)
     $LDFLAGS << ' -Wl,-exported_symbols_list,"' << File.join(__dir__, 'export.clang') << '"'
+  elsif RbConfig::CONFIG['CC'].match?(/gcc/i)
+    $LDFLAGS << ' -Wl,--version-script="' << File.join(__dir__, 'export.gcc') << '"'
   end
 
   if ENV["EXT_PEDANTIC"]
