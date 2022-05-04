@@ -5,6 +5,7 @@ require "redis-client"
 require "toxiproxy"
 
 Dir[File.join(__dir__, "support/**/*.rb")].sort.each { |f| require f }
+Dir[File.join(__dir__, "shared/**/*.rb")].sort.each { |f| require f }
 
 Servers.build_redis
 Servers::ALL.prepare
