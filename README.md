@@ -145,18 +145,52 @@ redis.call("LPUSH", "list", "1", "2", "3", "4")
 Hashes are flatenned as well:
 
 ```ruby
-redis.call("HMSET", "hash", foo: 1, bar: 2)
-redis.call("SET", "key", "value", ex: 5)
+redis.call("HMSET", "hash", { "foo" => "1", "bar" => "2" })
 ```
 
 is equivalent to:
 
 ```ruby
 redis.call("HMSET", "hash", "foo", "1", "bar", "2")
-redis.call("SET", "key", "value", "ex", "5")
 ```
 
 Any other type requires the caller to explictly cast the argument as a string.
+
+Keywords arguments are treated as Redis command flags:
+
+```ruby
+redis.call("SET", "mykey", "value", nx: true, ex: 60)
+redis.call("SET", "mykey", "value", nx: false, ex: nil)
+```
+
+is equivalent to:
+
+```ruby
+redis.call("SET", "mykey", "value", "nx", "ex", "60")
+redis.call("SET", "mykey", "value")
+```
+
+If flags are built dynamically, you'll have to explictly pass them as keyword arguments with `**`:
+
+```ruby
+flags = {}
+flags[:nx] = true if something?
+redis.call("SET", "mykey", "value", **flags)
+```
+
+**Important Note**: because of the keyword argument semantic change between Ruby 2 and Ruby 3,
+unclosed hash literals with string keys may be interpreted differently:
+
+```ruby
+redis.call("HMSET", "hash", "foo" => "bar")
+```
+
+On Ruby 2 `"foo" => "bar"` will be passed as a postional argument, but on Ruby 3 it will be interpreted as keyword
+arguments. To avoid such problem, make sure to enclose hash literals:
+
+```ruby
+redis.call("HMSET", "hash", { "foo" => "bar" })
+```
 
 ### Blocking commands
 

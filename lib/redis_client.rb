@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "redis_client/version"
+require "redis_client/command_builder"
 require "redis_client/config"
 require "redis_client/sentinel_config"
 require "redis_client/connection"
@@ -23,6 +24,7 @@ class RedisClient
       @connect_timeout = connect_timeout
       @read_timeout = read_timeout
       @write_timeout = write_timeout
+      @command_builder = config.command_builder
     end
 
     def timeout=(timeout)
@@ -115,13 +117,13 @@ class RedisClient
   end
 
   def pubsub
-    sub = PubSub.new(ensure_connected)
+    sub = PubSub.new(ensure_connected, @command_builder)
     @raw_connection = nil
     sub
   end
 
-  def call(*command)
-    command = RESP3.coerce_command!(command)
+  def call(*command, **kwargs)
+    command = @command_builder.generate!(command, kwargs)
     ensure_connected do |connection|
       Middlewares.call(command, config) do
         connection.call(command, nil)
@@ -129,8 +131,8 @@ class RedisClient
     end
   end
 
-  def call_once(*command)
-    command = RESP3.coerce_command!(command)
+  def call_once(*command, **kwargs)
+    command = @command_builder.generate!(command, kwargs)
     ensure_connected(retryable: false) do |connection|
       Middlewares.call(command, config) do
         connection.call(command, nil)
@@ -138,8 +140,8 @@ class RedisClient
     end
   end
 
-  def blocking_call(timeout, *command)
-    command = RESP3.coerce_command!(command)
+  def blocking_call(timeout, *command, **kwargs)
+    command = @command_builder.generate!(command, kwargs)
     ensure_connected do |connection|
       Middlewares.call(command, config) do
         connection.call(command, timeout)
@@ -190,7 +192,7 @@ class RedisClient
   end
 
   def pipelined
-    pipeline = Pipeline.new
+    pipeline = Pipeline.new(@command_builder)
     yield pipeline
 
     if pipeline._size == 0
@@ -250,12 +252,13 @@ class RedisClient
   end
 
   class PubSub
-    def initialize(raw_connection)
+    def initialize(raw_connection, command_builder)
       @raw_connection = raw_connection
+      @command_builder = command_builder
     end
 
-    def call(*command)
-      raw_connection.write(RESP3.coerce_command!(command))
+    def call(*command, **kwargs)
+      raw_connection.write(@command_builder.generate!(command, kwargs))
       nil
     end
 
@@ -281,20 +284,21 @@ class RedisClient
   end
 
   class Multi
-    def initialize
+    def initialize(command_builder)
+      @command_builder = command_builder
       @size = 0
       @commands = []
       @retryable = true
     end
 
-    def call(*command)
-      @commands << RESP3.coerce_command!(command)
+    def call(*command, **kwargs)
+      @commands << @command_builder.generate!(command, kwargs)
       nil
     end
 
-    def call_once(*command)
+    def call_once(*command, **kwargs)
       @retryable = false
-      @commands << RESP3.coerce_command!(command)
+      @commands << @command_builder.generate!(command, kwargs)
       nil
     end
 
@@ -320,15 +324,15 @@ class RedisClient
   end
 
   class Pipeline < Multi
-    def initialize
+    def initialize(_command_builder)
       super
       @timeouts = nil
     end
 
-    def blocking_call(timeout, *command)
+    def blocking_call(timeout, *command, **kwargs)
       @timeouts ||= []
       @timeouts[@commands.size] = timeout
-      @commands << RESP3.coerce_command!(command)
+      @commands << @command_builder.generate!(command, kwargs)
       nil
     end
 
@@ -344,7 +348,7 @@ class RedisClient
   private
 
   def build_transaction
-    transaction = Multi.new
+    transaction = Multi.new(@command_builder)
     transaction.call("MULTI")
     yield transaction
     transaction.call("EXEC")

@@ -1,5 +1,6 @@
 # Unreleased
 
+- Treat `#call` keyword arguments as Redis flags.
 - Fix `RedisClient#multi` returning some errors as values instead of raising them.
 
 # 0.2.1
