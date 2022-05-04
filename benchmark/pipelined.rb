@@ -19,8 +19,8 @@ benchmark("small string") do |x|
 end
 
 benchmark("large string") do |x|
-  x.report("redis-rb") { redis.pipelined { |p| 100.times { p.get("large") } } }
-  x.report("redis-client") { redis_client.pipelined { |p| 100.times { p.call("GET", "large") } } }
+  x.report("redis-rb") { redis.pipelined { |p| 100.times { p.get("large") } }.each(&:valid_encoding?) }
+  x.report("redis-client") { redis_client.pipelined { |p| 100.times { p.call("GET", "large") } }.each(&:valid_encoding?) }
 end
 
 benchmark("small list") do |x|

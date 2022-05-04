@@ -19,8 +19,8 @@ benchmark("small string") do |x|
 end
 
 benchmark("large string") do |x|
-  x.report("redis-rb") { redis.get("large") }
-  x.report("redis-client") { redis_client.call("GET", "large") }
+  x.report("redis-rb") { redis.get("large").valid_encoding? }
+  x.report("redis-client") { redis_client.call("GET", "large").valid_encoding? }
 end
 
 benchmark("small list") do |x|
