@@ -206,7 +206,7 @@ class RedisClient
   end
 
   def multi(watch: nil, &block)
-    if watch
+    results = if watch
       # WATCH is stateful, so we can't reconnect if it's used, the whole transaction
       # has to be redone.
       ensure_connected(retryable: false) do |connection|
@@ -239,6 +239,14 @@ class RedisClient
         end
       end
     end
+
+    results&.each do |result|
+      if result.is_a?(CommandError)
+        raise result
+      end
+    end
+
+    results
   end
 
   class PubSub

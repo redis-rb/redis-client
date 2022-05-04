@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fix `RedisClient#multi` returning some errors as values instead of raising them.
+
 # 0.2.1
 
 - Use a more robust way to detect the current compiler.

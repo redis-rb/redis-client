@@ -193,11 +193,45 @@ module RedisClientTests
     assert_equal "42", @redis.call("GET", "foo")
   end
 
+  def test_multi_error
+    assert_raises RedisClient::CommandError do
+      @redis.multi do |pipeline|
+        pipeline.call("DOESNOTEXIST")
+        pipeline.call("SET", "foo", "42")
+      end
+    end
+
+    assert_nil @redis.call("GET", "foo")
+  end
+
+  def test_wrong_type
+    @redis.call("SET", "str", "hello")
+
+    error = assert_raises RedisClient::CommandError do
+      @redis.call("SISMEMBER", "str", "member")
+    end
+    assert_includes error.message, "WRONGTYPE Operation against a key holding the wrong kind of value"
+
+    error = assert_raises RedisClient::CommandError do
+      @redis.pipelined do |pipeline|
+        pipeline.call("SISMEMBER", "str", "member")
+      end
+    end
+    assert_includes error.message, "WRONGTYPE Operation against a key holding the wrong kind of value"
+
+    error = assert_raises RedisClient::CommandError do
+      @redis.multi do |transaction|
+        transaction.call("SISMEMBER", "str", "member")
+      end
+    end
+    assert_includes error.message, "WRONGTYPE Operation against a key holding the wrong kind of value"
+  end
+
   def test_command_missing
     error = assert_raises RedisClient::CommandError do
       @redis.call("DOESNOTEXIST", "foo")
     end
-    assert error.message.start_with?("ERR unknown command `DOESNOTEXIST`")
+    assert_includes error.message, "ERR unknown command `DOESNOTEXIST`"
   end
 
   def test_authentication
