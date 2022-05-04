@@ -17,8 +17,10 @@ class RedisClient
     end
 
     def teardown
-      RedisClient.send(:remove_const, :Middlewares)
-      RedisClient.const_set(:Middlewares, @original_module)
+      if @original_module
+        RedisClient.send(:remove_const, :Middlewares)
+        RedisClient.const_set(:Middlewares, @original_module)
+      end
       TestMiddleware.calls.clear
       super
     end
