@@ -56,10 +56,14 @@ class RedisClient
 
   AuthenticationError = Class.new(CommandError)
   PermissionError = Class.new(CommandError)
+  ReadOnlyError = Class.new(CommandError)
+  WrongTypeError = Class.new(CommandError)
 
   CommandError::ERRORS = {
     "WRONGPASS" => AuthenticationError,
     "NOPERM" => PermissionError,
+    "READONLY" => ReadOnlyError,
+    "WRONGTYPE" => WrongTypeError,
   }.freeze
 
   class << self
