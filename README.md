@@ -192,6 +192,21 @@ arguments. To avoid such problem, make sure to enclose hash literals:
 redis.call("HMSET", "hash", { "foo" => "bar" })
 ```
 
+### Commands return values
+
+Contrary to the `redis` gem, `redis-client` doesn't do any type casting on the return value of commands.
+
+If you wish to cast the return value, you can pass a block to the `#call` familly of methods:
+
+```ruby
+redis.call("INCR", "counter") # => 1
+redis.call("GET", "counter") # => "1"
+redis.call("GET", "counter", &:to_i) # => 1
+
+redis.call("EXISTS", "counter") # => 1
+redis.call("EXISTS", "counter") { |c| c > 0 } # => true
+```
+
 ### Blocking commands
 
 For blocking commands such as `BRPOP`, a custom timeout duration can be passed as first argument of the `#blocking_call` method:

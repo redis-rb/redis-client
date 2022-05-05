@@ -1,5 +1,6 @@
 # Unreleased
 
+- `#call` now takes an optional block to cast the return value.
 - Treat `#call` keyword arguments as Redis flags.
 - Fix `RedisClient#multi` returning some errors as values instead of raising them.
 

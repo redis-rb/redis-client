@@ -426,4 +426,11 @@ module RedisClientTests
     @redis.read_timeout = 2
     @redis.write_timeout = 2
   end
+
+  def test_custom_result_casting
+    assert_equal(0, @redis.call("SISMEMBER", "set", "unknown"))
+    assert_equal(false, @redis.call("SISMEMBER", "set", "unknown") { |m| m > 0 })
+    assert_equal([false], @redis.pipelined { |p| p.call("SISMEMBER", "set", "unknown") { |m| m > 0 } })
+    assert_equal([false], @redis.multi { |p| p.call("SISMEMBER", "set", "unknown") { |m| m > 0 } })
+  end
 end

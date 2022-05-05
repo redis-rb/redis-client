@@ -124,28 +124,46 @@ class RedisClient
 
   def call(*command, **kwargs)
     command = @command_builder.generate!(command, kwargs)
-    ensure_connected do |connection|
+    result = ensure_connected do |connection|
       Middlewares.call(command, config) do
         connection.call(command, nil)
       end
+    end
+
+    if block_given?
+      yield result
+    else
+      result
     end
   end
 
   def call_once(*command, **kwargs)
     command = @command_builder.generate!(command, kwargs)
-    ensure_connected(retryable: false) do |connection|
+    result = ensure_connected(retryable: false) do |connection|
       Middlewares.call(command, config) do
         connection.call(command, nil)
       end
+    end
+
+    if block_given?
+      yield result
+    else
+      result
     end
   end
 
   def blocking_call(timeout, *command, **kwargs)
     command = @command_builder.generate!(command, kwargs)
-    ensure_connected do |connection|
+    result = ensure_connected do |connection|
       Middlewares.call(command, config) do
         connection.call(command, timeout)
       end
+    end
+
+    if block_given?
+      yield result
+    else
+      result
     end
   end
 
@@ -198,16 +216,20 @@ class RedisClient
     if pipeline._size == 0
       []
     else
-      ensure_connected(retryable: pipeline._retryable?) do |connection|
+      results = ensure_connected(retryable: pipeline._retryable?) do |connection|
         commands = pipeline._commands
         Middlewares.call_pipelined(commands, config) do
           connection.call_pipelined(commands, pipeline._timeouts)
         end
       end
+
+      pipeline._coerce!(results)
     end
   end
 
   def multi(watch: nil, &block)
+    transaction = nil
+
     results = if watch
       # WATCH is stateful, so we can't reconnect if it's used, the whole transaction
       # has to be redone.
@@ -216,7 +238,7 @@ class RedisClient
         begin
           if transaction = build_transaction(&block)
             commands = transaction._commands
-            Middlewares.call_pipelined(commands, config) do
+            results = Middlewares.call_pipelined(commands, config) do
               connection.call_pipelined(commands, nil)
             end.last
           else
@@ -242,13 +264,11 @@ class RedisClient
       end
     end
 
-    results&.each do |result|
-      if result.is_a?(CommandError)
-        raise result
-      end
+    if transaction
+      transaction._coerce!(results)
+    else
+      results
     end
-
-    results
   end
 
   class PubSub
@@ -288,22 +308,31 @@ class RedisClient
       @command_builder = command_builder
       @size = 0
       @commands = []
+      @blocks = nil
       @retryable = true
     end
 
-    def call(*command, **kwargs)
-      @commands << @command_builder.generate!(command, kwargs)
+    def call(*command, **kwargs, &block)
+      command = @command_builder.generate!(command, kwargs)
+      (@blocks ||= [])[@commands.size] = block if block_given?
+      @commands << command
       nil
     end
 
     def call_once(*command, **kwargs)
+      command = @command_builder.generate!(command, kwargs)
       @retryable = false
-      @commands << @command_builder.generate!(command, kwargs)
+      (@blocks ||= [])[@commands.size] = block if block_given?
+      @commands << command
       nil
     end
 
     def _commands
       @commands
+    end
+
+    def _blocks
+      @blocks
     end
 
     def _size
@@ -321,6 +350,24 @@ class RedisClient
     def _retryable?
       @retryable
     end
+
+    def _coerce!(results)
+      if results
+        results.each do |result|
+          if result.is_a?(CommandError)
+            raise result
+          end
+        end
+
+        @blocks&.each_with_index do |block, index|
+          if block
+            results[index - 1] = block.call(results[index - 1])
+          end
+        end
+      end
+
+      results
+    end
   end
 
   class Pipeline < Multi
@@ -330,9 +377,11 @@ class RedisClient
     end
 
     def blocking_call(timeout, *command, **kwargs)
+      command = @command_builder.generate!(command, kwargs)
       @timeouts ||= []
       @timeouts[@commands.size] = timeout
-      @commands << @command_builder.generate!(command, kwargs)
+      (@blocks ||= [])[@commands.size] = block if block_given?
+      @commands << command
       nil
     end
 
@@ -342,6 +391,18 @@ class RedisClient
 
     def _empty?
       @commands.empty?
+    end
+
+    def _coerce!(results)
+      return results unless results
+
+      @blocks&.each_with_index do |block, index|
+        if block
+          results[index] = block.call(results[index])
+        end
+      end
+
+      results
     end
   end
 
