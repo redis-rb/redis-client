@@ -11,7 +11,7 @@ class RedisClient
     DEFAULT_DB = 0
 
     module Common
-      attr_reader :db, :username, :password, :id, :ssl, :ssl_params,
+      attr_reader :db, :username, :password, :id, :ssl, :ssl_params, :command_builder,
         :connect_timeout, :read_timeout, :write_timeout, :driver, :connection_prelude
 
       alias_method :ssl?, :ssl
@@ -28,6 +28,7 @@ class RedisClient
         ssl: nil,
         ssl_params: nil,
         driver: :ruby,
+        command_builder: CommandBuilder,
         reconnect_attempts: false
       )
         @username = username || DEFAULT_USERNAME
@@ -52,6 +53,8 @@ class RedisClient
         else
           raise ArgumentError, "Unknown driver #{driver.inspect}, expected one of: `:ruby`, `:hiredis`"
         end
+
+        @command_builder = command_builder
 
         reconnect_attempts = Array.new(reconnect_attempts, 0).freeze if reconnect_attempts.is_a?(Integer)
         @reconnect_attempts = reconnect_attempts

@@ -6,40 +6,40 @@ redis-server: `Redis server v=7.0.0 sha=00000000:0 malloc=libc bits=64 build=fa9
 ### small string
 
 ```
-            redis-rb:     1249.9 i/s
-        redis-client:     2726.2 i/s - 2.18x  (± 0.00) faster
+            redis-rb:     1269.1 i/s
+        redis-client:     2735.9 i/s - 2.16x  (± 0.00) faster
 
 ```
 
 ### large string
 
 ```
-            redis-rb:      270.0 i/s
-        redis-client:      346.1 i/s - 1.28x  (± 0.00) faster
+            redis-rb:      280.1 i/s
+        redis-client:      356.2 i/s - 1.27x  (± 0.00) faster
 
 ```
 
 ### small list
 
 ```
-            redis-rb:      448.1 i/s
-        redis-client:     1119.5 i/s - 2.50x  (± 0.00) faster
+            redis-rb:      446.3 i/s
+        redis-client:     1109.2 i/s - 2.49x  (± 0.00) faster
 
 ```
 
 ### large list
 
 ```
-            redis-rb:        2.7 i/s
-        redis-client:       14.2 i/s - 5.25x  (± 0.00) faster
+            redis-rb:        2.8 i/s
+        redis-client:       14.3 i/s - 5.14x  (± 0.00) faster
 
 ```
 
 ### small hash
 
 ```
-            redis-rb:      375.4 i/s
-        redis-client:     1043.9 i/s - 2.78x  (± 0.00) faster
+            redis-rb:      375.5 i/s
+        redis-client:     1042.1 i/s - 2.77x  (± 0.00) faster
 
 ```
 
@@ -47,7 +47,7 @@ redis-server: `Redis server v=7.0.0 sha=00000000:0 malloc=libc bits=64 build=fa9
 
 ```
             redis-rb:        2.6 i/s
-        redis-client:       13.1 i/s - 5.01x  (± 0.00) faster
+        redis-client:       13.1 i/s - 4.99x  (± 0.00) faster
 
 ```
 
