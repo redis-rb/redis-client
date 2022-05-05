@@ -9,5 +9,5 @@ Dir[File.join(__dir__, "../shared/**/*.rb")].sort.each { |f| require f }
 
 Servers.build_redis
 Servers::SENTINEL_TESTS.prepare
-
 require "minitest/autorun"
+Minitest.after_run { Servers::TESTS.shutdown }
