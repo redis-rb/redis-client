@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
 require "redis_client/hiredis_connection.so"
+require "redis_client/connection_mixin"
 
 class RedisClient
   class HiredisConnection
-    include Connection::Common
+    include ConnectionMixin
 
     class SSLContext
       def initialize(ca_file: nil, ca_path: nil, cert: nil, key: nil, hostname: nil)

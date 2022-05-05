@@ -1,13 +1,62 @@
 # frozen_string_literal: true
 
+require "set"
+
 require "redis_client/version"
 require "redis_client/command_builder"
 require "redis_client/config"
 require "redis_client/sentinel_config"
-require "redis_client/connection"
 require "redis_client/middlewares"
 
 class RedisClient
+  @driver_definitions = {}
+  @drivers = {}
+
+  @default_driver = nil
+
+  class << self
+    def register_driver(name, &block)
+      @driver_definitions[name] = block
+    end
+
+    def driver(name)
+      return name if name.is_a?(Class)
+
+      name = name.to_sym
+      unless @driver_definitions.key?(name)
+        raise ArgumentError, "Unknown driver #{name.inspect}, expected one of: `#{DRIVER_DEFINITIONS.keys.inspect}`"
+      end
+
+      @drivers[name] ||= @driver_definitions[name]&.call
+    end
+
+    def default_driver
+      unless @default_driver
+        @driver_definitions.each_key do |name|
+          if @default_driver = driver(name)
+            break
+          end
+        rescue LoadError
+        end
+      end
+      @default_driver
+    end
+
+    def default_driver=(name)
+      @default_driver = driver(name)
+    end
+  end
+
+  register_driver :ruby do
+    require "redis_client/ruby_connection"
+    RubyConnection
+  end
+
+  register_driver :hiredis do
+    require "redis_client/hiredis_connection"
+    HiredisConnection
+  end
+
   module Common
     attr_reader :config, :id
     attr_accessor :connect_timeout, :read_timeout, :write_timeout
@@ -517,5 +566,6 @@ class RedisClient
   end
 end
 
-require "redis_client/resp3"
 require "redis_client/pooled"
+
+RedisClient.default_driver

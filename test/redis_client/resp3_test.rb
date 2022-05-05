@@ -2,6 +2,9 @@
 
 require "test_helper"
 
+require "redis_client/ruby_connection/buffered_io"
+require "redis_client/ruby_connection/resp3"
+
 class RedisClient
   class RESP3Test < Minitest::Test
     class StringIO < ::StringIO
@@ -117,7 +120,7 @@ class RedisClient
 
     def assert_parses(expected, payload)
       raw_io = StringIO.new(payload.b)
-      io = RedisClient::BufferedIO.new(raw_io, read_timeout: 1, write_timeout: 1)
+      io = RedisClient::RubyConnection::BufferedIO.new(raw_io, read_timeout: 1, write_timeout: 1)
       if expected.nil?
         assert_nil RESP3.load(io)
       else

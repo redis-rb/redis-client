@@ -2,46 +2,13 @@
 
 require "socket"
 require "openssl"
-require "redis_client/buffered_io"
+require "redis_client/connection_mixin"
+require "redis_client/ruby_connection/buffered_io"
+require "redis_client/ruby_connection/resp3"
 
 class RedisClient
-  class Connection
-    module Common
-      def call(command, timeout)
-        write(command)
-        result = read(timeout)
-        if result.is_a?(CommandError)
-          raise result
-        else
-          result
-        end
-      end
-
-      def call_pipelined(commands, timeouts)
-        exception = nil
-
-        size = commands.size
-        results = Array.new(commands.size)
-        write_multi(commands)
-
-        size.times do |index|
-          timeout = timeouts && timeouts[index]
-          result = read(timeout)
-          if result.is_a?(CommandError)
-            exception ||= result
-          end
-          results[index] = result
-        end
-
-        if exception
-          raise exception
-        else
-          results
-        end
-      end
-    end
-
-    include Common
+  class RubyConnection
+    include ConnectionMixin
 
     SUPPORTS_RESOLV_TIMEOUT = Socket.method(:tcp).parameters.any? { |p| p.last == :resolv_timeout }
 

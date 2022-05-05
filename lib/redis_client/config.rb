@@ -27,7 +27,7 @@ class RedisClient
         connect_timeout: timeout,
         ssl: nil,
         ssl_params: nil,
-        driver: :ruby,
+        driver: nil,
         command_builder: CommandBuilder,
         reconnect_attempts: false
       )
@@ -42,17 +42,7 @@ class RedisClient
         @read_timeout = read_timeout
         @write_timeout = write_timeout
 
-        @driver = case driver
-        when :ruby
-          Connection
-        when :hiredis
-          unless defined?(RedisClient::HiredisConnection)
-            require "redis_client/hiredis_connection"
-          end
-          HiredisConnection
-        else
-          raise ArgumentError, "Unknown driver #{driver.inspect}, expected one of: `:ruby`, `:hiredis`"
-        end
+        @driver = driver ? RedisClient.driver(driver) : RedisClient.default_driver
 
         @command_builder = command_builder
 
