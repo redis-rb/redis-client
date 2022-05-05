@@ -58,7 +58,7 @@ namespace :benchmark do
           env = {}
           args = []
           args << "--yjit" if mode == :yjit
-          env["DRIVER"] = "hiredis" if mode == :hiredis
+          env["DRIVER"] = mode == :hiredis ? "hiredis" : "ruby"
           system(env, RbConfig.ruby, *args, "benchmark/#{suite}.rb", out: output)
         end
 

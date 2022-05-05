@@ -7,6 +7,18 @@ class RedisClient
   class HiredisConnection
     include ConnectionMixin
 
+    class << self
+      def ssl_context(ssl_params)
+        HiredisConnection::SSLContext.new(
+          ca_file: ssl_params[:ca_file],
+          ca_path: ssl_params[:ca_path],
+          cert: ssl_params[:cert],
+          key: ssl_params[:key],
+          hostname: ssl_params[:hostname],
+        )
+      end
+    end
+
     class SSLContext
       def initialize(ca_file: nil, ca_path: nil, cert: nil, key: nil, hostname: nil)
         if (error = init(ca_file, ca_path, cert, key, hostname))
@@ -27,7 +39,7 @@ class RedisClient
       end
 
       if config.ssl
-        init_ssl(config.hiredis_ssl_context)
+        init_ssl(config.ssl_context)
       end
     end
 

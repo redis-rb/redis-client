@@ -31,25 +31,33 @@ if RUBY_ENGINE == "ruby" && !RUBY_ENGINE.match?(/mswin/)
   end
 
   Dir.chdir(hiredis_dir) do
-    flags = %(CFLAGS="-I#{openssl_include}" SSL_LDFLAGS="-L#{openssl_lib}") if openssl_lib
-    success = system("#{make_program} static USE_SSL=1 #{flags}")
-    raise "Building hiredis failed" unless success
+    flags = ["static", "USE_SSL=1"]
+    if openssl_lib
+      flags << %(CFLAGS="-I#{openssl_include}") << %(SSL_LDFLAGS="-L#{openssl_lib}")
+    end
+
+    flags << "OPTIMIZATION=-g" if ENV["EXT_PEDANTIC"]
+
+    unless system(make_program, *flags)
+      raise "Building hiredis failed"
+    end
   end
 
   $CFLAGS << " -I#{hiredis_dir}"
   $LDFLAGS << " -lssl -lcrypto"
   $libs << " #{hiredis_dir}/libhiredis.a #{hiredis_dir}/libhiredis_ssl.a "
-  $CFLAGS << " -O3"
   $CFLAGS << " -std=c99 "
+  if ENV["EXT_PEDANTIC"]
+    $CFLAGS << " -Werror"
+    $CFLAGS << " -g "
+  else
+    $CFLAGS << " -O3 "
+  end
 
   if `cc --version`.match?(/ clang /i) || RbConfig::CONFIG['CC'].match?(/clang/i)
     $LDFLAGS << ' -Wl,-exported_symbols_list,"' << File.join(__dir__, 'export.clang') << '"'
   elsif RbConfig::CONFIG['CC'].match?(/gcc/i)
     $LDFLAGS << ' -Wl,--version-script="' << File.join(__dir__, 'export.gcc') << '"'
-  end
-
-  if ENV["EXT_PEDANTIC"]
-    $CFLAGS << " -Werror"
   end
 
   $CFLAGS << " -Wno-declaration-after-statement" # Older compilers

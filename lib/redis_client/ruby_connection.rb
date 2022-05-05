@@ -10,6 +10,34 @@ class RedisClient
   class RubyConnection
     include ConnectionMixin
 
+    class << self
+      def ssl_context(ssl_params)
+        params = ssl_params.dup || {}
+
+        cert = params[:cert]
+        if cert.is_a?(String)
+          cert = File.read(cert) if File.exist?(cert)
+          params[:cert] = OpenSSL::X509::Certificate.new(cert)
+        end
+
+        key = params[:key]
+        if key.is_a?(String)
+          key = File.read(key) if File.exist?(key)
+          params[:key] = OpenSSL::PKey.read(key)
+        end
+
+        context = OpenSSL::SSL::SSLContext.new
+        context.set_params(params)
+        if context.verify_mode != OpenSSL::SSL::VERIFY_NONE
+          if context.respond_to?(:verify_hostname) # Missing on JRuby
+            context.verify_hostname
+          end
+        end
+
+        context
+      end
+    end
+
     SUPPORTS_RESOLV_TIMEOUT = Socket.method(:tcp).parameters.any? { |p| p.last == :resolv_timeout }
 
     def initialize(config, connect_timeout:, read_timeout:, write_timeout:)
@@ -27,7 +55,7 @@ class RedisClient
       end
 
       if config.ssl
-        socket = OpenSSL::SSL::SSLSocket.new(socket, config.openssl_context)
+        socket = OpenSSL::SSL::SSLSocket.new(socket, config.ssl_context)
         socket.hostname = config.host
         loop do
           case status = socket.connect_nonblock(exception: false)

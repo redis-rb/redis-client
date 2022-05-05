@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "openssl"
 require "uri"
 
 class RedisClient
@@ -77,41 +78,8 @@ class RedisClient
         false
       end
 
-      def hiredis_ssl_context
-        @hiredis_ssl_context ||= HiredisConnection::SSLContext.new(
-          ca_file: @ssl_params[:ca_file],
-          ca_path: @ssl_params[:ca_path],
-          cert: @ssl_params[:cert],
-          key: @ssl_params[:key],
-          hostname: @ssl_params[:hostname],
-        )
-      end
-
-      def openssl_context
-        @openssl_context ||= begin
-          params = @ssl_params.dup || {}
-
-          cert = params[:cert]
-          if cert.is_a?(String)
-            cert = File.read(cert) if File.exist?(cert)
-            params[:cert] = OpenSSL::X509::Certificate.new(cert)
-          end
-
-          key = params[:key]
-          if key.is_a?(String)
-            key = File.read(key) if File.exist?(key)
-            params[:key] = OpenSSL::PKey.read(key)
-          end
-
-          context = OpenSSL::SSL::SSLContext.new
-          context.set_params(params)
-          if context.verify_mode != OpenSSL::SSL::VERIFY_NONE
-            if context.respond_to?(:verify_hostname) # Missing on JRuby
-              context.verify_hostname
-            end
-          end
-          context
-        end
+      def ssl_context
+        @ssl_context ||= @driver.ssl_context(@ssl_params)
       end
 
       private
