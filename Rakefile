@@ -24,6 +24,7 @@ end
 
 namespace :test do
   Rake::TestTask.new(:sentinel) do |t|
+    t.libs << "test/sentinel"
     t.libs << "test"
     t.libs << "lib"
     t.test_files = FileList["test/sentinel/*_test.rb"]

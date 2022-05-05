@@ -12,7 +12,7 @@ class RedisClient
     end
 
     def teardown
-      Servers::ALL.reset
+      Servers::SENTINEL_TESTS.reset
     end
 
     def test_new_client

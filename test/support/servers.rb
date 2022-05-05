@@ -207,7 +207,12 @@ module Servers
     command: [ToxiproxyManager::BIN.to_s, "-port", 8474.to_s],
   )
 
-  ALL = ServerList.new(
+  TESTS = ServerList.new(
+    TOXIPROXY,
+    REDIS,
+  )
+
+  SENTINEL_TESTS = ServerList.new(
     TOXIPROXY,
     REDIS,
     REDIS_REPLICA,

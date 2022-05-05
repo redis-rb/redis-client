@@ -9,12 +9,12 @@ Dir[File.join(__dir__, "support/**/*.rb")].sort.each { |f| require f }
 Dir[File.join(__dir__, "shared/**/*.rb")].sort.each { |f| require f }
 
 Servers.build_redis
-Servers::ALL.prepare
+Servers::TESTS.prepare
 
 require "minitest/autorun"
 
 unless ENV["REDIS_CLIENT_RESTART_SERVER"] == "0"
-  Minitest.after_run { Servers::ALL.shutdown }
+  Minitest.after_run { Servers::TESTS.shutdown }
 end
 
 if ENV["DRIVER"] == "hiredis"
