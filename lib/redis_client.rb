@@ -167,35 +167,39 @@ class RedisClient
     end
   end
 
-  def scan(*args, &block)
+  def scan(*args, **kwargs, &block)
     unless block_given?
-      return to_enum(__callee__, *args)
+      return to_enum(__callee__, *args, **kwargs)
     end
 
+    args = @command_builder.generate!(args, kwargs)
     scan_list(1, ["SCAN", 0, *args], &block)
   end
 
-  def sscan(key, *args, &block)
+  def sscan(key, *args, **kwargs, &block)
     unless block_given?
-      return to_enum(__callee__, key, *args)
+      return to_enum(__callee__, key, *args, **kwargs)
     end
 
+    args = @command_builder.generate!(args, kwargs)
     scan_list(2, ["SSCAN", key, 0, *args], &block)
   end
 
-  def hscan(key, *args, &block)
+  def hscan(key, *args, **kwargs, &block)
     unless block_given?
-      return to_enum(__callee__, key, *args)
+      return to_enum(__callee__, key, *args, **kwargs)
     end
 
+    args = @command_builder.generate!(args, kwargs)
     scan_pairs(2, ["HSCAN", key, 0, *args], &block)
   end
 
-  def zscan(key, *args, &block)
+  def zscan(key, *args, **kwargs, &block)
     unless block_given?
-      return to_enum(__callee__, key, *args)
+      return to_enum(__callee__, key, *args, **kwargs)
     end
 
+    args = @command_builder.generate!(args, kwargs)
     scan_pairs(2, ["ZSCAN", key, 0, *args], &block)
   end
 

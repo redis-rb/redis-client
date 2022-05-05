@@ -21,7 +21,7 @@ class RedisClient
     end
 
     def test_symbol
-      assert_equal ["a", "b", "c", "d"], call(:a, [:b], { c: :d })
+      assert_equal ["a", "b", "c", "d"], call(:a, { b: :c }, :d)
     end
 
     def test_numeric
