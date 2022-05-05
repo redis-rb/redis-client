@@ -387,6 +387,24 @@ redis.call("GET", "counter") # Will be retried up to 3 times.
 redis.call_once("INCR", "counter") # Won't be retried.
 ```
 
+### Drivers
+
+`redis-client` ships with two connection implementations, a `hiredis` binding and a pure Ruby implementation.
+
+The hiredis binding is only available on Linux, macOS and other POSIX platforms. When available it is the default.
+
+The default driver can be set through `RedisClient.default_driver=`:
+
+```ruby
+RedisClient.default_driver = :ruby
+```
+
+You can also select the driver on a per connection basis:
+
+```ruby
+redis_config = RedisClient.config(driver: :ruby, ...)
+```
+
 ## Notable differences with the `redis` gem
 
 ### Thread Safety

@@ -47,14 +47,14 @@ class RedisClient
     end
   end
 
-  register_driver :ruby do
-    require "redis_client/ruby_connection"
-    RubyConnection
-  end
-
   register_driver :hiredis do
     require "redis_client/hiredis_connection"
     HiredisConnection
+  end
+
+  register_driver :ruby do
+    require "redis_client/ruby_connection"
+    RubyConnection
   end
 
   module Common

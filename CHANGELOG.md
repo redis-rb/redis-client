@@ -1,5 +1,6 @@
 # Unreleased
 
+- `hiredis` is now the default driver when available.
 - Add `RedisClient.default_driver=`.
 - `#call` now takes an optional block to cast the return value.
 - Treat `#call` keyword arguments as Redis flags.
