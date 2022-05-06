@@ -1,34 +1,53 @@
 # frozen_string_literal: true
 
-require "bundler/gem_tasks"
 require "rake/extensiontask"
 require "rake/testtask"
 require 'rubocop/rake_task'
 
 RuboCop::RakeTask.new
 
+require "rake/clean"
+CLOBBER.include "pkg"
+require "bundler/gem_helper"
+Bundler::GemHelper.install_tasks(name: "redis-client")
+Bundler::GemHelper.install_tasks(dir: "hiredis-client", name: "hiredis-client")
+
 gemspec = Gem::Specification.load("redis-client.gemspec")
 Rake::ExtensionTask.new do |ext|
   ext.name = "hiredis_connection"
-  ext.ext_dir = "ext/redis_client/hiredis"
-  ext.lib_dir = "lib/redis_client"
+  ext.ext_dir = "hiredis-client/ext/redis_client/hiredis"
+  ext.lib_dir = "hiredis-client/lib/redis_client"
   ext.gem_spec = gemspec
   CLEAN.add("#{ext.ext_dir}/vendor/*.{a,o}")
 end
 
-Rake::TestTask.new(:test) do |t|
-  t.libs << "test"
-  t.libs << "lib"
-  t.test_files = FileList["test/**/*_test.rb"].exclude("test/sentinel/*_test.rb")
-end
-
 namespace :test do
+  Rake::TestTask.new(:ruby) do |t|
+    t.libs << "test"
+    t.libs << "lib"
+    t.test_files = FileList["test/**/*_test.rb"].exclude("test/sentinel/*_test.rb")
+  end
+
   Rake::TestTask.new(:sentinel) do |t|
     t.libs << "test/sentinel"
     t.libs << "test"
     t.libs << "lib"
     t.test_files = FileList["test/sentinel/*_test.rb"]
   end
+
+  Rake::TestTask.new(:hiredis) do |t|
+    t.libs << "test/hiredis"
+    t.libs << "test"
+    t.libs << "lib"
+    t.test_files = FileList["test/**/*_test.rb"].exclude("test/sentinel/*_test.rb")
+  end
+end
+
+hiredis_supported = RUBY_ENGINE == "ruby" && !RUBY_PLATFORM.match?(/mswin/)
+if hiredis_supported
+  task test: %i[test:ruby test:hiredis test:sentinel]
+else
+  task test: %i[test:ruby test:sentinel]
 end
 
 namespace :hiredis do
@@ -37,10 +56,14 @@ namespace :hiredis do
     archive_path = "tmp/hiredis-#{version}.tar.gz"
     url = "https://github.com/redis/hiredis/archive/refs/tags/v#{version}.tar.gz"
     system("curl", "-L", url, out: archive_path) or raise "Downloading of #{url} failed"
-    system("rm", "-rf", "ext/redis_client/hiredis/vendor/")
-    system("mkdir", "-p", "ext/redis_client/hiredis/vendor/")
-    system("tar", "xvzf", archive_path, "-C", "ext/redis_client/hiredis/vendor", "--strip-components", "1")
-    system("rm", "-rf", "ext/redis_client/hiredis/vendor/examples")
+    system("rm", "-rf", "hiredis-client/ext/redis_client/hiredis/vendor/")
+    system("mkdir", "-p", "hiredis-client/ext/redis_client/hiredis/vendor/")
+    system(
+      "tar", "xvzf", archive_path,
+      "-C", "hiredis-client/ext/redis_client/hiredis/vendor",
+      "--strip-components", "1",
+    )
+    system("rm", "-rf", "hiredis-client/ext/redis_client/hiredis/vendor/examples")
   end
 end
 
@@ -82,14 +105,10 @@ namespace :benchmark do
   end
 end
 
-if RUBY_PLATFORM == "java"
-  task default: %i[test test:sentinel rubocop]
+if hiredis_supported
+  task default: %i[compile test rubocop]
+  task ci: %i[compile test]
 else
-  task default: %i[compile test test:sentinel rubocop]
-end
-
-if ENV["DRIVER"] == "hiredis"
-  task ci: %i[compile test test:sentinel]
-else
-  task ci: %i[test test:sentinel]
+  task default: %i[test rubocop]
+  task ci: %i[test]
 end

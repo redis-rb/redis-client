@@ -173,7 +173,7 @@ Style/SoleNestedConditional:
 
 Style/GlobalVars:
   Exclude:
-    - 'ext/**/*'
+    - '**/extconf.rb'
 
 Gemspec/RequireMFA:
   Enabled: false

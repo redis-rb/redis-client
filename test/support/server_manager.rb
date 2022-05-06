@@ -86,7 +86,7 @@ class ServerManager
 
   def pid
     Integer(pid_file.read)
-  rescue Errno::ENOENT
+  rescue Errno::ENOENT, ArgumentError
     nil
   end
 

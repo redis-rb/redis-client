@@ -4,8 +4,10 @@
 /coverage/
 /doc/
 /pkg/
+/hiredis-client/pkg/
 /spec/reports/
 /tmp/
+/hiredis-client/tmp/
 /bin/toxiproxy-server
 *.so
 *.bundle

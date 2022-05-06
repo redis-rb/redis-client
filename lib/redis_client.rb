@@ -24,7 +24,7 @@ class RedisClient
 
       name = name.to_sym
       unless @driver_definitions.key?(name)
-        raise ArgumentError, "Unknown driver #{name.inspect}, expected one of: `#{DRIVER_DEFINITIONS.keys.inspect}`"
+        raise ArgumentError, "Unknown driver #{name.inspect}, expected one of: `#{@driver_definitions.keys.inspect}`"
       end
 
       @drivers[name] ||= @driver_definitions[name]&.call
@@ -45,11 +45,6 @@ class RedisClient
     def default_driver=(name)
       @default_driver = driver(name)
     end
-  end
-
-  register_driver :hiredis do
-    require "redis_client/hiredis_connection"
-    HiredisConnection
   end
 
   register_driver :ruby do

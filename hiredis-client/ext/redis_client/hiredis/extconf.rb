@@ -2,7 +2,7 @@
 
 require "mkmf"
 
-if RUBY_ENGINE == "ruby" && !RUBY_ENGINE.match?(/mswin/)
+if RUBY_ENGINE == "ruby" && !RUBY_PLATFORM.match?(/mswin/)
   have_func("rb_hash_new_capa", "ruby.h")
 
   hiredis_dir = File.expand_path('vendor', __dir__)

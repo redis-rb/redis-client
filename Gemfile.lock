@@ -51,7 +51,6 @@ PLATFORMS
 DEPENDENCIES
   benchmark-ips
   byebug
-  connection_pool
   hiredis
   minitest
   rake (~> 13.0)

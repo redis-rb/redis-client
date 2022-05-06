@@ -21,15 +21,14 @@ jobs:
         run: bundle exec rubocop
 
   ruby:
-    name: Ruby ${{ matrix.ruby }} / ${{ matrix.driver }}
+    name: Ruby ${{ matrix.ruby }}
     timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
         redis: ["6.2"]
-        ruby: ["3.1", "3.0", "2.7", "2.6", "2.5"]
-        driver: ["ruby", "hiredis"]
+        ruby: ["3.1", "3.0", "2.7", "2.6", "2.5", "jruby-9.3.3.0"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out code
@@ -50,38 +49,4 @@ jobs:
         run: |
           bundle exec rake ci
         env:
-          DRIVER: "${{ matrix.driver }}"
-          EXT_PEDANTIC: "1"
-
-  jruby:
-    name: JRuby ${{ matrix.ruby }}
-    timeout-minutes: 5
-    strategy:
-      fail-fast: false
-      matrix:
-        os: ["ubuntu-latest"]
-        redis: ["6.2"]
-        ruby: ["jruby-9.3.3.0"]
-        driver: ["ruby"]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v2
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: ${{ matrix.ruby }}
-          bundler-cache: true
-      - name: Cache redis build
-        uses: actions/cache@v1
-        with:
-          path: tmp/cache
-          key: "local-tmp-cache-${{ matrix.redis }}-on-${{ matrix.os }}"
-      - name: Lower system timeout
-        run: sudo sysctl -w net.ipv4.tcp_syn_retries=2
-      - name: Test
-        run: |
-          bundle exec rake ci
-        env:
-          DRIVER: "${{ matrix.driver }}"
           EXT_PEDANTIC: "1"

@@ -45,7 +45,6 @@ module ClientTestHelper
       host: Servers::HOST,
       port: Servers::REDIS_TCP_PORT,
       timeout: 0.1,
-      driver: ENV.fetch("DRIVER", "ruby").to_sym,
     }
   end
 
@@ -60,7 +59,6 @@ module ClientTestHelper
         key: Servers::CERTS_PATH.join("client.key").to_s,
         ca_file: Servers::CERTS_PATH.join("ca.crt").to_s,
       },
-      driver: ENV.fetch("DRIVER", "ruby").to_sym,
     }
   end
 
@@ -68,7 +66,6 @@ module ClientTestHelper
     {
       path: Servers::REDIS_SOCKET_FILE.to_s,
       timeout: 0.1,
-      driver: ENV.fetch("DRIVER", "ruby").to_sym,
     }
   end
 

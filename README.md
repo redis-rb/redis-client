@@ -389,21 +389,17 @@ redis.call_once("INCR", "counter") # Won't be retried.
 
 ### Drivers
 
-`redis-client` ships with two connection implementations, a `hiredis` binding and a pure Ruby implementation.
+`redis-client` ships with a pure Ruby socket implementation.
 
-The hiredis binding is only available on Linux, macOS and other POSIX platforms. When available it is the default.
+For increased performance, you can enable the `hiredis` binding by adding `hiredis-client` to your Gemfile:
+
+```ruby
+gem "hiredis-client"
+```
+
+The hiredis binding is only available on Linux, macOS and other POSIX platforms. You can install the gem on other platforms, but it won't have any effect.
 
 The default driver can be set through `RedisClient.default_driver=`:
-
-```ruby
-RedisClient.default_driver = :ruby
-```
-
-You can also select the driver on a per connection basis:
-
-```ruby
-redis_config = RedisClient.config(driver: :ruby, ...)
-```
 
 ## Notable differences with the `redis` gem
 

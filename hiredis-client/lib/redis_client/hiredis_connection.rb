@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "openssl"
 require "redis_client/hiredis_connection.so"
 require "redis_client/connection_mixin"
 

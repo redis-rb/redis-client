@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 
 $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
+$LOAD_PATH.unshift(File.expand_path("../hiredis-client/lib", __dir__))
 $LOAD_PATH.unshift(File.expand_path("../test/support", __dir__))
 
 require "redis"
 require "redis-client"
-require "redis_client/hiredis_connection"
+require "hiredis-client"
 require "servers"
 require "benchmark/ips"
 
