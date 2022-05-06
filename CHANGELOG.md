@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.4.0
+
 - The `hiredis` driver have been moved to the `hiredis-client` gem.
 
 # 0.3.0
