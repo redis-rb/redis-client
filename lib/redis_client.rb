@@ -89,12 +89,18 @@ class RedisClient
   CheckoutTimeoutError = Class.new(ConnectTimeoutError)
 
   class CommandError < Error
+    attr_reader :command
+
     class << self
       def parse(error_message)
         code = error_message.split(' ', 2).first
         klass = ERRORS.fetch(code, self)
         klass.new(error_message)
       end
+    end
+
+    def _set_command(command)
+      @command = command
     end
   end
 
@@ -405,8 +411,9 @@ class RedisClient
 
     def _coerce!(results)
       if results
-        results.each do |result|
+        results.each_with_index do |result, index|
           if result.is_a?(CommandError)
+            result._set_command(@commands[index + 1])
             raise result
           end
         end
