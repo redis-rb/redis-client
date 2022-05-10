@@ -192,23 +192,27 @@ module RedisClientTests
   end
 
   def test_pipelining_error
-    assert_raises RedisClient::CommandError do
+    error = assert_raises RedisClient::CommandError do
       @redis.pipelined do |pipeline|
-        pipeline.call("DOESNOTEXIST")
+        pipeline.call("DOESNOTEXIST", 12)
         pipeline.call("SET", "foo", "42")
       end
     end
+
+    assert_equal ["DOESNOTEXIST", "12"], error.command
 
     assert_equal "42", @redis.call("GET", "foo")
   end
 
   def test_multi_error
-    assert_raises RedisClient::CommandError do
+    error = assert_raises RedisClient::CommandError do
       @redis.multi do |pipeline|
-        pipeline.call("DOESNOTEXIST")
+        pipeline.call("DOESNOTEXIST", 12)
         pipeline.call("SET", "foo", "42")
       end
     end
+
+    assert_equal ["DOESNOTEXIST", "12"], error.command
 
     assert_nil @redis.call("GET", "foo")
   end
@@ -219,6 +223,7 @@ module RedisClientTests
     error = assert_raises RedisClient::CommandError do
       @redis.call("SISMEMBER", "str", "member")
     end
+    assert_equal ["SISMEMBER", "str", "member"], error.command
     assert_includes error.message, "WRONGTYPE Operation against a key holding the wrong kind of value"
 
     error = assert_raises RedisClient::CommandError do

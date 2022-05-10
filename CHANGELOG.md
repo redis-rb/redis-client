@@ -1,5 +1,7 @@
 # Unreleased
 
+- Add `CommandError#command` to expose the command that caused the error.
+
 # 0.4.0
 
 - The `hiredis` driver have been moved to the `hiredis-client` gem.
