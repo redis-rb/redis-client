@@ -1,5 +1,6 @@
 # Unreleased
 
+- Add `RedisClient::Config#server_url` as a quick way to identify which server the client is pointing to.
 - Add `CommandError#command` to expose the command that caused the error.
 
 # 0.4.0

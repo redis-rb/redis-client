@@ -146,6 +146,11 @@ class RedisClient
     @disable_reconnection = false
   end
 
+  def inspect
+    id_string = " id=#{id}" if id
+    "#<#{self.class.name} #{config.server_url}#{id_string}>"
+  end
+
   def size
     1
   end

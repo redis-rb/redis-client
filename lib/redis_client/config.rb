@@ -82,6 +82,14 @@ class RedisClient
         @ssl_context ||= @driver.ssl_context(@ssl_params)
       end
 
+      def server_url
+        if path
+          "#{path}/#{db}"
+        else
+          "redis#{'s' if ssl?}://#{host}:#{port}/#{db}"
+        end
+      end
+
       private
 
       def build_connection_prelude
@@ -110,8 +118,8 @@ class RedisClient
       path: nil,
       **kwargs
     )
-      uri = url && URI.parse(url)
-      if uri
+      if url
+        uri = URI.parse(url)
         kwargs[:ssl] = uri.scheme == "rediss" unless kwargs.key?(:ssl)
 
         kwargs[:username] ||= uri.user && uri.password

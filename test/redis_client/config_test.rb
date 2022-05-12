@@ -63,5 +63,15 @@ class RedisClient
       assert_equal 5, config.db
       assert_predicate config, :ssl?
     end
+
+    def test_server_url
+      assert_equal "redis://localhost:6379/0", Config.new.server_url
+      assert_equal "redis://localhost:6379/0", Config.new(username: "george", password: "hunter2").server_url
+      assert_equal "redis://localhost:6379/5", Config.new(db: 5).server_url
+      assert_equal "redis://example.com:8080/0", Config.new(host: "example.com", port: 8080).server_url
+      assert_equal "rediss://localhost:6379/0", Config.new(ssl: true).server_url
+
+      assert_equal "/var/redis/redis.sock/5", Config.new(path: "/var/redis/redis.sock", db: 5).server_url
+    end
   end
 end
