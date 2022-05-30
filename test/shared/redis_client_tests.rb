@@ -21,6 +21,32 @@ module RedisClientTests
     assert_equal "PONG", @redis.call("PING")
   end
 
+  def test_empty_call
+    assert_raises ArgumentError do
+      @redis.call
+    end
+
+    assert_raises ArgumentError do
+      @redis.blocking_call(false)
+    end
+
+    assert_raises ArgumentError do
+      @redis.call([], [])
+    end
+
+    @redis.pipelined do |pipeline|
+      assert_raises ArgumentError do
+        pipeline.call
+      end
+    end
+
+    @redis.multi do |transaction|
+      assert_raises ArgumentError do
+        transaction.call
+      end
+    end
+  end
+
   def test_acts_as_pool
     assert_equal("PONG", @redis.with { |c| c.call("PING") })
     assert_instance_of Integer, @redis.size

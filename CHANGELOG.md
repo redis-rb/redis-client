@@ -4,6 +4,7 @@
 - Add `RedisClient::Config#server_url` as a quick way to identify which server the client is pointing to.
 - Add `CommandError#command` to expose the command that caused the error.
 - Raise a more explicit error when connecting to older redises without RESP3 support (5.0 and older).
+- Properly reject empty commands early.
 
 # 0.4.0
 

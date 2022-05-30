@@ -40,6 +40,10 @@ class RedisClient
           end
         end
 
+        if command.empty?
+          raise ArgumentError, "can't issue an empty redis command"
+        end
+
         command
       end
     else
@@ -74,6 +78,10 @@ class RedisClient
           else
             raise TypeError, "Unsupported command argument type: #{element.class}"
           end
+        end
+
+        if command.empty?
+          raise ArgumentError, "can't issue an empty redis command"
         end
 
         command
