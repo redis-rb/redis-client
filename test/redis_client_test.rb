@@ -47,4 +47,22 @@ class RedisClientTest < Minitest::Test
       client.call("PING")
     end
   end
+
+  def test_older_server
+    fake_redis5_driver = Class.new(RedisClient::RubyConnection) do
+      def call_pipelined(commands, *)
+        if commands.any? { |c| c == ["HELLO", "3" ]}
+          raise RedisClient::CommandError, "ERR unknown command `HELLO`, with args beginning with: `3`"
+        else
+          super
+        end
+      end
+    end
+    client = new_client(driver: fake_redis5_driver)
+
+    error = assert_raises RedisClient::UnsupportedServer do
+      client.call("PING")
+    end
+    assert_includes error.message, "Your Redis server version is too old"
+  end
 end

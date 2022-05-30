@@ -78,6 +78,8 @@ class RedisClient
 
   Error = Class.new(StandardError)
 
+  UnsupportedServer = Class.new(Error)
+
   ConnectionError = Class.new(Error)
 
   FailoverError = Class.new(ConnectionError)
@@ -570,6 +572,12 @@ class RedisClient
     end
 
     connection
+  rescue CommandError => error
+    if error.message.include?("ERR unknown command `HELLO`")
+      raise UnsupportedServer, "Your Redis server version is too old. redis-client requires Redis 6+. (#{config.server_url})"
+    else
+      raise
+    end
   end
 end
 
