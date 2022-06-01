@@ -2,7 +2,7 @@
 
 `redis-client` is a simple, low-level, client for Redis 6+.
 
-Contrary to the `redis` gem, `redis-client` doesn't try to map all redis commands to Ruby constructs,
+Contrary to the `redis` gem, `redis-client` doesn't try to map all Redis commands to Ruby constructs,
 it merely is a thin wrapper on top of the RESP3 protocol.
 
 ## Installation
@@ -63,7 +63,7 @@ redis.call("GET", "mykey")
 ### Configuration
 
 - `url`: A Redis connection URL, e.g. `redis://example.com:6379/5`, a `rediss://` scheme enable SSL, and the path is interpreted as a database number.
-  Note tht all other configurtions take precedence, e.g. `RedisClient.config(url: "redis://localhost:3000" port: 6380)` will connect on port `6380`.
+  Note that all other configurations take precedence, e.g. `RedisClient.config(url: "redis://localhost:3000" port: 6380)` will connect on port `6380`.
 - `host`: The server hostname or IP address. Defaults to `"localhost"`.
 - `port`: The server port. Defaults to `6379`.
 - `path`: The path to a UNIX socket, if set `url`, `host` and `port` are ignored.
@@ -142,7 +142,7 @@ is equivalent to:
 redis.call("LPUSH", "list", "1", "2", "3", "4")
 ```
 
-Hashes are flatenned as well:
+Hashes are flattened as well:
 
 ```ruby
 redis.call("HMSET", "hash", { "foo" => "1", "bar" => "2" })
@@ -154,7 +154,7 @@ is equivalent to:
 redis.call("HMSET", "hash", "foo", "1", "bar", "2")
 ```
 
-Any other type requires the caller to explictly cast the argument as a string.
+Any other type requires the caller to explicitly cast the argument as a string.
 
 Keywords arguments are treated as Redis command flags:
 
@@ -170,7 +170,7 @@ redis.call("SET", "mykey", "value", "nx", "ex", "60")
 redis.call("SET", "mykey", "value")
 ```
 
-If flags are built dynamically, you'll have to explictly pass them as keyword arguments with `**`:
+If flags are built dynamically, you'll have to explicitly pass them as keyword arguments with `**`:
 
 ```ruby
 flags = {}
@@ -185,7 +185,7 @@ unclosed hash literals with string keys may be interpreted differently:
 redis.call("HMSET", "hash", "foo" => "bar")
 ```
 
-On Ruby 2 `"foo" => "bar"` will be passed as a postional argument, but on Ruby 3 it will be interpreted as keyword
+On Ruby 2 `"foo" => "bar"` will be passed as a positional argument, but on Ruby 3 it will be interpreted as keyword
 arguments. To avoid such problem, make sure to enclose hash literals:
 
 ```ruby
@@ -196,7 +196,7 @@ redis.call("HMSET", "hash", { "foo" => "bar" })
 
 Contrary to the `redis` gem, `redis-client` doesn't do any type casting on the return value of commands.
 
-If you wish to cast the return value, you can pass a block to the `#call` familly of methods:
+If you wish to cast the return value, you can pass a block to the `#call` family of methods:
 
 ```ruby
 redis.call("INCR", "counter") # => 1
@@ -297,7 +297,7 @@ end
 
 If the transaction wasn't successful, `#multi` will return `nil`.
 
-Note that transactions using optimistic locking aren't automatically retried uppon connection errors.
+Note that transactions using optimistic locking aren't automatically retried upon connection errors.
 
 ### Publish / Subscribe
 
