@@ -574,7 +574,8 @@ class RedisClient
     connection
   rescue CommandError => error
     if error.message.include?("ERR unknown command `HELLO`")
-      raise UnsupportedServer, "Your Redis server version is too old. redis-client requires Redis 6+. (#{config.server_url})"
+      raise UnsupportedServer,
+        "Your Redis server version is too old. redis-client requires Redis 6+. (#{config.server_url})"
     else
       raise
     end

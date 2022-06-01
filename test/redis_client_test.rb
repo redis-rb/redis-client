@@ -51,7 +51,7 @@ class RedisClientTest < Minitest::Test
   def test_older_server
     fake_redis5_driver = Class.new(RedisClient::RubyConnection) do
       def call_pipelined(commands, *)
-        if commands.any? { |c| c == ["HELLO", "3" ]}
+        if commands.any? { |c| c == ["HELLO", "3"] }
           raise RedisClient::CommandError, "ERR unknown command `HELLO`, with args beginning with: `3`"
         else
           super
