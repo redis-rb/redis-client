@@ -19,6 +19,16 @@ class RedisClient
       assert_equal "::1", config.host
     end
 
+    def test_user_password_uri
+      config = Config.new(url: "redis://username:password@example.com")
+      assert_equal "example.com", config.host
+      assert_equal 6379, config.port
+      assert_equal "username", config.username
+      assert_equal "password", config.password
+      assert_equal 0, config.db
+      refute_predicate config, :ssl?
+    end
+
     def test_simple_password_uri
       config = Config.new(url: "redis://password@example.com")
       assert_equal "example.com", config.host

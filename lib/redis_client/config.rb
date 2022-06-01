@@ -122,11 +122,11 @@ class RedisClient
         uri = URI.parse(url)
         kwargs[:ssl] = uri.scheme == "rediss" unless kwargs.key?(:ssl)
 
-        kwargs[:username] ||= uri.user && uri.password
+        kwargs[:username] ||= uri.user if uri.password
 
         kwargs[:password] ||= if uri.user && !uri.password
           URI.decode_www_form_component(uri.user)
-        elsif uri&.user && uri&.password
+        elsif uri.user && uri.password
           URI.decode_www_form_component(uri.password)
         end
 
