@@ -39,6 +39,16 @@ class RedisClient
       refute_predicate config, :ssl?
     end
 
+    def test_simple_password_uri_empty_user
+      config = Config.new(url: "redis://:password@example.com")
+      assert_equal "example.com", config.host
+      assert_equal 6379, config.port
+      assert_equal "default", config.username
+      assert_equal "password", config.password
+      assert_equal 0, config.db
+      refute_predicate config, :ssl?
+    end
+
     def test_percent_encoded_password_uri
       # from https://redis.io/topics/rediscli#host-port-password-and-database
       config = Config.new(url: "redis://p%40ssw0rd@redis-16379.hosted.com:16379/12")
