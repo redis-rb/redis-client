@@ -1,5 +1,6 @@
 # Unreleased
 
+- Fix handling of connection URLs with empty passwords (`redis://:pass@example.com`).
 - Handle URLs with IPv6 hosts.
 - Add `RedisClient::Config#server_url` as a quick way to identify which server the client is pointing to.
 - Add `CommandError#command` to expose the command that caused the error.
