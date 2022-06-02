@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.5.1
+
 - Fix a regression in the `scan` familly of methods, they would raise with `ArgumentError: can't issue an empty redis command`. Fix: #24
 
 # 0.5.0
