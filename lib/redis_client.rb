@@ -233,8 +233,8 @@ class RedisClient
       return to_enum(__callee__, *args, **kwargs)
     end
 
-    args = @command_builder.generate!(args, kwargs)
-    scan_list(1, ["SCAN", 0, *args], &block)
+    args = @command_builder.generate!(["SCAN", 0] + args, kwargs)
+    scan_list(1, args, &block)
   end
 
   def sscan(key, *args, **kwargs, &block)
@@ -242,8 +242,8 @@ class RedisClient
       return to_enum(__callee__, key, *args, **kwargs)
     end
 
-    args = @command_builder.generate!(args, kwargs)
-    scan_list(2, ["SSCAN", key, 0, *args], &block)
+    args = @command_builder.generate!(["SSCAN", key, 0] + args, kwargs)
+    scan_list(2, args, &block)
   end
 
   def hscan(key, *args, **kwargs, &block)
@@ -251,8 +251,8 @@ class RedisClient
       return to_enum(__callee__, key, *args, **kwargs)
     end
 
-    args = @command_builder.generate!(args, kwargs)
-    scan_pairs(2, ["HSCAN", key, 0, *args], &block)
+    args = @command_builder.generate!(["HSCAN", key, 0] + args, kwargs)
+    scan_pairs(2, args, &block)
   end
 
   def zscan(key, *args, **kwargs, &block)
@@ -260,8 +260,8 @@ class RedisClient
       return to_enum(__callee__, key, *args, **kwargs)
     end
 
-    args = @command_builder.generate!(args, kwargs)
-    scan_pairs(2, ["ZSCAN", key, 0, *args], &block)
+    args = @command_builder.generate!(["ZSCAN", key, 0] + args, kwargs)
+    scan_pairs(2, args, &block)
   end
 
   def connected?

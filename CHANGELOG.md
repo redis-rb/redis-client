@@ -1,5 +1,9 @@
 # Unreleased
 
+- Fix a regression in the `scan` familly of methods, they would raise with `ArgumentError: can't issue an empty redis command`. Fix: #24
+
+# 0.5.0
+
 - Fix handling of connection URLs with empty passwords (`redis://:pass@example.com`).
 - Handle URLs with IPv6 hosts.
 - Add `RedisClient::Config#server_url` as a quick way to identify which server the client is pointing to.

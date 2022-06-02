@@ -400,18 +400,29 @@ module RedisClientTests
 
   def test_scan
     @redis.call("MSET", *100.times.to_a)
+    expected_keys = 100.times.select(&:even?).map(&:to_s).sort
+
+    keys = []
+    @redis.scan do |key|
+      keys << key
+    end
+    assert_equal expected_keys, keys.sort
+
     keys = []
     @redis.scan("COUNT", "10") do |key|
       keys << key
     end
-    expected_keys = 100.times.select(&:even?).map(&:to_s).sort
     assert_equal expected_keys, keys.sort
   end
 
   def test_scan_iterator
     @redis.call("MSET", *100.times.to_a)
-    keys = @redis.scan(count: 10).to_a
     expected_keys = 100.times.select(&:even?).map(&:to_s).sort
+
+    keys = @redis.scan.to_a
+    assert_equal expected_keys, keys.sort
+
+    keys = @redis.scan(count: 10).to_a
     assert_equal expected_keys, keys.sort
   end
 
