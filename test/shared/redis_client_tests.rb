@@ -428,32 +428,61 @@ module RedisClientTests
 
   def test_sscan
     @redis.call("SADD", "large-set", *100.times.to_a)
+    expected_elements = *100.times.map(&:to_s).sort
+
+    elements = []
+    @redis.sscan("large-set") do |element|
+      elements << element
+    end
+    assert_equal expected_elements, elements.sort
+
+    elements = @redis.sscan("large-set").to_a
+    assert_equal expected_elements, elements.sort
+
     elements = []
     @redis.sscan("large-set", "COUNT", "10") do |element|
       elements << element
     end
-    expected_elements = *100.times.map(&:to_s).sort
     assert_equal expected_elements, elements.sort
   end
 
   def test_zscan
     @redis.call("ZADD", "large-set", *100.times.to_a)
+    expected_elements = Hash[*100.times.map(&:to_s)].invert
+
+    elements = {}
+    @redis.zscan("large-set") do |element, score|
+      elements[element] = score
+    end
+    assert_equal expected_elements, elements
+
+    elements = @redis.zscan("large-set").to_a.to_h
+    assert_equal expected_elements, elements
+
     elements = {}
     @redis.zscan("large-set", "COUNT", "10") do |element, score|
       elements[element] = score
     end
-
-    expected_elements = Hash[*100.times.map(&:to_s)].invert
     assert_equal expected_elements, elements
   end
 
   def test_hscan
     @redis.call("HMSET", "large-hash", *100.times.to_a)
+    expected_pairs = Hash[*100.times.map(&:to_s)].to_a
+
+    pairs = []
+    @redis.hscan("large-hash") do |key, value|
+      pairs << [key, value]
+    end
+    assert_equal expected_pairs, pairs
+
+    pairs = @redis.hscan("large-hash").to_a
+    assert_equal expected_pairs, pairs
+
     pairs = []
     @redis.hscan("large-hash", "COUNT", "10") do |key, value|
       pairs << [key, value]
     end
-    expected_pairs = Hash[*100.times.map(&:to_s)].to_a
     assert_equal expected_pairs, pairs
   end
 
