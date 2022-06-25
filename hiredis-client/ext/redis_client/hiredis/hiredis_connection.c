@@ -150,6 +150,12 @@ static void *reply_append(const redisReadTask *task, VALUE value) {
 }
 
 static void *reply_create_string(const redisReadTask *task, char *cstr, size_t len) {
+    if (len >= 4 && task->type == REDIS_REPLY_VERB) {
+        // Skip 4 bytes of verbatim type header.
+        cstr += 4;
+        len -= 4;
+    }
+
     VALUE string = rb_external_str_new(cstr, len);
     if (rb_enc_str_coderange(string) == ENC_CODERANGE_BROKEN) {
         rb_enc_associate(string, rb_ascii8bit_encoding());

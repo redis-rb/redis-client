@@ -504,4 +504,8 @@ module RedisClientTests
     assert_equal([false], @redis.pipelined { |p| p.call("SISMEMBER", "set", "unknown") { |m| m > 0 } })
     assert_equal([false], @redis.multi { |p| p.call("SISMEMBER", "set", "unknown") { |m| m > 0 } })
   end
+
+  def test_verbatim_string_reply
+    assert_equal("# Server", @redis.call("INFO")[0..7])
+  end
 end
