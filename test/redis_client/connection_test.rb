@@ -192,6 +192,23 @@ class RedisClient
       assert_equal "1", client.call("GET", "counter")
     end
 
+    def test_killed_connection
+      client = new_client(reconnect_attempts: 1, id: "background")
+
+      thread = Thread.new do
+        client.blocking_call(false, "BLPOP", "list", 0)
+      end
+      thread.join(0.1)
+      assert_predicate thread, :alive?
+
+      second_client = new_client
+
+      id = second_client.call("CLIENT", "LIST").lines.grep(/name=background/)[0].match(/^id=(\d+)/)[1]
+      assert_equal 1, second_client.call("CLIENT", "KILL", "ID", id)
+      second_client.call("LPUSH", "list", "hello")
+      assert_equal ["list", "hello"], thread.join.value
+    end
+
     private
 
     def assert_timeout(error, faster_than = 0.5, &block)
