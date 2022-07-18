@@ -55,7 +55,7 @@ class RedisClient
     end
 
     def new_buffer
-      String.new(encoding: Encoding::BINARY, capacity: 128)
+      String.new(encoding: Encoding::BINARY, capacity: 127)
     end
 
     def dump_any(object, buffer)
