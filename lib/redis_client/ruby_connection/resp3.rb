@@ -148,7 +148,11 @@ class RedisClient
     end
 
     def parse_map(io)
-      Hash[*parse_sequence(io, parse_integer(io) * 2)]
+      hash = {}
+      parse_integer(io).times do
+        hash[parse(io)] = parse(io)
+      end
+      hash
     end
 
     def parse_push(io)

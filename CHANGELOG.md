@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fix `SystemStackError` when parsing very large hashes. Fix: #30
+
 # 0.5.1
 
 - Fix a regression in the `scan` familly of methods, they would raise with `ArgumentError: can't issue an empty redis command`. Fix: #24
