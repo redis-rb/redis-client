@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   lint:
     name: Rubocop
-    timeout-minutes: 5
+    timeout-minutes: 15
     strategy:
       fail-fast: false
     runs-on: ubuntu-latest
@@ -22,7 +22,7 @@ jobs:
 
   ruby:
     name: Ruby ${{ matrix.ruby }}
-    timeout-minutes: 5
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -50,3 +50,39 @@ jobs:
           bundle exec rake ci
         env:
           EXT_PEDANTIC: "1"
+          REDIS: ${{ matrix.redis }}
+
+  # Redis sentinel is super slow to setup nad very flaky
+  # So we run them independently against a single set of versions
+  # so that they're easier to retry and less likely to flake.
+  sentinel:
+    name: Sentinel
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        redis: ["6.2"]
+        ruby: ["3.1"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+      - name: Cache redis build
+        uses: actions/cache@v1
+        with:
+          path: tmp/cache
+          key: "local-tmp-cache-${{ matrix.redis }}-on-${{ matrix.os }}"
+      - name: Lower system timeout
+        run: sudo sysctl -w net.ipv4.tcp_syn_retries=2
+      - name: Test
+        run: |
+          bundle exec rake test:sentinel
+        env:
+          EXT_PEDANTIC: "1"
+          REDIS: ${{ matrix.redis }}

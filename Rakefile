@@ -107,8 +107,8 @@ end
 
 if hiredis_supported
   task default: %i[compile test rubocop]
-  task ci: %i[compile test]
+  task ci: %i[compile test:ruby test:hiredis]
 else
   task default: %i[test rubocop]
-  task ci: %i[test]
+  task ci: %i[test:ruby test:hiredis]
 end
