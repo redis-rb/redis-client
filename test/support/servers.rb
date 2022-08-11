@@ -20,7 +20,7 @@ module Servers
   SENTINEL_CONF_PATH = ServerManager::ROOT.join("tmp/sentinel.conf")
   SENTINEL_NAME = "cache"
 
-  DEFAULT_REDIS_VERSION = "6.2"
+  DEFAULT_REDIS_VERSION = "7.0"
 
   class << self
     def build_redis
