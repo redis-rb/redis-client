@@ -13,7 +13,7 @@ class RedisClient
 
     module Common
       attr_reader :db, :username, :password, :id, :ssl, :ssl_params, :command_builder,
-        :connect_timeout, :read_timeout, :write_timeout, :driver, :connection_prelude
+        :connect_timeout, :read_timeout, :write_timeout, :driver, :connection_prelude, :protocol
 
       alias_method :ssl?, :ssl
 
@@ -29,6 +29,7 @@ class RedisClient
         ssl: nil,
         ssl_params: nil,
         driver: nil,
+        protocol: 3,
         command_builder: CommandBuilder,
         reconnect_attempts: false
       )
@@ -44,6 +45,11 @@ class RedisClient
         @write_timeout = write_timeout
 
         @driver = driver ? RedisClient.driver(driver) : RedisClient.default_driver
+
+        @protocol = protocol
+        unless protocol == 2 || protocol == 3
+          raise ArgumentError, "Unknown protocol version #{protocol.inspect}, expected 2 or 3"
+        end
 
         @command_builder = command_builder
 
@@ -94,10 +100,18 @@ class RedisClient
 
       def build_connection_prelude
         prelude = []
-        prelude <<  if @password
-          ["HELLO", "3", "AUTH", @username, @password]
-        else
-          ["HELLO", "3"]
+        if protocol == 3
+          prelude << if @password
+            ["HELLO", "3", "AUTH", @username, @password]
+          else
+            ["HELLO", "3"]
+          end
+        elsif @password
+          if @username && !@username.empty?
+            ["AUTH", @username, @password]
+          else
+            ["AUTH", @password]
+          end
         end
 
         if @db && @db != 0

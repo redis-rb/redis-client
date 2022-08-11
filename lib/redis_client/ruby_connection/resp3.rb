@@ -156,6 +156,8 @@ class RedisClient
     end
 
     def parse_sequence(io, size)
+      return if size < 0 # RESP2 nil
+
       array = Array.new(size)
       size.times do |index|
         array[index] = parse(io)
@@ -185,6 +187,8 @@ class RedisClient
 
     def parse_blob(io)
       bytesize = parse_integer(io)
+      return if bytesize < 0 # RESP2 nil type
+
       str = io.read_chomp(bytesize)
       str.force_encoding(Encoding.default_external)
       str.force_encoding(Encoding::BINARY) unless str.valid_encoding?

@@ -537,7 +537,7 @@ class RedisClient
       begin
         @disable_reconnection = true
         yield connection
-      rescue ConnectionError => error
+      rescue ConnectionError
         connection&.close
         close
         raise
@@ -571,7 +571,9 @@ class RedisClient
       role, = connection.call_pipelined(prelude, nil).last
       config.check_role!(role)
     else
-      connection.call_pipelined(prelude, nil)
+      unless prelude.empty?
+        connection.call_pipelined(prelude, nil)
+      end
     end
 
     connection
