@@ -12,10 +12,6 @@ class RedisClient
       assert_equal ["a", "b", "c"], call("a", ["b", "c"])
     end
 
-    def test_set
-      assert_equal ["a", "b", "c"], call("a", Set["b", "c"])
-    end
-
     def test_hash
       assert_equal ["a", "b", "c"], call("a", { "b" => "c" })
     end

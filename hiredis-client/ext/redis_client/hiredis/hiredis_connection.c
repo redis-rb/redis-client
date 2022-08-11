@@ -45,7 +45,7 @@ static inline VALUE rb_hash_new_capa(long capa)
 }
 #endif
 
-static VALUE rb_cSet, rb_eRedisClientCommandError, rb_eRedisClientConnectionError;
+static VALUE rb_eRedisClientCommandError, rb_eRedisClientConnectionError;
 static VALUE rb_eRedisClientConnectTimeoutError, rb_eRedisClientReadTimeoutError, rb_eRedisClientWriteTimeoutError;
 static ID id_parse, id_add, id_new;
 
@@ -176,13 +176,11 @@ static void *reply_create_array(const redisReadTask *task, size_t elements) {
     switch (task->type) {
         case REDIS_REPLY_PUSH:
         case REDIS_REPLY_ARRAY:
+        case REDIS_REPLY_SET:
             value = rb_ary_new_capa(elements);
             break;
         case REDIS_REPLY_MAP:
             value = rb_hash_new_capa(elements / 2);
-            break;
-        case REDIS_REPLY_SET:
-            value = rb_funcallv(rb_cSet, id_new, 0, NULL);
             break;
         default:
             rb_bug("[hiredis] Unexpected create array type %d", task->parent->type);
@@ -670,9 +668,6 @@ void Init_hiredis_connection(void) {
     id_parse = rb_intern("parse");
     id_add = rb_intern("add");
     id_new = rb_intern("new");
-
-    rb_cSet = rb_const_get(rb_cObject, rb_intern("Set"));
-    rb_global_variable(&rb_cSet);
 
     VALUE rb_cRedisClient = rb_const_get(rb_cObject, rb_intern("RedisClient"));
 

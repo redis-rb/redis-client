@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "set"
-
 class RedisClient
   module RESP3
     module_function
@@ -41,8 +39,6 @@ class RedisClient
         case element
         when Hash
           element.flatten
-        when Set
-          element.to_a
         else
           element
         end
@@ -144,7 +140,7 @@ class RedisClient
     end
 
     def parse_set(io)
-      parse_sequence(io, parse_integer(io)).to_set
+      parse_sequence(io, parse_integer(io))
     end
 
     def parse_map(io)

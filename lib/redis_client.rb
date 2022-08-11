@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "set"
-
 require "redis_client/version"
 require "redis_client/command_builder"
 require "redis_client/config"
