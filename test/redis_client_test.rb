@@ -42,7 +42,7 @@ class RedisClientTest < Minitest::Test
   end
 
   def test_dns_resolution_failure
-    client = RedisClient.new(host: "does-not-exist.localhost")
+    client = RedisClient.new(host: "does-not-exist.example.com")
     assert_raises RedisClient::ConnectionError do
       client.call("PING")
     end
