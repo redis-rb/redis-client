@@ -86,7 +86,7 @@ module RedisClientTests
 
   def test_argument_casting_arrays
     assert_equal 3, @redis.call("LPUSH", "list", [1, 2, 3])
-    assert_equal ["1", "2", "3"], @redis.call("RPOP", "list", 3)
+    assert_equal ["3", "2", "1"], @redis.call("LRANGE", "list", 0, 3)
 
     error = assert_raises TypeError do
       @redis.call("LPUSH", "list", [1, [2, 3]])
@@ -134,7 +134,7 @@ module RedisClientTests
 
   def test_pipeline_argument_casting_arrays
     assert_equal([3], @redis.pipelined { |p| p.call("LPUSH", "list", [1, 2, 3]) })
-    assert_equal ["1", "2", "3"], @redis.call("RPOP", "list", 3)
+    assert_equal ["3", "2", "1"], @redis.call("LRANGE", "list", 0, 3)
 
     error = assert_raises TypeError do
       @redis.pipelined { |p| p.call("LPUSH", "list", [1, [2, 3]]) }
@@ -271,7 +271,7 @@ module RedisClientTests
     error = assert_raises RedisClient::CommandError do
       @redis.call("DOESNOTEXIST", "foo")
     end
-    assert_includes error.message, "ERR unknown command `DOESNOTEXIST`"
+    assert_match(/ERR unknown command .DOESNOTEXIST./, error.message)
   end
 
   def test_authentication
@@ -394,7 +394,7 @@ module RedisClientTests
   end
 
   def test_blocking_call_timeout
-    assert_nil @redis.blocking_call(0.2, "BRPOP", "list", "0.1")
+    assert_nil @redis.blocking_call(0.5, "BRPOP", "list", "0.1")
     assert_equal "OK", @redis.call("SET", "foo", "bar")
   end
 
