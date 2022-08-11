@@ -58,10 +58,6 @@ class RedisClient
       assert_dumps ["PRINT", [1, 2, 3]], "*4\r\n$5\r\nPRINT\r\n$1\r\n1\r\n$1\r\n2\r\n$1\r\n3\r\n"
     end
 
-    def test_dump_set
-      assert_dumps ["PRINT", Set[1, 2, 3]], "*4\r\n$5\r\nPRINT\r\n$1\r\n1\r\n$1\r\n2\r\n$1\r\n3\r\n"
-    end
-
     def test_dump_hash
       assert_dumps(["PRINT", { 'first' => 1, 'second' => 2 }], "*5\r\n$5\r\nPRINT\r\n$5\r\nfirst\r\n$1\r\n1\r\n$6\r\nsecond\r\n$1\r\n2\r\n")
     end
@@ -105,7 +101,7 @@ class RedisClient
     end
 
     def test_load_set
-      assert_parses Set['orange', 'apple', true, 100, 999], "~5\r\n+orange\r\n+apple\r\n#t\r\n:100\r\n:999\r\n"
+      assert_parses ['orange', 'apple', true, 100, 999], "~5\r\n+orange\r\n+apple\r\n#t\r\n:100\r\n:999\r\n"
     end
 
     def test_load_map

@@ -1,5 +1,6 @@
 # Unreleased
 
+- Stop parsing RESP3 sets as Ruby Set instances.
 - Fix `SystemStackError` when parsing very large hashes. Fix: #30
 
 # 0.5.1

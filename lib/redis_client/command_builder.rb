@@ -10,8 +10,6 @@ class RedisClient
           case element
           when Hash
             element.flatten
-          when Set
-            element.to_a
           else
             element
           end
@@ -52,8 +50,6 @@ class RedisClient
           case element
           when Hash
             element.flatten
-          when Set
-            element.to_a
           else
             element
           end
