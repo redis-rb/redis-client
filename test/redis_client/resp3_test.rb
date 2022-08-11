@@ -118,7 +118,7 @@ class RedisClient
       entries.times do |i|
         payload << "+#{i}\r\n:#{i}\r\n"
       end
-      expected = entries.times.to_h { |i| [i.to_s, i] }
+      expected = entries.times.each_with_object({}) { |i, h| h[i.to_s] = i }
       assert_parses(expected, payload)
     end
 
