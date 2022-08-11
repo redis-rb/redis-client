@@ -518,4 +518,18 @@ module RedisClientTests
   def test_verbatim_string_reply
     assert_equal("# Server", @redis.call("INFO")[0..7])
   end
+
+  def test_resp2_nil_string
+    @redis = new_client(protocol: 2)
+    @redis.call("SET", "foo", "bar")
+    assert_equal "bar", @redis.call("GETDEL", "foo")
+    assert_nil @redis.call("GET", "foo")
+  end
+
+  def test_resp2_limited_type_casting
+    @redis = new_client(protocol: 2)
+    assert_equal 1, @redis.call("INCR", "foo")
+    @redis.call("HMSET", "hash", "foo", "bar")
+    assert_equal ["foo", "bar"], @redis.call("HGETALL", "hash")
+  end
 end
