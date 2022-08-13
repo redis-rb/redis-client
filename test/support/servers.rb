@@ -119,8 +119,8 @@ module Servers
       [
         Servers.redis_server_bin,
         conf_file.to_s,
-        "--sentinel",
         "--port", real_port.to_s,
+        "--sentinel",
       ]
     end
 
