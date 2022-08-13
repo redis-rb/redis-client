@@ -541,6 +541,10 @@ class RedisClient
       begin
         @disable_reconnection = true
         yield connection
+      rescue ConnectionError => error
+        connection&.close
+        close
+        raise
       ensure
         @disable_reconnection = previous_disable_reconnection
       end
