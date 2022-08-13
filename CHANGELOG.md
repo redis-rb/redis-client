@@ -1,5 +1,6 @@
 # Unreleased
 
+- Fix calling `blocking_call` with a block in a pipeline.
 - `blocking_call` now raise `ReadTimeoutError` if the command didn't complete in time.
 - Fix `blocking_call` to not respect `retry_attempts` on timeout.
 - Stop parsing RESP3 sets as Ruby Set instances.

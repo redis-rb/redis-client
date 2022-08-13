@@ -376,13 +376,13 @@ module RedisClientTests
     thr = Thread.start do
       client = new_client
       client.pipelined do |pipeline|
-        pipeline.blocking_call(false, "BRPOP", "list", "0")
+        pipeline.blocking_call(false, "BRPOP", "list", "0") { |r| r.map(&:upcase) }
       end
     end
     assert_nil thr.join(0.3) # still blocking
     @redis.call("LPUSH", "list", "token")
     refute_nil thr.join(0.3)
-    assert_equal [["list", "token"]], thr.value
+    assert_equal [["LIST", "TOKEN"]], thr.value
   end
 
   def test_multi_call_timeout

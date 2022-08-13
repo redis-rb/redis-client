@@ -445,7 +445,7 @@ class RedisClient
       @timeouts = nil
     end
 
-    def blocking_call(timeout, *command, **kwargs)
+    def blocking_call(timeout, *command, **kwargs, &block)
       command = @command_builder.generate!(command, kwargs)
       @timeouts ||= []
       @timeouts[@commands.size] = timeout
