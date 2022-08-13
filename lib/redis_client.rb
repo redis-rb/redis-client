@@ -420,18 +420,14 @@ class RedisClient
     end
 
     def _coerce!(results)
-      if results
-        results.each_with_index do |result, index|
-          if result.is_a?(CommandError)
-            result._set_command(@commands[index + 1])
-            raise result
-          end
+      results&.each_with_index do |result, index|
+        if result.is_a?(CommandError)
+          result._set_command(@commands[index + 1])
+          raise result
         end
 
-        @blocks&.each_with_index do |block, index|
-          if block
-            results[index - 1] = block.call(results[index - 1])
-          end
+        if @blocks && block = @blocks[index + 1]
+          results[index] = block.call(result)
         end
       end
 
