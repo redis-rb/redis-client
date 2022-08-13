@@ -215,7 +215,7 @@ For blocking commands such as `BRPOP`, a custom timeout duration can be passed a
 redis.blocking_call(timeout, "BRPOP", "key", 0)
 ```
 
-If `timeout` is reached, `#blocking_call` returns `nil`.
+If `timeout` is reached, `#blocking_call` raises `RedisClient::ReadTimeoutError` and doesn't retry regardless of the `reconnect_attempts` configuration.
 
 `timeout` is expressed in seconds, you can pass `false` or `0` to mean no timeout.
 

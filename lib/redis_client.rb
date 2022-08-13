@@ -213,13 +213,18 @@ class RedisClient
 
   def blocking_call(timeout, *command, **kwargs)
     command = @command_builder.generate!(command, kwargs)
+    error = nil
     result = ensure_connected do |connection|
       Middlewares.call(command, config) do
         connection.call(command, timeout)
       end
+    rescue ReadTimeoutError => error
+      break
     end
 
-    if block_given?
+    if error
+      raise error
+    elsif block_given?
       yield result
     else
       result
