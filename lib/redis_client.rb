@@ -575,6 +575,8 @@ class RedisClient
     end
 
     connection
+  rescue FailoverError
+    raise
   rescue ConnectionError => error
     raise CannotConnectError, error.message, error.backtrace
   rescue CommandError => error
