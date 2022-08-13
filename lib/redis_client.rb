@@ -79,14 +79,14 @@ class RedisClient
   UnsupportedServer = Class.new(Error)
 
   ConnectionError = Class.new(Error)
+  CannotConnectError = Class.new(ConnectionError)
 
   FailoverError = Class.new(ConnectionError)
 
   TimeoutError = Class.new(ConnectionError)
   ReadTimeoutError = Class.new(TimeoutError)
   WriteTimeoutError = Class.new(TimeoutError)
-  ConnectTimeoutError = Class.new(TimeoutError)
-  CheckoutTimeoutError = Class.new(ConnectTimeoutError)
+  CheckoutTimeoutError = Class.new(TimeoutError)
 
   class CommandError < Error
     attr_reader :command
@@ -570,6 +570,8 @@ class RedisClient
     end
 
     connection
+  rescue ConnectionError => error
+    raise CannotConnectError, error.message, error.backtrace
   rescue CommandError => error
     if error.message.include?("ERR unknown command `HELLO`")
       raise UnsupportedServer,

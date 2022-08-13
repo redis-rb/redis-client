@@ -60,9 +60,9 @@ class RedisClient
         loop do
           case status = socket.connect_nonblock(exception: false)
           when :wait_readable
-            socket.to_io.wait_readable(connect_timeout) or raise ReadTimeoutError
+            socket.to_io.wait_readable(connect_timeout) or raise CannotConnectError
           when :wait_writable
-            socket.to_io.wait_writable(connect_timeout) or raise WriteTimeoutError
+            socket.to_io.wait_writable(connect_timeout) or raise CannotConnectError
           when socket
             break
           else
@@ -76,10 +76,8 @@ class RedisClient
         read_timeout: read_timeout,
         write_timeout: write_timeout,
       )
-    rescue Errno::ETIMEDOUT => error
-      raise ConnectTimeoutError, error.message
     rescue SystemCallError, OpenSSL::SSL::SSLError, SocketError => error
-      raise ConnectionError, error.message
+      raise CannotConnectError, error.message, error.backtrace
     end
 
     def connected?

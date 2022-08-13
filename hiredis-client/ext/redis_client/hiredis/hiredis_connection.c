@@ -45,8 +45,8 @@ static inline VALUE rb_hash_new_capa(long capa)
 }
 #endif
 
-static VALUE rb_eRedisClientCommandError, rb_eRedisClientConnectionError;
-static VALUE rb_eRedisClientConnectTimeoutError, rb_eRedisClientReadTimeoutError, rb_eRedisClientWriteTimeoutError;
+static VALUE rb_eRedisClientCommandError, rb_eRedisClientConnectionError, rb_eRedisClientCannotConnectError;
+static VALUE rb_eRedisClientReadTimeoutError, rb_eRedisClientWriteTimeoutError;
 static ID id_parse, id_add, id_new;
 
 typedef struct {
@@ -424,7 +424,7 @@ static int hiredis_wait_writable(int fd, const struct timeval *timeout, int *iss
 
 static VALUE hiredis_connect_finish(hiredis_connection_t *connection, redisContext *context) {
     if (context->err) {
-        redis_raise_error_and_disconnect(context, rb_eRedisClientConnectTimeoutError);
+        redis_raise_error_and_disconnect(context, rb_eRedisClientCannotConnectError);
     }
 
     int writable = 0;
@@ -433,23 +433,23 @@ static VALUE hiredis_connect_finish(hiredis_connection_t *connection, redisConte
 
     /* Wait for socket to become writable */
     if (hiredis_wait_writable(context->fd, &connection->connect_timeout, &writable) < 0) {
-        redis_raise_error_and_disconnect(context, rb_eRedisClientConnectTimeoutError);
+        redis_raise_error_and_disconnect(context, rb_eRedisClientCannotConnectError);
     }
 
     if (!writable) {
         errno = ETIMEDOUT;
-        redis_raise_error_and_disconnect(context, rb_eRedisClientConnectTimeoutError);
+        redis_raise_error_and_disconnect(context, rb_eRedisClientCannotConnectError);
     }
 
     /* Check for socket error */
     if (getsockopt(context->fd, SOL_SOCKET, SO_ERROR, &optval, &optlen) < 0) {
         context->err = REDIS_ERR_IO;
-        redis_raise_error_and_disconnect(context, rb_eRedisClientConnectTimeoutError);
+        redis_raise_error_and_disconnect(context, rb_eRedisClientCannotConnectError);
     }
 
     if (optval) {
         errno = optval;
-        redis_raise_error_and_disconnect(context, rb_eRedisClientConnectTimeoutError);
+        redis_raise_error_and_disconnect(context, rb_eRedisClientCannotConnectError);
     }
 
     context->reader->fn = &reply_functions;
@@ -481,7 +481,7 @@ static VALUE hiredis_init_ssl(VALUE self, VALUE ssl_param) {
     SSL_CONTEXT(ssl_param, ssl_context)
 
     if (redisInitiateSSLWithContext(connection->context, ssl_context->context) != REDIS_OK) {
-        hiredis_raise_error_and_disconnect(connection, rb_eRedisClientConnectTimeoutError);
+        hiredis_raise_error_and_disconnect(connection, rb_eRedisClientCannotConnectError);
     }
 
     redisSSL *redis_ssl = redisGetSSLSocket(connection->context);
@@ -489,15 +489,15 @@ static VALUE hiredis_init_ssl(VALUE self, VALUE ssl_param) {
     if (redis_ssl->wantRead) {
         int readable = 0;
         if (hiredis_wait_readable(connection->context->fd, &connection->connect_timeout, &readable) < 0) {
-            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientConnectTimeoutError);
+            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientCannotConnectError);
         }
         if (!readable) {
             errno = EAGAIN;
-            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientConnectTimeoutError);
+            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientCannotConnectError);
         }
 
         if (redisInitiateSSLContinue(connection->context) != REDIS_OK) {
-            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientConnectTimeoutError);
+            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientCannotConnectError);
         };
     }
 
@@ -677,8 +677,8 @@ void Init_hiredis_connection(void) {
     rb_eRedisClientConnectionError = rb_const_get(rb_cRedisClient, rb_intern("ConnectionError"));
     rb_global_variable(&rb_eRedisClientConnectionError);
 
-    rb_eRedisClientConnectTimeoutError = rb_const_get(rb_cRedisClient, rb_intern("ConnectTimeoutError"));
-    rb_global_variable(&rb_eRedisClientConnectTimeoutError);
+    rb_eRedisClientCannotConnectError = rb_const_get(rb_cRedisClient, rb_intern("CannotConnectError"));
+    rb_global_variable(&rb_eRedisClientCannotConnectError);
 
     rb_eRedisClientReadTimeoutError = rb_const_get(rb_cRedisClient, rb_intern("ReadTimeoutError"));
     rb_global_variable(&rb_eRedisClientReadTimeoutError);

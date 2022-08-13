@@ -34,7 +34,11 @@ class RedisClient
       self.write_timeout = write_timeout
 
       if config.path
-        connect_unix(config.path)
+        begin
+          connect_unix(config.path)
+        rescue SystemCallError => error
+          raise CannotConnectError, error.message, error.backtrace
+        end
       else
         connect_tcp(config.host, config.port)
       end

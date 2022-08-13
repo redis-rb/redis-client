@@ -52,7 +52,7 @@ class RedisClient
     def test_tcp_connect_upstream_timeout
       @redis.close
       Toxiproxy[/redis/].upstream(:timeout, timeout: 2_000).apply do
-        assert_timeout RedisClient::TimeoutError do
+        assert_timeout RedisClient::ConnectionError do
           @redis.call("PING")
         end
       end
@@ -61,7 +61,7 @@ class RedisClient
     def test_tcp_connect_downstream_timeout
       @redis.close
       Toxiproxy[/redis/].upstream(:timeout, timeout: 2_000).apply do
-        assert_timeout RedisClient::TimeoutError do
+        assert_timeout RedisClient::ConnectionError do
           @redis.call("PING")
         end
       end
@@ -224,10 +224,17 @@ class RedisClient
     include ClientTestHelper
     include ConnectionTests
 
+    def test_connecting_to_a_ssl_server
+      client = new_client(**ssl_config, ssl: false)
+      assert_raises CannotConnectError do
+        client.call("PING")
+      end
+    end
+
     private
 
     def new_client(**overrides)
-      RedisClient.new(**tcp_config.merge(overrides))
+      RedisClient.new(**tcp_config, **overrides)
     end
   end
 
@@ -235,10 +242,17 @@ class RedisClient
     include ClientTestHelper
     include ConnectionTests
 
+    def test_connecting_to_a_raw_tcp_server
+      client = new_client(**tcp_config, ssl: true)
+      assert_raises CannotConnectError do
+        client.call("PING")
+      end
+    end
+
     private
 
     def new_client(**overrides)
-      RedisClient.new(**ssl_config.merge(overrides))
+      RedisClient.new(**ssl_config, **overrides)
     end
   end
 
@@ -249,10 +263,16 @@ class RedisClient
       assert_equal "PONG", @redis.call("PING")
     end
 
+    def test_missing_socket
+      assert_raises RedisClient::CannotConnectError do
+        new_client(path: "/tmp/does-not-exist").call("PING")
+      end
+    end
+
     private
 
     def new_client(**overrides)
-      RedisClient.new(**unix_config.merge(overrides))
+      RedisClient.new(**unix_config, **overrides)
     end
   end
 end
