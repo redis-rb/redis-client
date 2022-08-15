@@ -76,6 +76,7 @@ class RedisClient
 
   Error = Class.new(StandardError)
 
+  ProtocolError = Class.new(Error)
   UnsupportedServer = Class.new(Error)
 
   ConnectionError = Class.new(Error)

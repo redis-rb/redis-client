@@ -231,6 +231,24 @@ class RedisClient
       end
     end
 
+    def test_protocol_error
+      tcp_server = TCPServer.new("127.0.0.1", 0)
+      tcp_server.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
+      port = tcp_server.addr[1]
+
+      server_thread = Thread.new do
+        session = tcp_server.accept
+        session.write("invalid")
+        session.close
+      end
+
+      assert_raises RedisClient::ProtocolError do
+        new_client(host: "127.0.0.1", port: port).call("PING")
+      end
+    ensure
+      server_thread&.kill
+    end
+
     private
 
     def new_client(**overrides)

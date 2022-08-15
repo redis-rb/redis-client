@@ -46,7 +46,7 @@ static inline VALUE rb_hash_new_capa(long capa)
 }
 #endif
 
-static VALUE rb_eRedisClientCommandError, rb_eRedisClientConnectionError, rb_eRedisClientCannotConnectError;
+static VALUE rb_eRedisClientCommandError, rb_eRedisClientConnectionError, rb_eRedisClientCannotConnectError, rb_eRedisClientProtocolError;
 static VALUE rb_eRedisClientReadTimeoutError, rb_eRedisClientWriteTimeoutError;
 static ID id_parse, id_add, id_new;
 
@@ -330,6 +330,8 @@ static inline void redis_raise_error_and_disconnect(redisContext *context, VALUE
     case REDIS_ERR_IO:
         rb_sys_fail(0);
         break;
+    case REDIS_ERR_PROTOCOL:
+        rb_raise(rb_eRedisClientProtocolError, "%s", errstr);
     default:
         /* Raise something else */
         rb_raise(rb_eRedisClientConnectionError, "%s", errstr);
@@ -718,6 +720,9 @@ void Init_hiredis_connection(void) {
 
     rb_eRedisClientCannotConnectError = rb_const_get(rb_cRedisClient, rb_intern("CannotConnectError"));
     rb_global_variable(&rb_eRedisClientCannotConnectError);
+
+    rb_eRedisClientProtocolError = rb_const_get(rb_cRedisClient, rb_intern("ProtocolError"));
+    rb_global_variable(&rb_eRedisClientProtocolError);
 
     rb_eRedisClientReadTimeoutError = rb_const_get(rb_cRedisClient, rb_intern("ReadTimeoutError"));
     rb_global_variable(&rb_eRedisClientReadTimeoutError);

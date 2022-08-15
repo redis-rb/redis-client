@@ -123,6 +123,8 @@ class RedisClient
       else
         @io.with_timeout(timeout) { RESP3.load(@io) }
       end
+    rescue RedisClient::RESP3::UnknownType => error
+      raise RedisClient::ProtocolError, error.message
     rescue SystemCallError, IOError, OpenSSL::SSL::SSLError => error
       raise ConnectionError, error.message
     end
