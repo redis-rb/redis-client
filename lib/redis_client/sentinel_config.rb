@@ -103,7 +103,10 @@ class RedisClient
           return Config.new(host: host, port: Integer(port), **@client_config)
         end
       end
-      raise ConnectionError, "Couldn't locate a master for role: #{@name}"
+    rescue ConnectionError
+      raise ConnectionError, "No sentinels available"
+    else
+      raise ConnectionError, "Couldn't locate a replica for role: #{@name}"
     end
 
     def sentinel_client(sentinel_config)
@@ -119,6 +122,9 @@ class RedisClient
         replica ||= replicas.sample
         return Config.new(host: replica["ip"], port: Integer(replica["port"]), **@client_config)
       end
+    rescue ConnectionError
+      raise ConnectionError, "No sentinels available"
+    else
       raise ConnectionError, "Couldn't locate a replica for role: #{@name}"
     end
 
