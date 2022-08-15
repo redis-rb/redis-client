@@ -52,7 +52,11 @@ class RedisClient
       def call(*args)
         command, response = @responses.shift
         if command == args
-          response
+          if block_given?
+            yield response
+          else
+            response
+          end
         else
           raise "Expected #{command.inspect}, got: #{args.inspect}"
         end
@@ -118,9 +122,9 @@ class RedisClient
     def test_replica_failover_not_ready
       @config = new_config(role: :replica)
       sentinel_client_mock = SentinelClientMock.new([
-        [["SENTINEL", "replicas", "cache"], [{ "ip" => Servers::REDIS_REPLICA.host, "port" => Servers::REDIS_REPLICA.port.to_s, "flags" => "slave" }]],
-        [["SENTINEL", "replicas", "cache"], [{ "ip" => Servers::REDIS.host, "port" => Servers::REDIS.port.to_s, "flags" => "slave" }]],
-        [["SENTINEL", "replicas", "cache"], [{ "ip" => Servers::REDIS.host, "port" => Servers::REDIS.port.to_s, "flags" => "slave" }]],
+        [["SENTINEL", "replicas", "cache"], [response_hash("ip" => Servers::REDIS_REPLICA.host, "port" => Servers::REDIS_REPLICA.port.to_s, "flags" => "slave")]],
+        [["SENTINEL", "replicas", "cache"], [response_hash("ip" => Servers::REDIS.host, "port" => Servers::REDIS.port.to_s, "flags" => "slave")]],
+        [["SENTINEL", "replicas", "cache"], [response_hash("ip" => Servers::REDIS.host, "port" => Servers::REDIS.port.to_s, "flags" => "slave")]],
       ])
       @config.stub(:sentinel_client, ->(_config) { sentinel_client_mock }) do
         client = @config.new_client
@@ -137,10 +141,10 @@ class RedisClient
     def test_replica_failover_ready
       @config = new_config(role: :replica)
       sentinel_client_mock = SentinelClientMock.new([
-        [["SENTINEL", "replicas", "cache"], [{ "ip" => Servers::REDIS.host, "port" => Servers::REDIS.port.to_s, "flags" => "slave" }]],
-        [["SENTINEL", "replicas", "cache"], [{ "ip" => Servers::REDIS_REPLICA.host, "port" => Servers::REDIS_REPLICA.port.to_s, "flags" => "slave" }]],
-        [["SENTINEL", "replicas", "cache"], [{ "ip" => Servers::REDIS_REPLICA.host, "port" => Servers::REDIS_REPLICA.port.to_s, "flags" => "slave" }]],
-        [["SENTINEL", "replicas", "cache"], [{ "ip" => Servers::REDIS_REPLICA.host, "port" => Servers::REDIS_REPLICA.port.to_s, "flags" => "slave" }]],
+        [["SENTINEL", "replicas", "cache"], [response_hash("ip" => Servers::REDIS.host, "port" => Servers::REDIS.port.to_s, "flags" => "slave")]],
+        [["SENTINEL", "replicas", "cache"], [response_hash("ip" => Servers::REDIS_REPLICA.host, "port" => Servers::REDIS_REPLICA.port.to_s, "flags" => "slave")]],
+        [["SENTINEL", "replicas", "cache"], [response_hash("ip" => Servers::REDIS_REPLICA.host, "port" => Servers::REDIS_REPLICA.port.to_s, "flags" => "slave")]],
+        [["SENTINEL", "replicas", "cache"], [response_hash("ip" => Servers::REDIS_REPLICA.host, "port" => Servers::REDIS_REPLICA.port.to_s, "flags" => "slave")]],
       ])
 
       @config.stub(:sentinel_client, ->(_config) { sentinel_client_mock }) do
@@ -150,6 +154,10 @@ class RedisClient
     end
 
     private
+
+    def response_hash(hash)
+      hash
+    end
 
     def new_config(**kwargs)
       RedisClient.sentinel(
@@ -161,6 +169,17 @@ class RedisClient
         driver: ENV.fetch("DRIVER", "ruby").to_sym,
         **kwargs,
       )
+    end
+  end
+
+  class RESP2SentinelTest < SentinelTest
+    def new_config(**kwargs)
+      super(**kwargs, protocol: 2)
+    end
+
+    def response_hash(hash)
+      # In RESP2 hashes are returned as flat arrays
+      hash.to_a.flatten(1)
     end
   end
 end

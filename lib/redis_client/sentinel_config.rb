@@ -12,8 +12,21 @@ class RedisClient
         raise ArgumentError, "Expected role to be either :master or :replica, got: #{role.inspect}"
       end
 
+      @to_list_of_hash = @to_hash = nil
+      extra_config = {}
+      if client_config[:protocol] == 2
+        extra_config[:protocol] = client_config[:protocol]
+        @to_list_of_hash = lambda do |may_be_a_list|
+          if may_be_a_list.is_a?(Array)
+            may_be_a_list.map { |l| l.each_slice(2).to_h }
+          else
+            may_be_a_list
+          end
+        end
+      end
+
       @name = name
-      @sentinel_configs = sentinels.map { |s| Config.new(**s) }
+      @sentinel_configs = sentinels.map { |s| Config.new(**extra_config, **s) }
       @sentinels = {}.compare_by_identity
       @role = role
       @mutex = Mutex.new
@@ -99,7 +112,7 @@ class RedisClient
 
     def resolve_replica
       each_sentinel do |sentinel_client|
-        replicas = sentinel_client.call("SENTINEL", "replicas", @name)
+        replicas = sentinel_client.call("SENTINEL", "replicas", @name, &@to_list_of_hash)
         next if replicas.empty?
 
         replica = replicas.reject { |r| r["flags"].to_s.split(",").include?("disconnected") }.sample
