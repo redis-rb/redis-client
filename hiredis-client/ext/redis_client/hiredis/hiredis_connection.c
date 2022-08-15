@@ -480,14 +480,17 @@ static VALUE hiredis_init_ssl(VALUE self, VALUE ssl_param) {
     CONNECTION(self, connection);
     SSL_CONTEXT(ssl_param, ssl_context)
 
+        puts("redisInitiateSSLWithContext");
     if (redisInitiateSSLWithContext(connection->context, ssl_context->context) != REDIS_OK) {
         hiredis_raise_error_and_disconnect(connection, rb_eRedisClientCannotConnectError);
     }
 
+    puts("redisGetSSLSocket");
     redisSSL *redis_ssl = redisGetSSLSocket(connection->context);
  
     if (redis_ssl->wantRead) {
         int readable = 0;
+        puts("hiredis_wait_readable");
         if (hiredis_wait_readable(connection->context->fd, &connection->connect_timeout, &readable) < 0) {
             hiredis_raise_error_and_disconnect(connection, rb_eRedisClientCannotConnectError);
         }
