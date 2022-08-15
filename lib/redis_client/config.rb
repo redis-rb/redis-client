@@ -12,7 +12,7 @@ class RedisClient
     DEFAULT_DB = 0
 
     module Common
-      attr_reader :db, :username, :password, :id, :ssl, :ssl_params, :command_builder,
+      attr_reader :db, :password, :id, :ssl, :ssl_params, :command_builder,
         :connect_timeout, :read_timeout, :write_timeout, :driver, :connection_prelude, :protocol
 
       alias_method :ssl?, :ssl
@@ -33,7 +33,7 @@ class RedisClient
         command_builder: CommandBuilder,
         reconnect_attempts: false
       )
-        @username = username || DEFAULT_USERNAME
+        @username = username
         @password = password
         @db = db || DEFAULT_DB
         @id = id
@@ -57,6 +57,10 @@ class RedisClient
         @reconnect_attempts = reconnect_attempts
 
         @connection_prelude = build_connection_prelude
+      end
+
+      def username
+        @username || DEFAULT_USERNAME
       end
 
       def sentinel?
@@ -102,7 +106,7 @@ class RedisClient
         prelude = []
         if protocol == 3
           prelude << if @password
-            ["HELLO", "3", "AUTH", @username, @password]
+            ["HELLO", "3", "AUTH", @username || DEFAULT_USERNAME, @password]
           else
             ["HELLO", "3"]
           end
