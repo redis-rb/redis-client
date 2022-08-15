@@ -90,7 +90,7 @@ class RedisClient
       end
 
       def ssl_context
-        @ssl_context ||= @driver.ssl_context(@ssl_params)
+        @ssl_context ||= @driver.ssl_context(@ssl_params || {})
       end
 
       def server_url
