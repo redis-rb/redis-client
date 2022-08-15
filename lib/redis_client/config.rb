@@ -30,6 +30,7 @@ class RedisClient
         ssl_params: nil,
         driver: nil,
         protocol: 3,
+        client_implementation: RedisClient,
         command_builder: CommandBuilder,
         reconnect_attempts: false
       )
@@ -46,6 +47,7 @@ class RedisClient
 
         @driver = driver ? RedisClient.driver(driver) : RedisClient.default_driver
 
+        @client_implementation = client_implementation
         @protocol = protocol
         unless protocol == 2 || protocol == 3
           raise ArgumentError, "Unknown protocol version #{protocol.inspect}, expected 2 or 3"
@@ -55,7 +57,6 @@ class RedisClient
 
         reconnect_attempts = Array.new(reconnect_attempts, 0).freeze if reconnect_attempts.is_a?(Integer)
         @reconnect_attempts = reconnect_attempts
-
         @connection_prelude = build_connection_prelude
       end
 
@@ -73,7 +74,7 @@ class RedisClient
       end
 
       def new_client(**kwargs)
-        RedisClient.new(self, **kwargs)
+        @client_implementation.new(self, **kwargs)
       end
 
       def retry_connecting?(attempt, _error)

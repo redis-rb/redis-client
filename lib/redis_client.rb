@@ -118,11 +118,11 @@ class RedisClient
 
   class << self
     def config(**kwargs)
-      Config.new(**kwargs)
+      Config.new(client_implementation: self, **kwargs)
     end
 
     def sentinel(**kwargs)
-      SentinelConfig.new(**kwargs)
+      SentinelConfig.new(client_implementation: self, **kwargs)
     end
 
     def new(arg = nil, **kwargs)
