@@ -31,6 +31,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ruby.h"
+#include "ruby/thread.h"
 #include "ruby/encoding.h"
 #include <errno.h>
 #include <sys/socket.h>
@@ -534,6 +535,44 @@ static VALUE hiredis_write(VALUE self, VALUE command) {
     return Qnil;
 }
 
+typedef struct {
+    redisContext *context;
+    int return_value;
+} hiredis_buffer_read_args_t;
+
+void *hiredis_buffer_read_safe(void *_args) {
+    hiredis_buffer_read_args_t *args = _args;
+    args->return_value = redisBufferRead(args->context);
+    return NULL;
+}
+int hiredis_buffer_read_nogvl(redisContext *context) {
+    hiredis_buffer_read_args_t args = {
+        .context = context,
+    };
+    rb_thread_call_without_gvl(hiredis_buffer_read_safe, &args, RUBY_UBF_IO, 0);
+    return args.return_value;
+}
+
+typedef struct {
+    redisContext *context;
+    int *done;
+    int return_value;
+} hiredis_buffer_write_args_t;
+
+void *hiredis_buffer_write_safe(void *_args) {
+    hiredis_buffer_write_args_t *args = _args;
+    args->return_value = redisBufferWrite(args->context, args->done);
+    return NULL;
+}
+int hiredis_buffer_write_nogvl(redisContext *context, int *done) {
+    hiredis_buffer_write_args_t args = {
+        .context = context,
+        .done = done,
+    };
+    rb_thread_call_without_gvl(hiredis_buffer_write_safe, &args, RUBY_UBF_IO, 0);
+    return args.return_value;
+}
+
 static VALUE hiredis_flush(VALUE self) {
     CONNECTION(self, connection);
     ENSURE_CONNECTED(connection);
@@ -541,7 +580,7 @@ static VALUE hiredis_flush(VALUE self) {
     int wdone = 0;
     while (!wdone) {
         errno = 0;
-        if (redisBufferWrite(connection->context, &wdone) == REDIS_ERR) {
+        if (hiredis_buffer_write_nogvl(connection->context, &wdone) == REDIS_ERR) {
             if (errno == EAGAIN) {
                 int writable = 0;
 
@@ -577,7 +616,7 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
         while (!wdone) {
             errno = 0;
 
-            if (redisBufferWrite(connection->context, &wdone) == REDIS_ERR) {
+            if (hiredis_buffer_write_nogvl(connection->context, &wdone) == REDIS_ERR) {
                 /* Socket error */
                 return -1;
             }
@@ -600,7 +639,7 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
         while (redis_reply == NULL) {
             errno = 0;
 
-            if (redisBufferRead(connection->context) == REDIS_ERR) {
+            if (hiredis_buffer_read_nogvl(connection->context) == REDIS_ERR) {
                 /* Socket error */
                 return -1;
             }
