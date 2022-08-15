@@ -49,7 +49,7 @@ class RedisClient
     end
 
     def connect_timeout=(timeout)
-      self.connect_timeout_us = timeout ? (timeout * 1_000_000).to_i : 0
+      p [:connect_timeout_us, (self.connect_timeout_us = timeout ? (timeout * 1_000_000).to_i : 0)]
       @connect_timeout = timeout
     end
 
