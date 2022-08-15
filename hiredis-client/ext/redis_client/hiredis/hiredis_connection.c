@@ -380,6 +380,7 @@ static int hiredis_wait_readable(int fd, const struct timeval *timeout, int *iss
         toptr = &to;
     }
 
+    puts("rb_thread_fd_select");
     if (rb_thread_fd_select(fd + 1, &fds, NULL, NULL, toptr) < 0) {
         rb_fd_term(&fds);
         return -1;
@@ -494,6 +495,7 @@ static VALUE hiredis_init_ssl(VALUE self, VALUE ssl_param) {
         if (hiredis_wait_readable(connection->context->fd, &connection->connect_timeout, &readable) < 0) {
             hiredis_raise_error_and_disconnect(connection, rb_eRedisClientCannotConnectError);
         }
+        puts("hiredis_wait_readable_done");
         if (!readable) {
             errno = EAGAIN;
             hiredis_raise_error_and_disconnect(connection, rb_eRedisClientCannotConnectError);
