@@ -155,7 +155,7 @@ class RedisClient
       super(**kwargs)
 
       @host = host || uri&.host&.sub(/\A\[(.*)\]\z/, '\1') || DEFAULT_HOST
-      @port = port || uri&.port || DEFAULT_PORT
+      @port = Integer(port || uri&.port || DEFAULT_PORT)
       @path = path
     end
   end
