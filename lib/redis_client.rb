@@ -600,7 +600,7 @@ class RedisClient
         else
           connection
         end
-      rescue ConnectionError => error
+      rescue ConnectionError, ProtocolError => error
         connection&.close
         close
 
@@ -617,7 +617,7 @@ class RedisClient
       begin
         @disable_reconnection = true
         yield connection
-      rescue ConnectionError
+      rescue ConnectionError, ProtocolError
         connection&.close
         close
         raise
