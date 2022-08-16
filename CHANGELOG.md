@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.6.1
+
 - Fix `REDIS_REPLY_SET` parsing in `hiredis`.
 
 # 0.6.0
