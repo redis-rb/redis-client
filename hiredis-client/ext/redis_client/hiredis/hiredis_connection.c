@@ -48,7 +48,7 @@ static inline VALUE rb_hash_new_capa(long capa)
 
 static VALUE rb_eRedisClientCommandError, rb_eRedisClientConnectionError, rb_eRedisClientCannotConnectError, rb_eRedisClientProtocolError;
 static VALUE rb_eRedisClientReadTimeoutError, rb_eRedisClientWriteTimeoutError;
-static ID id_parse, id_add, id_new;
+static ID id_parse;
 
 typedef struct {
     redisSSLContext *context;
@@ -127,6 +127,7 @@ static void *reply_append(const redisReadTask *task, VALUE value) {
 
         switch (task->parent->type) {
             case REDIS_REPLY_ARRAY:
+            case REDIS_REPLY_SET:
             case REDIS_REPLY_PUSH:
                 rb_ary_store(parent, task->idx, value);
                 break;
@@ -138,9 +139,6 @@ static void *reply_append(const redisReadTask *task, VALUE value) {
                 } else {
                     task->parent->privdata = (void*)value;
                 }
-                break;
-            case REDIS_REPLY_SET:
-                rb_funcall(parent, id_add, 1, value);
                 break;
             default:
                 rb_bug("[hiredis] Unexpected task parent type %d", task->parent->type);
@@ -707,8 +705,6 @@ void Init_hiredis_connection(void) {
     redisInitOpenSSL();
 
     id_parse = rb_intern("parse");
-    id_add = rb_intern("add");
-    id_new = rb_intern("new");
 
     VALUE rb_cRedisClient = rb_const_get(rb_cObject, rb_intern("RedisClient"));
 

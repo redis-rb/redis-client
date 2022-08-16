@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fix `REDIS_REPLY_SET` parsing in `hiredis`.
+
 # 0.6.0
 
 - Added `protocol: 2` options to talk with Redis 5 and older servers.
