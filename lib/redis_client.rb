@@ -183,7 +183,22 @@ class RedisClient
   end
 
   def call(*command, **kwargs)
-    command = @command_builder.generate!(command, kwargs)
+    command = @command_builder.generate(command, kwargs)
+    result = ensure_connected do |connection|
+      Middlewares.call(command, config) do
+        connection.call(command, nil)
+      end
+    end
+
+    if block_given?
+      yield result
+    else
+      result
+    end
+  end
+
+  def call_v(command)
+    command = @command_builder.generate(command)
     result = ensure_connected do |connection|
       Middlewares.call(command, config) do
         connection.call(command, nil)
@@ -198,7 +213,22 @@ class RedisClient
   end
 
   def call_once(*command, **kwargs)
-    command = @command_builder.generate!(command, kwargs)
+    command = @command_builder.generate(command, kwargs)
+    result = ensure_connected(retryable: false) do |connection|
+      Middlewares.call(command, config) do
+        connection.call(command, nil)
+      end
+    end
+
+    if block_given?
+      yield result
+    else
+      result
+    end
+  end
+
+  def call_once_v(command)
+    command = @command_builder.generate(command)
     result = ensure_connected(retryable: false) do |connection|
       Middlewares.call(command, config) do
         connection.call(command, nil)
@@ -213,7 +243,27 @@ class RedisClient
   end
 
   def blocking_call(timeout, *command, **kwargs)
-    command = @command_builder.generate!(command, kwargs)
+    command = @command_builder.generate(command, kwargs)
+    error = nil
+    result = ensure_connected do |connection|
+      Middlewares.call(command, config) do
+        connection.call(command, timeout)
+      end
+    rescue ReadTimeoutError => error
+      break
+    end
+
+    if error
+      raise error
+    elsif block_given?
+      yield result
+    else
+      result
+    end
+  end
+
+  def blocking_call_v(timeout, command)
+    command = @command_builder.generate(command)
     error = nil
     result = ensure_connected do |connection|
       Middlewares.call(command, config) do
@@ -237,7 +287,7 @@ class RedisClient
       return to_enum(__callee__, *args, **kwargs)
     end
 
-    args = @command_builder.generate!(["SCAN", 0] + args, kwargs)
+    args = @command_builder.generate(["SCAN", 0] + args, kwargs)
     scan_list(1, args, &block)
   end
 
@@ -246,7 +296,7 @@ class RedisClient
       return to_enum(__callee__, key, *args, **kwargs)
     end
 
-    args = @command_builder.generate!(["SSCAN", key, 0] + args, kwargs)
+    args = @command_builder.generate(["SSCAN", key, 0] + args, kwargs)
     scan_list(2, args, &block)
   end
 
@@ -255,7 +305,7 @@ class RedisClient
       return to_enum(__callee__, key, *args, **kwargs)
     end
 
-    args = @command_builder.generate!(["HSCAN", key, 0] + args, kwargs)
+    args = @command_builder.generate(["HSCAN", key, 0] + args, kwargs)
     scan_pairs(2, args, &block)
   end
 
@@ -264,7 +314,7 @@ class RedisClient
       return to_enum(__callee__, key, *args, **kwargs)
     end
 
-    args = @command_builder.generate!(["ZSCAN", key, 0] + args, kwargs)
+    args = @command_builder.generate(["ZSCAN", key, 0] + args, kwargs)
     scan_pairs(2, args, &block)
   end
 
@@ -347,7 +397,12 @@ class RedisClient
     end
 
     def call(*command, **kwargs)
-      raw_connection.write(@command_builder.generate!(command, kwargs))
+      raw_connection.write(@command_builder.generate(command, kwargs))
+      nil
+    end
+
+    def call_v(command)
+      raw_connection.write(@command_builder.generate(command))
       nil
     end
 
@@ -382,14 +437,29 @@ class RedisClient
     end
 
     def call(*command, **kwargs, &block)
-      command = @command_builder.generate!(command, kwargs)
+      command = @command_builder.generate(command, kwargs)
       (@blocks ||= [])[@commands.size] = block if block_given?
       @commands << command
       nil
     end
 
-    def call_once(*command, **kwargs)
-      command = @command_builder.generate!(command, kwargs)
+    def call_v(command, &block)
+      command = @command_builder.generate(command)
+      (@blocks ||= [])[@commands.size] = block if block_given?
+      @commands << command
+      nil
+    end
+
+    def call_once(*command, **kwargs, &block)
+      command = @command_builder.generate(command, kwargs)
+      @retryable = false
+      (@blocks ||= [])[@commands.size] = block if block_given?
+      @commands << command
+      nil
+    end
+
+    def call_once_v(command, &block)
+      command = @command_builder.generate(command)
       @retryable = false
       (@blocks ||= [])[@commands.size] = block if block_given?
       @commands << command
@@ -443,7 +513,16 @@ class RedisClient
     end
 
     def blocking_call(timeout, *command, **kwargs, &block)
-      command = @command_builder.generate!(command, kwargs)
+      command = @command_builder.generate(command, kwargs)
+      @timeouts ||= []
+      @timeouts[@commands.size] = timeout
+      (@blocks ||= [])[@commands.size] = block if block_given?
+      @commands << command
+      nil
+    end
+
+    def blocking_call_v(timeout, command, &block)
+      command = @command_builder.generate(command)
       @timeouts ||= []
       @timeouts[@commands.size] = timeout
       (@blocks ||= [])[@commands.size] = block if block_given?

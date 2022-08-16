@@ -20,7 +20,7 @@ class RedisClient
         @client = client
       end
 
-      %i(call call_once blocking_call).each do |method|
+      %i(call call_v call_once call_once_v blocking_call blocking_call_v).each do |method|
         class_eval(<<~RUBY, __FILE__, __LINE__ + 1)
           def #{method}(*args, &block)
             @client.#{method}(*args, &block)
@@ -64,7 +64,7 @@ class RedisClient
         RUBY
       end
 
-      %i(id config size connect_timeout read_timeout write_timeout).each do |reader|
+      %i(id config size connect_timeout read_timeout write_timeout pubsub).each do |reader|
         class_eval(<<~RUBY, __FILE__, __LINE__ + 1)
           def #{reader}
             @client.#{reader}

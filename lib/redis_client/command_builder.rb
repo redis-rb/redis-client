@@ -5,7 +5,7 @@ class RedisClient
     extend self
 
     if Symbol.method_defined?(:name)
-      def generate!(args, kwargs)
+      def generate(args, kwargs = nil)
         command = args.flat_map do |element|
           case element
           when Hash
@@ -15,7 +15,7 @@ class RedisClient
           end
         end
 
-        kwargs.each do |key, value|
+        kwargs&.each do |key, value|
           if value
             if value == true
               command << key.name
@@ -45,7 +45,7 @@ class RedisClient
         command
       end
     else
-      def generate!(args, kwargs)
+      def generate(args, kwargs = nil)
         command = args.flat_map do |element|
           case element
           when Hash
@@ -55,7 +55,7 @@ class RedisClient
           end
         end
 
-        kwargs.each do |key, value|
+        kwargs&.each do |key, value|
           if value
             if value == true
               command << key.to_s

@@ -32,10 +32,14 @@ class RedisClient
       assert_equal ["ttl", "42"], call(ttl: 42)
     end
 
+    def test_nil_kwargs
+      assert_equal ["a", "b", "c"], CommandBuilder.generate(%i(a b c))
+    end
+
     private
 
     def call(*args, **kwargs)
-      CommandBuilder.generate!(args, kwargs)
+      CommandBuilder.generate(args, kwargs)
     end
   end
 end

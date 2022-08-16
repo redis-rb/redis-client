@@ -47,6 +47,27 @@ module RedisClientTests
     end
   end
 
+  def test_call_v
+    assert_equal "OK", @redis.call(["SET", "str", 42])
+    assert_equal "OK", @redis.blocking_call_v(1, ["SET", "str", 42])
+    assert_equal "OK", @redis.call_once_v(["SET", "str", 42])
+
+    results = @redis.pipelined do |pipeline|
+      assert_nil pipeline.call(["SET", "str", 42])
+      assert_nil pipeline.blocking_call_v(1, ["SET", "str", 42])
+      assert_nil pipeline.call_once_v(["SET", "str", 42])
+    end
+    assert_equal %w(OK OK OK), results
+
+    results = @redis.multi do |transaction|
+      assert_nil transaction.call(["SET", "str", 42])
+      assert_nil transaction.call_once_v(["SET", "str", 42])
+    end
+    assert_equal %w(OK OK), results
+
+    assert_nil @redis.pubsub.call_v(["PING"])
+  end
+
   def test_acts_as_pool
     assert_equal("PONG", @redis.with { |c| c.call("PING") })
     assert_instance_of Integer, @redis.size

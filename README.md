@@ -208,6 +208,16 @@ redis.call("EXISTS", "counter") # => 1
 redis.call("EXISTS", "counter") { |c| c > 0 } # => true
 ```
 
+### `*_v` methods
+
+In some it's more convenient to pass commands as arrays, for that `_v` versions of `call` methods are available.
+
+```ruby
+redis.call_v(["MGET"] + keys)
+redis.blocking_call_v(1, ["MGET"] + keys)
+redis.call_once_v(1, ["MGET"] + keys)
+```
+
 ### Blocking commands
 
 For blocking commands such as `BRPOP`, a custom timeout duration can be passed as first argument of the `#blocking_call` method:
