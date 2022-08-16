@@ -1,11 +1,13 @@
 # Unreleased
 
+- Added `protocol: 2` options to talk with Redis 5 and older servers.
 - Added `_v` versions of `call` methods to make it easier to pass commands as arrays without splating.
 - Fix calling `blocking_call` with a block in a pipeline.
 - `blocking_call` now raise `ReadTimeoutError` if the command didn't complete in time.
 - Fix `blocking_call` to not respect `retry_attempts` on timeout.
 - Stop parsing RESP3 sets as Ruby Set instances.
 - Fix `SystemStackError` when parsing very large hashes. Fix: #30
+- `hiredis` now more properly release the GVL when doing IOs.
 
 # 0.5.1
 
