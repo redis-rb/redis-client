@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.6.0
+
 - Added `protocol: 2` options to talk with Redis 5 and older servers.
 - Added `_v` versions of `call` methods to make it easier to pass commands as arrays without splating.
 - Fix calling `blocking_call` with a block in a pipeline.
