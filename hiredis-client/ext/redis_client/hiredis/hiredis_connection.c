@@ -54,7 +54,7 @@ typedef struct {
     redisSSLContext *context;
 } hiredis_ssl_context_t;
 
-#define ENSURE_CONNECTED(connection) if (!connection->context) rb_raise(rb_eRuntimeError, "[BUG] not connected");
+#define ENSURE_CONNECTED(connection) if (!connection->context) rb_raise(rb_eRedisClientConnectionError, "Not connected");
 
 #define SSL_CONTEXT(from, name) \
     hiredis_ssl_context_t *name = NULL; \
