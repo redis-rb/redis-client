@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.6.2
+
 - Fix sentinel to not connected to s_down or o_down replicas.
 
 # 0.6.1
