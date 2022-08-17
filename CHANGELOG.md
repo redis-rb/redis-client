@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fix sentinel to not connected to s_down or o_down replicas.
+
 # 0.6.1
 
 - Fix `REDIS_REPLY_SET` parsing in `hiredis`.

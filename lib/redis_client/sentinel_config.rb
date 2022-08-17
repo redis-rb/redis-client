@@ -116,10 +116,13 @@ class RedisClient
     def resolve_replica
       each_sentinel do |sentinel_client|
         replicas = sentinel_client.call("SENTINEL", "replicas", @name, &@to_list_of_hash)
+        replicas.reject! do |r|
+          flags = r["flags"].to_s.split(",")
+          flags.include?("s_down") || flags.include?("o_down")
+        end
         next if replicas.empty?
 
-        replica = replicas.reject { |r| r["flags"].to_s.split(",").include?("disconnected") }.sample
-        replica ||= replicas.sample
+        replica = replicas.sample
         return Config.new(host: replica["ip"], port: Integer(replica["port"]), **@client_config)
       end
     rescue ConnectionError
