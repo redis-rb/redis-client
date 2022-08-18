@@ -100,6 +100,19 @@ redis_config = RedisClient.sentinel(
 )
 ```
 
+or:
+
+```ruby
+redis_config = RedisClient.sentinel(
+  name: "mymaster",
+  sentinels: [
+    "redis://127.0.0.1:26380",
+    "redis://127.0.0.1:26381",
+  ],
+  role: :master,
+)
+```
+
 * The name identifies a group of Redis instances composed of a master and one or more replicas (`mymaster` in the example).
 
 * It is possible to optionally provide a role. The allowed roles are `:master`

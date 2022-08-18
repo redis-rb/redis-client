@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.7.0
+
 - Sentinel config now accept a list of URLs: `RedisClient.sentinel(sentinels: %w(redis://example.com:7000 redis://example.com:7001 ..))`
 
 # 0.6.2
