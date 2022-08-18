@@ -19,6 +19,11 @@ class RedisClient
       assert_equal "PONG", @config.new_client.call("PING")
     end
 
+    def test_url_list
+      sentinel_config = new_config(sentinels: Servers::SENTINELS.map { |s| "redis://#{s.host}:#{s.port}" })
+      assert_equal "PONG", sentinel_config.new_client.call("PING")
+    end
+
     def test_sentinel_config
       assert_equal [Servers::REDIS.host, Servers::REDIS.port], [@config.host, @config.port]
     end

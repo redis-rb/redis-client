@@ -26,7 +26,14 @@ class RedisClient
       end
 
       @name = name
-      @sentinel_configs = sentinels.map { |s| Config.new(**extra_config, **s) }
+      @sentinel_configs = sentinels.map do |s|
+        case s
+        when String
+          Config.new(**extra_config, url: s)
+        else
+          Config.new(**extra_config, **s)
+        end
+      end
       @sentinels = {}.compare_by_identity
       @role = role
       @mutex = Mutex.new
