@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.7.1
+
 - Fix `#pubsub` being called when reconnection is disabled (redis-rb compatibility fix).
 
 # 0.7.0
