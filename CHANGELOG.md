@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fix `#pubsub` being called when reconnection is disabled (redis-rb compatibility fix).
+
 # 0.7.0
 
 - Sentinel config now accept a list of URLs: `RedisClient.sentinel(sentinels: %w(redis://example.com:7000 redis://example.com:7001 ..))`

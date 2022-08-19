@@ -73,5 +73,11 @@ class RedisClient
     def test_next_event_timeout
       assert_nil @subscription.next_event(0.01)
     end
+
+    def test_pubsub_with_disabled_reconnection
+      @redis.send(:ensure_connected, retryable: false) do
+        refute_nil @redis.pubsub
+      end
+    end
   end
 end
