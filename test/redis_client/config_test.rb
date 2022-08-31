@@ -70,6 +70,13 @@ class RedisClient
       assert_predicate config, :ssl?
     end
 
+    def test_trailing_slash_url
+      config = Config.new(url: "redis://example.com/")
+      assert_equal 0, config.db
+      config = Config.new(url: "redis://[::1]/")
+      assert_equal 0, config.db
+    end
+
     def test_overriding
       config = Config.new(
         url: "redis://p%40ssw0rd@redis-16379.hosted.com:16379/12",

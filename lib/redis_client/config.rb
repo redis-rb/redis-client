@@ -149,7 +149,7 @@ class RedisClient
           URI.decode_www_form_component(uri.password)
         end
 
-        kwargs[:db] ||= Integer(uri.path.delete_prefix("/")) if uri.path && !uri.path.empty?
+        kwargs[:db] ||= Integer(uri.path.delete_prefix("/")) if uri.path && !uri.path.empty? && uri.path != "/"
       end
 
       super(**kwargs)
