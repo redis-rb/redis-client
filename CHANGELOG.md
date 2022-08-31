@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fix `url:` configuration to accept a trailing slash. 
+
 # 0.7.1
 
 - Fix `#pubsub` being called when reconnection is disabled (redis-rb compatibility fix).
