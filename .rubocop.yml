@@ -164,6 +164,9 @@ Metrics/BlockNesting:
 Style/HashTransformValues:
   Enabled: false
 
+Style/FetchEnvVar:
+  Enabled: false
+
 Style/SymbolProc:
   Exclude:
     - 'test/**/*'
