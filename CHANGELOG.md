@@ -1,5 +1,6 @@
 # Unreleased
 
+- Fix the instrumentation API to be called even for authentication commands.
 - Fix `url:` configuration to accept a trailing slash. 
 
 # 0.7.1

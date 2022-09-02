@@ -652,11 +652,15 @@ class RedisClient
     # The connection prelude is deliberately not sent to Middlewares
     if config.sentinel?
       prelude << ["ROLE"]
-      role, = connection.call_pipelined(prelude, nil).last
+      role, = Middlewares.call_pipelined(prelude, config) do
+        connection.call_pipelined(prelude, nil).last
+      end
       config.check_role!(role)
     else
       unless prelude.empty?
-        connection.call_pipelined(prelude, nil)
+        Middlewares.call_pipelined(prelude, config) do
+          connection.call_pipelined(prelude, nil)
+        end
       end
     end
 
