@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.7.3
+
 - Fix a bug in `url` parsing conflicting with the `path` option.
 
 # 0.7.2
