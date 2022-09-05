@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.7.2
+
 - Raise a distinct `RedisClient::OutOfMemoryError`, for Redis `OOM` errors.
 - Fix the instrumentation API to be called even for authentication commands.
 - Fix `url:` configuration to accept a trailing slash. 
