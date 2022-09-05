@@ -109,12 +109,14 @@ class RedisClient
   PermissionError = Class.new(CommandError)
   ReadOnlyError = Class.new(CommandError)
   WrongTypeError = Class.new(CommandError)
+  OutOfMemoryError = Class.new(CommandError)
 
   CommandError::ERRORS = {
     "WRONGPASS" => AuthenticationError,
     "NOPERM" => PermissionError,
     "READONLY" => ReadOnlyError,
     "WRONGTYPE" => WrongTypeError,
+    "OOM" => OutOfMemoryError,
   }.freeze
 
   class << self
