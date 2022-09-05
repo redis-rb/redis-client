@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fix a bug in `url` parsing conflicting with the `path` option.
+
 # 0.7.2
 
 - Raise a distinct `RedisClient::OutOfMemoryError`, for Redis `OOM` errors.
