@@ -1,5 +1,7 @@
 # Unreleased
 
+- Properly parse script errors on pre 7.0 redis server.
+
 # 0.7.3
 
 - Fix a bug in `url` parsing conflicting with the `path` option.

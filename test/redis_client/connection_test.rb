@@ -209,6 +209,24 @@ class RedisClient
       assert_equal ["list", "hello"], thread.join.value
     end
 
+    def test_oom_errors
+      config_client = new_client
+      old_max_memory = config_client.call("config", "get", "maxmemory").fetch("maxmemory")
+      begin
+        config_client.call("config", "set", "maxmemory", "1") # 1 byte
+        client = new_client
+        assert_raises RedisClient::OutOfMemoryError do
+          client.call("SET", "foo", "a" * 1000)
+        end
+
+        assert_raises RedisClient::OutOfMemoryError do
+          client.call("EVAL", "redis.call('SET', 'foo', '#{'a' * 1000}')", 0)
+        end
+      ensure
+        config_client.call("config", "set", "maxmemory", old_max_memory)
+      end
+    end
+
     private
 
     def assert_timeout(error, faster_than = 0.5, &block)

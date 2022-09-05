@@ -94,7 +94,14 @@ class RedisClient
 
     class << self
       def parse(error_message)
-        code = error_message.split(' ', 2).first
+        code = if error_message.start_with?("ERR Error running script")
+          # On older redis servers script errors are nested.
+          # So we need to parse some more.
+          if (match = error_message.match(/:\s-([A-Z]+) /))
+            match[1]
+          end
+        end
+        code ||= error_message.split(' ', 2).first
         klass = ERRORS.fetch(code, self)
         klass.new(error_message)
       end
