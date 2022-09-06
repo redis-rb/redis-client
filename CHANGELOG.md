@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.7.4
+
 - Properly parse script errors on pre 7.0 redis server.
 
 # 0.7.3
