@@ -12,4 +12,3 @@ updates:
       # redis is used for benchmarking, since redis 5.0 use
       # redis-client under the hood, there's no point comparing it.
       - dependency-name: "redis"
-        update-types: ["major"]
