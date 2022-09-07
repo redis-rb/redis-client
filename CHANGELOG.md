@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.8.0
+
 - Add a `connect` interface to the instrumentation API.
 
 # 0.7.4
