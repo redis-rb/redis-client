@@ -51,46 +51,26 @@ class RedisClient
 
     methods = %w(pipelined multi pubsub call call_v call_once call_once_v blocking_call blocking_call_v)
     iterable_methods = %w(scan sscan hscan zscan)
-    begin
-      methods.each do |method|
-        class_eval <<~RUBY, __FILE__, __LINE__ + 1
-          def #{method}(...)
-            with { |r| r.#{method}(...) }
-          end
-        RUBY
-      end
+    methods.each do |method|
+      class_eval <<~RUBY, __FILE__, __LINE__ + 1
+        def #{method}(*args, &block)
+          with { |r| r.#{method}(*args, &block) }
+        end
+        ruby2_keywords :#{method} if respond_to?(:ruby2_keywords, true)
+      RUBY
+    end
 
-      iterable_methods.each do |method|
-        class_eval <<~RUBY, __FILE__, __LINE__ + 1
-          def #{method}(...)
-            unless block_given?
-              return to_enum(__callee__, ...)
-            end
-
-            with { |r| r.#{method}(...) }
+    iterable_methods.each do |method|
+      class_eval <<~RUBY, __FILE__, __LINE__ + 1
+        def #{method}(*args, &block)
+          unless block_given?
+            return to_enum(__callee__, *args)
           end
-        RUBY
-      end
-    rescue SyntaxError
-      methods.each do |method|
-        class_eval <<~RUBY, __FILE__, __LINE__ + 1
-          def #{method}(*args, &block)
-            with { |r| r.#{method}(*args, &block) }
-          end
-        RUBY
-      end
 
-      iterable_methods.each do |method|
-        class_eval <<~RUBY, __FILE__, __LINE__ + 1
-          def #{method}(*args, &block)
-            unless block_given?
-              return to_enum(__callee__, *args)
-            end
-
-            with { |r| r.#{method}(*args, &block) }
-          end
-        RUBY
-      end
+          with { |r| r.#{method}(*args, &block) }
+        end
+        ruby2_keywords :#{method} if respond_to?(:ruby2_keywords, true)
+      RUBY
     end
 
     private
