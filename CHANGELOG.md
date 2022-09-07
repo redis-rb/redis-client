@@ -1,5 +1,7 @@
 # Unreleased
 
+- Workaround a bug in Ruby 2.6 causing a crash if the `debug` gem is enabled when `redis-client` is being required. Fix: #48
+
 # 0.8.0
 
 - Add a `connect` interface to the instrumentation API.
