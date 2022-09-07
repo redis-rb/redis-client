@@ -4,6 +4,10 @@ class RedisClient
   module Middlewares
     extend self
 
+    def connect(_config)
+      yield
+    end
+
     def call(command, _config)
       yield command
     end

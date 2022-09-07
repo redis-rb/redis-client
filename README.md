@@ -349,6 +349,10 @@ end
 
 ```ruby
 module MyRedisInstrumentation
+  def connect(redis_config)
+    MyMonitoringService.instrument("redis.connect") { super }
+  end
+
   def call(command, redis_config)
     MyMonitoringService.instrument("redis.query") { super }
   end

@@ -1,5 +1,7 @@
 # Unreleased
 
+- Add a `connect` interface to the instrumentation API.
+
 # 0.7.4
 
 - Properly parse script errors on pre 7.0 redis server.

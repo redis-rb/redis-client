@@ -645,12 +645,14 @@ class RedisClient
   end
 
   def connect
-    connection = config.driver.new(
-      config,
-      connect_timeout: connect_timeout,
-      read_timeout: read_timeout,
-      write_timeout: write_timeout,
-    )
+    connection = Middlewares.connect(config) do
+      config.driver.new(
+        config,
+        connect_timeout: connect_timeout,
+        read_timeout: read_timeout,
+        write_timeout: write_timeout,
+      )
+    end
 
     prelude = config.connection_prelude.dup
 
