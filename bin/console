@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require "bundler/setup"
+$LOAD_PATH.unshift(File.expand_path("../hiredis-client/lib", __dir__))
 require "redis-client"
 
 require "irb"

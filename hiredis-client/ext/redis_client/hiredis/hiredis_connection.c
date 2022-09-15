@@ -48,6 +48,7 @@ static inline VALUE rb_hash_new_capa(long capa)
 
 static VALUE rb_eRedisClientCommandError, rb_eRedisClientConnectionError, rb_eRedisClientCannotConnectError, rb_eRedisClientProtocolError;
 static VALUE rb_eRedisClientReadTimeoutError, rb_eRedisClientWriteTimeoutError;
+static VALUE Redis_Qfalse;
 static ID id_parse;
 
 typedef struct {
@@ -200,8 +201,8 @@ static void *reply_create_nil(const redisReadTask *task) {
 static void *reply_create_bool(const redisReadTask *task, int bval) {
     reply_append(task, bval ? Qtrue : Qfalse);
     // Qfalse == NULL, so we can't return Qfalse as it would be interpreted as out of memory error.
-    // So we return Qnil instead.
-    return (void*)(bval ? Qtrue : Qnil);
+    // So we return a token value instead and the caller is responsible for turning it into Qfalse.
+    return (void*)(bval ? Qtrue : Redis_Qfalse);
 }
 
 static void reply_free(void *ptr) {
@@ -683,6 +684,10 @@ static VALUE hiredis_read(VALUE self) {
     if (hiredis_read_internal(connection, &reply)) {
         hiredis_raise_error_and_disconnect(connection, rb_eRedisClientReadTimeoutError);
     }
+    if (reply == Redis_Qfalse) {
+        // See reply_create_bool
+        reply = Qfalse;
+    }
     return reply;
 }
 
@@ -705,6 +710,8 @@ void Init_hiredis_connection(void) {
     redisInitOpenSSL();
 
     id_parse = rb_intern("parse");
+    Redis_Qfalse = rb_obj_alloc(rb_cObject);
+    rb_global_variable(&Redis_Qfalse);
 
     VALUE rb_cRedisClient = rb_const_get(rb_cObject, rb_intern("RedisClient"));
 

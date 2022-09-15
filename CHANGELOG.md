@@ -1,5 +1,6 @@
 # Unreleased
 
+- hiredis: handle commands returning a top-level `false` (no command does this today, but some extensions might). 
 - Workaround a bug in Ruby 2.6 causing a crash if the `debug` gem is enabled when `redis-client` is being required. Fix: #48
 
 # 0.8.0

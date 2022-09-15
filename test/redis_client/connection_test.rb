@@ -267,6 +267,39 @@ class RedisClient
       server_thread&.kill
     end
 
+    def test_boolean_replies
+      # The RESP3 protocol allows for boolean replies, but I'm not aware of
+      # any commands doing so. So to test for potential future commands returning
+      # a boolean, we use a fake server.
+
+      tcp_server = TCPServer.new("127.0.0.1", 0)
+      tcp_server.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
+      port = tcp_server.addr[1]
+
+      server_thread = Thread.new do
+        session = tcp_server.accept
+        io = RubyConnection::BufferedIO.new(session, read_timeout: 1, write_timeout: 1)
+        while command = RESP3.load(io)
+          case command.first
+          when "HELLO"
+            session.write("_\r\n")
+          when "ECHO"
+            session.write(command[1])
+          else
+            session.write("-ERR Unknown command #{command.first}\r\n")
+          end
+        end
+        session.close
+      end
+
+      client = new_client(host: "127.0.0.1", port: port)
+      assert_equal true, client.call("ECHO", "#t\r\n")
+      assert_equal false, client.call("ECHO", "#f\r\n")
+      assert_nil client.call("ECHO", "_\r\n")
+    ensure
+      server_thread&.kill
+    end
+
     private
 
     def new_client(**overrides)
