@@ -29,6 +29,7 @@ class RedisClient
     end
 
     def initialize(config, connect_timeout:, read_timeout:, write_timeout:)
+      super()
       self.connect_timeout = connect_timeout
       self.read_timeout = read_timeout
       self.write_timeout = write_timeout

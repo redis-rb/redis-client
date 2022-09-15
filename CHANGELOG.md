@@ -1,5 +1,7 @@
 # Unreleased
 
+- Make the client resilient to `Timeout.timeout` or `Thread#kill` use (it still still very much discouraged to use).
+  Use of async interrupts could cause responses to be interleaved.
 - hiredis: handle commands returning a top-level `false` (no command does this today, but some extensions might). 
 - Workaround a bug in Ruby 2.6 causing a crash if the `debug` gem is enabled when `redis-client` is being required. Fix: #48
 

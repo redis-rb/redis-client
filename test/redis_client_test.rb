@@ -65,4 +65,34 @@ class RedisClientTest < Minitest::Test
     end
     assert_includes error.message, "Your Redis server version is too old"
   end
+
+  def test_handle_async_raise
+    10.times do |i|
+      thread = Thread.new do
+        loop do
+          assert_equal "OK", @redis.call("SET", "key#{i}", i)
+        end
+      rescue RuntimeError
+      end
+      thread.join(rand(0.01..0.2))
+      thread.raise("Timeout Error")
+      refute_predicate thread.join, :alive?
+      assert_equal i.to_s, @redis.call("GET", "key#{i}")
+    end
+  end
+
+  def test_handle_async_thread_kill
+    10.times do |i|
+      thread = Thread.new do
+        loop do
+          assert_equal "OK", @redis.call("SET", "key#{i}", i)
+        end
+      rescue RuntimeError
+      end
+      thread.join(rand(0.01..0.2))
+      thread.kill
+      refute_predicate thread.join, :alive?
+      assert_equal i.to_s, @redis.call("GET", "key#{i}")
+    end
+  end
 end

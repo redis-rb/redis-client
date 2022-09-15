@@ -641,6 +641,7 @@ class RedisClient
   end
 
   def raw_connection
+    @raw_connection = @raw_connection&.revalidate
     @raw_connection ||= connect
   end
 

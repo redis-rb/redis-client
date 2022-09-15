@@ -2,9 +2,21 @@
 
 class RedisClient
   module ConnectionMixin
+    def initialize
+      @pending_reads = 0
+    end
+
+    def revalidate
+      if @pending_reads == 0 && connected?
+        self
+      end
+    end
+
     def call(command, timeout)
+      @pending_reads += 1
       write(command)
       result = read(timeout)
+      @pending_reads -= 1
       if result.is_a?(CommandError)
         result._set_command(command)
         raise result
@@ -18,11 +30,13 @@ class RedisClient
 
       size = commands.size
       results = Array.new(commands.size)
+      @pending_reads += size
       write_multi(commands)
 
       size.times do |index|
         timeout = timeouts && timeouts[index]
         result = read(timeout)
+        @pending_reads -= 1
         if result.is_a?(CommandError)
           result._set_command(commands[index])
           exception ||= result
