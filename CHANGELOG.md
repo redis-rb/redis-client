@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.8.1
+
 - Make the client resilient to `Timeout.timeout` or `Thread#kill` use (it still still very much discouraged to use).
   Use of async interrupts could cause responses to be interleaved.
 - hiredis: handle commands returning a top-level `false` (no command does this today, but some extensions might). 
