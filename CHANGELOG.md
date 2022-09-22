@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.9.0
+
 - Automatically reconnect if the process was forked.
 
 # 0.8.1
