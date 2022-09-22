@@ -67,6 +67,7 @@ class RedisClient
       @read_timeout = read_timeout
       @write_timeout = write_timeout
       @command_builder = config.command_builder
+      @pid = Process.pid
     end
 
     def timeout=(timeout)
@@ -416,7 +417,7 @@ class RedisClient
     end
 
     def close
-      raw_connection&.close
+      @raw_connection&.close
       @raw_connection = nil
       self
     end
@@ -597,6 +598,8 @@ class RedisClient
   end
 
   def ensure_connected(retryable: true)
+    close if !config.inherit_socket && @pid != Process.pid
+
     if @disable_reconnection
       if block_given?
         yield @raw_connection
@@ -614,7 +617,6 @@ class RedisClient
           connection
         end
       rescue ConnectionError, ProtocolError => error
-        connection&.close
         close
 
         if !@disable_reconnection && config.retry_connecting?(tries, error)
@@ -631,7 +633,6 @@ class RedisClient
         @disable_reconnection = true
         yield connection
       rescue ConnectionError, ProtocolError
-        connection&.close
         close
         raise
       ensure
@@ -646,6 +647,8 @@ class RedisClient
   end
 
   def connect
+    @pid = Process.pid
+
     connection = Middlewares.connect(config) do
       config.driver.new(
         config,

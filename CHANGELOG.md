@@ -1,5 +1,7 @@
 # Unreleased
 
+- Automatically reconnect if the process was forked.
+
 # 0.8.1
 
 - Make the client resilient to `Timeout.timeout` or `Thread#kill` use (it still is very much discouraged to use either).

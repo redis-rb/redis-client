@@ -12,7 +12,7 @@ class RedisClient
     DEFAULT_DB = 0
 
     module Common
-      attr_reader :db, :password, :id, :ssl, :ssl_params, :command_builder,
+      attr_reader :db, :password, :id, :ssl, :ssl_params, :command_builder, :inherit_socket,
         :connect_timeout, :read_timeout, :write_timeout, :driver, :connection_prelude, :protocol
 
       alias_method :ssl?, :ssl
@@ -32,6 +32,7 @@ class RedisClient
         protocol: 3,
         client_implementation: RedisClient,
         command_builder: CommandBuilder,
+        inherit_socket: false,
         reconnect_attempts: false
       )
         @username = username
@@ -54,6 +55,7 @@ class RedisClient
         end
 
         @command_builder = command_builder
+        @inherit_socket = inherit_socket
 
         reconnect_attempts = Array.new(reconnect_attempts, 0).freeze if reconnect_attempts.is_a?(Integer)
         @reconnect_attempts = reconnect_attempts

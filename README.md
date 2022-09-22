@@ -437,15 +437,6 @@ Contrary to the `redis` gem, `redis-client` doesn't protect against concurrent a
 To use `redis-client` in concurrent environments, you MUST use a connection pool, or
 have one client per Thread or Fiber.
 
-### Fork Safety
-
-`redis-client` doesn't try to detect forked processes. You MUST disconnect all clients before forking your process.
-
-```ruby
-redis.close
-Process.fork ...
-```
-
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
