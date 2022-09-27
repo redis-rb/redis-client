@@ -10,12 +10,12 @@ class RedisClient
 
     EOL = "\r\n".b.freeze
     EOL_SIZE = EOL.bytesize
-    DUMP_TYPES = {
+    DUMP_TYPES = { # rubocop:disable Style/MutableConstant
       String => :dump_string,
       Symbol => :dump_symbol,
       Integer => :dump_numeric,
       Float => :dump_numeric,
-    }.freeze
+    }
     PARSER_TYPES = {
       '#' => :parse_boolean,
       '$' => :parse_blob,
@@ -55,8 +55,12 @@ class RedisClient
     end
 
     def dump_any(object, buffer)
-      method = DUMP_TYPES.fetch(object.class) do
-        raise TypeError, "Unsupported command argument type: #{object.class}"
+      method = DUMP_TYPES.fetch(object.class) do |unexpected_class|
+        if superclass = DUMP_TYPES.keys.find { |t| t > unexpected_class }
+          DUMP_TYPES[unexpected_class] = DUMP_TYPES[superclass]
+        else
+          raise TypeError, "Unsupported command argument type: #{unexpected_class}"
+        end
       end
       send(method, object, buffer)
     end

@@ -1,5 +1,7 @@
 # Unreleased
 
+- Allow subclasses of accepted types as command arguments. Fix: #51
+
 # 0.9.0
 
 - Automatically reconnect if the process was forked.

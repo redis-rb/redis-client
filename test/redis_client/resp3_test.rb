@@ -62,6 +62,11 @@ class RedisClient
       assert_dumps(["PRINT", { 'first' => 1, 'second' => 2 }], "*5\r\n$5\r\nPRINT\r\n$5\r\nfirst\r\n$1\r\n1\r\n$6\r\nsecond\r\n$1\r\n2\r\n")
     end
 
+    def test_dump_subclasses
+      my_string_class = Class.new(String)
+      assert_dumps [my_string_class.new("Hello")], "*1\r\n$5\r\nHello\r\n"
+    end
+
     def test_load_blob_string
       assert_parses "Hello World!", "$12\r\nHello World!\r\n"
     end
