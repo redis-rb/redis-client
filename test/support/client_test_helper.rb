@@ -69,8 +69,12 @@ module ClientTestHelper
     }
   end
 
+  def redis_config(**overrides)
+    RedisClient.config(**tcp_config.merge(overrides))
+  end
+
   def new_client(**overrides)
-    RedisClient.new(**tcp_config.merge(overrides))
+    redis_config(**overrides).new_client
   end
 
   def simulate_network_errors(client, failures)

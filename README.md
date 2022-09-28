@@ -343,9 +343,11 @@ end
 
 ## Production
 
-### Instrumentation
+### Instrumentation and Middleware
 
-`redis-client` offers a public instrumentation API monitoring tools.
+`redis-client` offers a public middleware API to aid in monitoring and library extension. Middleware can be registered
+either globally or on a given configuration instance. When configured on the instance multiple middlewares may be
+registered.
 
 ```ruby
 module MyRedisInstrumentation
@@ -361,10 +363,24 @@ module MyRedisInstrumentation
     MyMonitoringService.instrument("redis.pipeline") { super }
   end
 end
-RedisClient.register(MyRedisInstrumentation)
-```
 
-Note that this instrumentation is global.
+module AnotherRedisInstrumentation
+  def call(command, redis_config)
+    MyHelperService.call(command, redis_config)
+    super
+  end
+end
+
+# Global middleware
+RedisClient.register(MyRedisInstrumentation)
+
+# Local middleware
+RedisClient.new(middleware: [MyRedisInstrumentation, AnotherRedisInstrumentation])
+# or
+redis_config = RedisClient.config
+redis_config.register(MyRedisInstrumentation)
+redis_config.register(AnotherRedisInstrumentation)
+```
 
 ### Timeouts
 

@@ -195,7 +195,7 @@ class RedisClient
   def call(*command, **kwargs)
     command = @command_builder.generate(command, kwargs)
     result = ensure_connected do |connection|
-      Middlewares.call(command, config) do
+      with_middlewares(:call, command, config) do
         connection.call(command, nil)
       end
     end
@@ -210,7 +210,7 @@ class RedisClient
   def call_v(command)
     command = @command_builder.generate(command)
     result = ensure_connected do |connection|
-      Middlewares.call(command, config) do
+      with_middlewares(:call, command, config) do
         connection.call(command, nil)
       end
     end
@@ -225,7 +225,7 @@ class RedisClient
   def call_once(*command, **kwargs)
     command = @command_builder.generate(command, kwargs)
     result = ensure_connected(retryable: false) do |connection|
-      Middlewares.call(command, config) do
+      with_middlewares(:call, command, config) do
         connection.call(command, nil)
       end
     end
@@ -240,7 +240,7 @@ class RedisClient
   def call_once_v(command)
     command = @command_builder.generate(command)
     result = ensure_connected(retryable: false) do |connection|
-      Middlewares.call(command, config) do
+      with_middlewares(:call, command, config) do
         connection.call(command, nil)
       end
     end
@@ -256,7 +256,7 @@ class RedisClient
     command = @command_builder.generate(command, kwargs)
     error = nil
     result = ensure_connected do |connection|
-      Middlewares.call(command, config) do
+      with_middlewares(:call, command, config) do
         connection.call(command, timeout)
       end
     rescue ReadTimeoutError => error
@@ -276,7 +276,7 @@ class RedisClient
     command = @command_builder.generate(command)
     error = nil
     result = ensure_connected do |connection|
-      Middlewares.call(command, config) do
+      with_middlewares(:call, command, config) do
         connection.call(command, timeout)
       end
     rescue ReadTimeoutError => error
@@ -347,7 +347,7 @@ class RedisClient
     else
       results = ensure_connected(retryable: pipeline._retryable?) do |connection|
         commands = pipeline._commands
-        Middlewares.call_pipelined(commands, config) do
+        with_middlewares(:call_pipelined, commands, config) do
           connection.call_pipelined(commands, pipeline._timeouts)
         end
       end
@@ -367,7 +367,7 @@ class RedisClient
         begin
           if transaction = build_transaction(&block)
             commands = transaction._commands
-            results = Middlewares.call_pipelined(commands, config) do
+            results = with_middlewares(:call_pipelined, commands, config) do
               connection.call_pipelined(commands, nil)
             end.last
           else
@@ -386,7 +386,7 @@ class RedisClient
       else
         ensure_connected(retryable: transaction._retryable?) do |connection|
           commands = transaction._commands
-          Middlewares.call_pipelined(commands, config) do
+          with_middlewares(:call_pipelined, commands, config) do
             connection.call_pipelined(commands, nil)
           end.last
         end
@@ -649,7 +649,7 @@ class RedisClient
   def connect
     @pid = Process.pid
 
-    connection = Middlewares.connect(config) do
+    connection = with_middlewares(:connect, config) do
       config.driver.new(
         config,
         connect_timeout: connect_timeout,
@@ -667,13 +667,13 @@ class RedisClient
     # The connection prelude is deliberately not sent to Middlewares
     if config.sentinel?
       prelude << ["ROLE"]
-      role, = Middlewares.call_pipelined(prelude, config) do
+      role, = with_middlewares(:call_pipelined, prelude, config) do
         connection.call_pipelined(prelude, nil).last
       end
       config.check_role!(role)
     else
       unless prelude.empty?
-        Middlewares.call_pipelined(prelude, config) do
+        with_middlewares(:call_pipelined, prelude, config) do
           connection.call_pipelined(prelude, nil)
         end
       end
@@ -690,6 +690,22 @@ class RedisClient
         "Your Redis server version is too old. redis-client requires Redis 6+. (#{config.server_url})"
     else
       raise
+    end
+  end
+
+  def with_middlewares(method, *args, &block)
+    Middlewares.send(method, *args) do
+      call_local_middlewares(config.middlewares, 0, method, *args, &block)
+    end
+  end
+
+  def call_local_middlewares(middlewares, position, method, *args, &block)
+    middleware = middlewares[position]
+
+    return block.call if middleware.nil?
+
+    middleware.send(method, *args) do
+      call_local_middlewares(middlewares, position + 1, method, *args, &block)
     end
   end
 end
