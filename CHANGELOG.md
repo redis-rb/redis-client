@@ -1,6 +1,7 @@
 # Unreleased
 
 - Allow subclasses of accepted types as command arguments. Fix: #51
+- Improve hiredis driver error messages.
 
 # 0.9.0
 

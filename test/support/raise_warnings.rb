@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+$VERBOSE = true
 module RaiseWarnings
   def warn(message, *)
     super

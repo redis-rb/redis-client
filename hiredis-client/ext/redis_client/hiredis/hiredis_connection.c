@@ -311,13 +311,27 @@ static VALUE hiredis_alloc(VALUE klass) {
     return TypedData_Make_Struct(klass, hiredis_connection_t, &hiredis_connection_data_type, connection);
 }
 
+void redis_set_io_error(redisContext *context, int err) {
+    if (err) {
+        errno = err;
+    }
+    context->err = REDIS_ERR_IO;
+    (void)!strerror_r(errno, context->errstr, sizeof(context->errstr));
+}
+
 static inline void redis_raise_error_and_disconnect(redisContext *context, VALUE timeout_error) {
     if (!context) return;
 
     int err = context->err;
     char errstr[128];
-    MEMCPY(context->errstr, errstr, char, 128);
+    if (context->err) {
+      strncpy(errstr, context->errstr, 128);
+    }
     redisFree(context);
+
+    if (!err) {
+      rb_raise(timeout_error, "Unknown Error");
+    }
 
     // OpenSSL bug: The SSL_ERROR_SYSCALL with errno value of 0 indicates unexpected EOF from the peer.
     if (errno == EAGAIN || (err == REDIS_ERR_IO && errno == 0)) {
@@ -431,26 +445,28 @@ static VALUE hiredis_connect_finish(hiredis_connection_t *connection, redisConte
 
     int writable = 0;
     int optval = 0;
+    errno = 0;
     socklen_t optlen = sizeof(optval);
 
     /* Wait for socket to become writable */
     if (hiredis_wait_writable(context->fd, &connection->connect_timeout, &writable) < 0) {
+        redis_set_io_error(context, ETIMEDOUT);
         redis_raise_error_and_disconnect(context, rb_eRedisClientCannotConnectError);
     }
 
     if (!writable) {
-        errno = ETIMEDOUT;
+        redis_set_io_error(context, ETIMEDOUT);
         redis_raise_error_and_disconnect(context, rb_eRedisClientCannotConnectError);
     }
 
     /* Check for socket error */
     if (getsockopt(context->fd, SOL_SOCKET, SO_ERROR, &optval, &optlen) < 0) {
-        context->err = REDIS_ERR_IO;
+        redis_set_io_error(context, 0);
         redis_raise_error_and_disconnect(context, rb_eRedisClientCannotConnectError);
     }
 
     if (optval) {
-        errno = optval;
+        redis_set_io_error(context, optval);
         redis_raise_error_and_disconnect(context, rb_eRedisClientCannotConnectError);
     }
 
