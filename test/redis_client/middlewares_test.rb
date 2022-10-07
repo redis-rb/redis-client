@@ -7,12 +7,12 @@ class RedisClient
     include ClientTestHelper
 
     def setup
-      super
       @original_module = RedisClient::Middlewares
       new_module = @original_module.dup
       RedisClient.send(:remove_const, :Middlewares)
       RedisClient.const_set(:Middlewares, new_module)
       RedisClient.register(TestMiddleware)
+      super
       TestMiddleware.calls.clear
     end
 
@@ -69,6 +69,22 @@ class RedisClient
       ]
     end
 
+    module DummyMiddleware
+      def call(command, _config)
+        command
+      end
+
+      def call_pipelined(commands, _config)
+        commands
+      end
+    end
+
+    def test_instance_middleware
+      second_client = new_client(middlewares: [DummyMiddleware])
+      assert_equal ["GET", "2"], second_client.call("GET", 2)
+      assert_equal([["GET", "2"]], second_client.pipelined { |p| p.call("GET", 2) })
+    end
+
     private
 
     def assert_call(call)
@@ -85,6 +101,15 @@ class RedisClient
         attr_accessor :calls
       end
       @calls = []
+
+      def connect(config)
+        result = super
+        TestMiddleware.calls << [:connect, :success, result, config]
+        result
+      rescue => error
+        TestMiddleware.calls << [:connect, :error, error, config]
+        raise
+      end
 
       def call(command, config)
         result = super
