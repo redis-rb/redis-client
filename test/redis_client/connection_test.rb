@@ -43,9 +43,10 @@ class RedisClient
     def test_redis_down_before_connect
       @redis.close
       Toxiproxy[/redis/].down do
-        assert_raises RedisClient::ConnectionError do
+        error = assert_raises RedisClient::ConnectionError do
           @redis.call("PING")
         end
+        assert_includes error.message, "#{@redis.config.host}:#{@redis.config.port}"
       end
     end
 

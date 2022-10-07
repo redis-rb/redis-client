@@ -935,8 +935,9 @@ int redisBufferRead(redisContext *c) {
     int nread;
 
     /* Return early when the context has seen an error. */
-    if (c->err)
+    if (c->err) {
         return REDIS_ERR;
+    }
 
     nread = c->funcs->read(c, buf, sizeof(buf));
     if (nread > 0) {

@@ -41,7 +41,12 @@ class RedisClient
           raise CannotConnectError, error.message, error.backtrace
         end
       else
-        connect_tcp(config.host, config.port)
+        begin
+          connect_tcp(config.host, config.port)
+        rescue SystemCallError => error
+          error_code = error.class.name.split("::").last
+          raise CannotConnectError, "Failed to connect to #{config.host}:#{config.port} (#{error_code})"
+        end
       end
 
       if config.ssl
