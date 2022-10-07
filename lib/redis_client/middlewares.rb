@@ -1,8 +1,12 @@
 # frozen_string_literal: true
 
 class RedisClient
-  module Middlewares
-    extend self
+  class BasicMiddleware
+    attr_reader :client
+
+    def initialize(client)
+      @client = client
+    end
 
     def connect(_config)
       yield
@@ -12,5 +16,8 @@ class RedisClient
       yield command
     end
     alias_method :call_pipelined, :call
+  end
+
+  class Middlewares < BasicMiddleware
   end
 end

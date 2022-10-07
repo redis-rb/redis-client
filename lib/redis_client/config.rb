@@ -13,7 +13,8 @@ class RedisClient
 
     module Common
       attr_reader :db, :password, :id, :ssl, :ssl_params, :command_builder, :inherit_socket,
-        :connect_timeout, :read_timeout, :write_timeout, :driver, :connection_prelude, :protocol
+        :connect_timeout, :read_timeout, :write_timeout, :driver, :connection_prelude, :protocol,
+        :middlewares_stack
 
       alias_method :ssl?, :ssl
 
@@ -33,7 +34,8 @@ class RedisClient
         client_implementation: RedisClient,
         command_builder: CommandBuilder,
         inherit_socket: false,
-        reconnect_attempts: false
+        reconnect_attempts: false,
+        middlewares: false
       )
         @username = username
         @password = password
@@ -60,6 +62,15 @@ class RedisClient
         reconnect_attempts = Array.new(reconnect_attempts, 0).freeze if reconnect_attempts.is_a?(Integer)
         @reconnect_attempts = reconnect_attempts
         @connection_prelude = build_connection_prelude
+
+        middlewares_stack = Middlewares
+        if middlewares && !middlewares.empty?
+          middlewares_stack = Class.new(Middlewares)
+          middlewares.each do |mod|
+            middlewares_stack.include(mod)
+          end
+        end
+        @middlewares_stack = middlewares_stack
       end
 
       def username
