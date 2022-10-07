@@ -1,5 +1,6 @@
 # Unreleased
 
+- Added instance scoped middlewares. See: #53
 - Allow subclasses of accepted types as command arguments. Fix: #51
 - Improve hiredis driver error messages.
 
