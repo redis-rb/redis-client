@@ -1,53 +1,53 @@
-ruby: `ruby 3.1.1p18 (2022-02-18 revision 53f5fc4236) [arm64-darwin21]`
+ruby: `ruby 3.2.0dev (2022-10-07T07:03:33Z master e76217a7f3) [arm64-darwin21]`
 
-redis-server: `Redis server v=7.0.0 sha=00000000:0 malloc=libc bits=64 build=fa9ffba7836907da`
+redis-server: `Redis server v=7.0.4 sha=00000000:0 malloc=libc bits=64 build=ef6295796237ef48`
 
 
 ### small string
 
 ```
-            redis-rb:     5470.5 i/s
-        redis-client:     6913.0 i/s - 1.26x  (± 0.00) faster
+            redis-rb:     4850.3 i/s
+        redis-client:     6132.4 i/s - 1.26x  (± 0.00) faster
 
 ```
 
 ### large string
 
 ```
-            redis-rb:      382.6 i/s
-        redis-client:      437.7 i/s - 1.14x  (± 0.00) faster
+            redis-rb:      369.3 i/s
+        redis-client:      408.0 i/s - 1.10x  (± 0.00) faster
 
 ```
 
 ### small list
 
 ```
-            redis-rb:     2599.9 i/s
-        redis-client:     3430.7 i/s - 1.32x  (± 0.00) faster
+            redis-rb:     2743.1 i/s
+        redis-client:     3545.1 i/s - 1.29x  (± 0.00) faster
 
 ```
 
 ### large list
 
 ```
-            redis-rb:       80.2 i/s
-        redis-client:      108.6 i/s - 1.36x  (± 0.00) faster
+            redis-rb:       73.2 i/s
+        redis-client:      101.5 i/s - 1.39x  (± 0.00) faster
 
 ```
 
 ### small hash
 
 ```
-            redis-rb:     2412.7 i/s
-        redis-client:     4143.8 i/s - 1.72x  (± 0.00) faster
+            redis-rb:     2269.9 i/s
+        redis-client:     3958.9 i/s - 1.74x  (± 0.00) faster
 
 ```
 
 ### large hash
 
 ```
-            redis-rb:       48.0 i/s
-        redis-client:       79.4 i/s - 1.65x  (± 0.00) faster
+            redis-rb:       44.2 i/s
+        redis-client:       78.8 i/s - 1.78x  (± 0.00) faster
 
 ```
 

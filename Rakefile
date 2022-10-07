@@ -67,12 +67,15 @@ namespace :hiredis do
   end
 end
 
+benchmark_suites = %w(single pipelined)
+benchmark_modes = %i[ruby yjit hiredis]
 namespace :benchmark do
-  task :record do
-    system("rm -rf tmp/*.benchmark")
-    %w(single pipelined).each do |suite|
-      %i[ruby yjit hiredis].each do |mode|
-        output_path = "benchmark/#{suite}_#{mode}.md"
+  benchmark_suites.each do |suite|
+    benchmark_modes.each do |mode|
+      name = "#{suite}_#{mode}"
+      task name do
+        output_path = "benchmark/#{name}.md"
+        sh "rm", "-f", output_path
         File.open(output_path, "w+") do |output|
           output.puts("ruby: `#{RUBY_DESCRIPTION}`\n\n")
           output.puts("redis-server: `#{`redis-server -v`.strip}`\n\n")
@@ -103,6 +106,8 @@ namespace :benchmark do
       end
     end
   end
+
+  task all: benchmark_suites.flat_map { |s| benchmark_modes.flat_map { |m| "#{s}_#{m}" } }
 end
 
 if hiredis_supported
