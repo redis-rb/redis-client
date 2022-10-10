@@ -1,5 +1,7 @@
 # Unreleased
 
+- Add `Config#extra` to store configuration metadata. It can be used for per server middleware configuration.
+
 # 0.10.0
 
 - Added instance scoped middlewares. See: #53

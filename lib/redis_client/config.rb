@@ -14,7 +14,7 @@ class RedisClient
     module Common
       attr_reader :db, :password, :id, :ssl, :ssl_params, :command_builder, :inherit_socket,
         :connect_timeout, :read_timeout, :write_timeout, :driver, :connection_prelude, :protocol,
-        :middlewares_stack
+        :middlewares_stack, :custom
 
       alias_method :ssl?, :ssl
 
@@ -28,6 +28,7 @@ class RedisClient
         write_timeout: timeout,
         connect_timeout: timeout,
         ssl: nil,
+        custom: {},
         ssl_params: nil,
         driver: nil,
         protocol: 3,
@@ -49,6 +50,8 @@ class RedisClient
         @write_timeout = write_timeout
 
         @driver = driver ? RedisClient.driver(driver) : RedisClient.default_driver
+
+        @custom = custom
 
         @client_implementation = client_implementation
         @protocol = protocol

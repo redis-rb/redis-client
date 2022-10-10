@@ -374,6 +374,26 @@ redis_config = RedisClient.config(middlewares: [AnotherRedisInstrumentation])
 redis_config.new_client
 ```
 
+If middlewares need a client specific configuration, `Config#custom` can be used
+
+```ruby
+module MyGlobalRedisInstrumentation
+  def connect(redis_config)
+    MyMonitoringService.instrument("redis.connect", tags: redis_config.custom[:tags]) { super }
+  end
+
+  def call(command, redis_config)
+    MyMonitoringService.instrument("redis.query", tags: redis_config.custom[:tags]) { super }
+  end
+
+  def call_pipelined(commands, redis_config)
+    MyMonitoringService.instrument("redis.pipeline", tags: redis_config.custom[:tags]) { super }
+  end
+end
+RedisClient.register(MyGlobalRedisInstrumentation)
+
+redis_config = RedisClient.config(custom: { tags: { "environment": Rails.env }})
+```
 ### Timeouts
 
 The client allows you to configure connect, read, and write timeouts.

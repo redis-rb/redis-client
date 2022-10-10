@@ -105,5 +105,10 @@ class RedisClient
 
       assert_equal "/var/redis/redis.sock/5", Config.new(path: "/var/redis/redis.sock", db: 5).server_url
     end
+
+    def test_custom_field
+      config = Config.new(custom: { foo: "bar" })
+      assert_equal({ foo: "bar" }, config.custom)
+    end
   end
 end
