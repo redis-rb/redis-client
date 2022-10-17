@@ -38,7 +38,7 @@ GEM
     rubocop-minitest (0.19.1)
       rubocop (>= 0.90, < 2.0)
     ruby-progressbar (1.11.0)
-    stackprof (0.2.21)
+    stackprof (0.2.22)
     toxiproxy (2.0.2)
     unicode-display_width (2.2.0)
 
