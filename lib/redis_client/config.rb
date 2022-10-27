@@ -36,7 +36,8 @@ class RedisClient
         command_builder: CommandBuilder,
         inherit_socket: false,
         reconnect_attempts: false,
-        middlewares: false
+        middlewares: false,
+        retry_connecting_delay: false
       )
         @username = username
         @password = password
@@ -74,6 +75,7 @@ class RedisClient
           end
         end
         @middlewares_stack = middlewares_stack
+        @retry_connecting_delay = retry_connecting_delay
       end
 
       def username
@@ -102,6 +104,16 @@ class RedisClient
             return true
           end
         end
+        false
+      end
+
+      def delay_connecting?(connection_error_at)
+        return false unless connection_error_at
+        return false unless @retry_connecting_delay
+
+        time_to_retry_connecting = connection_error_at + @retry_connecting_delay.seconds - Time.now
+        return true if time_to_retry_connecting.positive?
+
         false
       end
 
