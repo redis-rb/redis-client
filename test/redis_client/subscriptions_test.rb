@@ -55,6 +55,16 @@ class RedisClient
       ], events
     end
 
+    def test_connection_lost
+      assert_nil @subscription.call("SUBSCRIBE", "mychannel")
+      @redis.call("PUBLISH", "mychannel", "event-0")
+      assert_equal ["subscribe", "mychannel", 1], @subscription.next_event
+      assert_equal ["message", "mychannel", "event-0"], @subscription.next_event
+
+      assert_nil @subscription.next_event(0.2)
+      assert_nil @subscription.next_event(0.2)
+    end
+
     def test_close
       assert_nil @subscription.call("SUBSCRIBE", "mychannel")
       @redis.pipelined do |pipeline|
