@@ -618,14 +618,17 @@ static VALUE hiredis_flush(VALUE self) {
     return Qtrue;
 }
 
+
+#define HIREDIS_FATAL_CONNECTION_ERROR -1
+#define HIREDIS_CLIENT_TIMEOUT -2
+
 static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply) {
     void *redis_reply = NULL;
     int wdone = 0;
 
     /* Try to read pending replies */
     if (redisGetReplyFromReader(connection->context, &redis_reply) == REDIS_ERR) {
-        /* Protocol error */
-        return -1;
+        return HIREDIS_FATAL_CONNECTION_ERROR; // Protocol error
     }
 
     if (redis_reply == NULL) {
@@ -634,20 +637,19 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
             errno = 0;
 
             if (hiredis_buffer_write_nogvl(connection->context, &wdone) == REDIS_ERR) {
-                /* Socket error */
-                return -1;
+                return HIREDIS_FATAL_CONNECTION_ERROR; // Socket error
             }
 
             if (errno == EAGAIN) {
                 int writable = 0;
 
                 if (hiredis_wait_writable(connection->context->fd, &connection->write_timeout, &writable) < 0) {
-                    return -2;
+                    return HIREDIS_CLIENT_TIMEOUT;
                 }
 
                 if (!writable) {
                     errno = EAGAIN;
-                    return -2;
+                    return HIREDIS_CLIENT_TIMEOUT;
                 }
             }
         }
@@ -657,20 +659,19 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
             errno = 0;
 
             if (hiredis_buffer_read_nogvl(connection->context) == REDIS_ERR) {
-                /* Socket error */
-                return -1;
+                return HIREDIS_FATAL_CONNECTION_ERROR; // Socket error
             }
 
             if (errno == EAGAIN) {
                 int readable = 0;
 
                 if (hiredis_wait_readable(connection->context->fd, &connection->read_timeout, &readable) < 0) {
-                    return -2;
+                    return HIREDIS_CLIENT_TIMEOUT;
                 }
 
                 if (!readable) {
                     errno = EAGAIN;
-                    return -2;
+                    return HIREDIS_CLIENT_TIMEOUT;
                 }
 
                 /* Retry */
@@ -678,8 +679,7 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
             }
 
             if (redisGetReplyFromReader(connection->context, &redis_reply) == REDIS_ERR) {
-                /* Protocol error */
-                return -1;
+                return HIREDIS_FATAL_CONNECTION_ERROR; // Protocol error
             }
         }
     }
@@ -697,9 +697,19 @@ static VALUE hiredis_read(VALUE self) {
     ENSURE_CONNECTED(connection);
 
     VALUE reply = Qnil;
-    if (hiredis_read_internal(connection, &reply)) {
-        hiredis_raise_error_and_disconnect(connection, rb_eRedisClientReadTimeoutError);
+    switch (hiredis_read_internal(connection, &reply)) {
+        case HIREDIS_FATAL_CONNECTION_ERROR:
+            // The error is unrecoverable, we eagerly close the connection to ensure
+            // it won't be re-used.
+            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientReadTimeoutError);
+            break;
+        case HIREDIS_CLIENT_TIMEOUT:
+            // The timeout might have been expected (e.g. `PubSub#next_event`).
+            // we let the caller decide if the connection should be closed.
+            rb_raise(rb_eRedisClientReadTimeoutError, "Unknown Error");
+            break;
     }
+
     if (reply == Redis_Qfalse) {
         // See reply_create_bool
         reply = Qfalse;
