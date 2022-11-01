@@ -154,7 +154,7 @@ class RedisClient
       **kwargs
     )
       if url
-        uri = URI.parse(url)
+        uri = URI(url)
         kwargs[:ssl] = uri.scheme == "rediss" unless kwargs.key?(:ssl)
 
         kwargs[:username] ||= uri.user if uri.password && !uri.user.empty?

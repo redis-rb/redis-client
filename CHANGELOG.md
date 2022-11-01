@@ -1,5 +1,7 @@
 # Unreleased
 
+- Accept `URI` instances as `uri` parameter.
+
 # 0.11.0
 
 - hiredis: do not eagerly close the connection on read timeout, let the caller decide if a timeout is final.

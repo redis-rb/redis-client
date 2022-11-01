@@ -14,6 +14,11 @@ class RedisClient
       refute_predicate config, :ssl?
     end
 
+    def test_uri_instance
+      config = Config.new(url: URI.parse("redis://example.com"))
+      assert_equal "example.com", config.host
+    end
+
     def test_ipv6_uri
       config = Config.new(url: "redis://[::1]")
       assert_equal "::1", config.host
