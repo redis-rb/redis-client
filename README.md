@@ -82,6 +82,7 @@ redis.call("GET", "mykey")
 - `write_timeout`: The write timeout, takes precedence over the general timeout when sending commands to the server.
 - `reconnect_attempts`: Specify how many times the client should retry to send queries. Defaults to `0`. Makes sure to read the [reconnection section](#reconnection) before enabling it.
 - `protocol:` The version of the RESP protocol to use. Default to `3`.
+- `custom`: A user owned value ignored by `redis-client` but available as `Config#custom`. This can be used to hold middleware configurations and other user specific metadatas.
 
 ### Sentinel support
 

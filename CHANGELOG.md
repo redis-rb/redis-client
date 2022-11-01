@@ -1,7 +1,9 @@
 # Unreleased
 
+# 0.11.0
+
 - hiredis: do not eagerly close the connection on read timeout, let the caller decide if a timeout is final.
-- Add `Config#extra` to store configuration metadata. It can be used for per server middleware configuration.
+- Add `Config#custom` to store configuration metadata. It can be used for per server middleware configuration.
 
 # 0.10.0
 
