@@ -54,14 +54,12 @@ if RUBY_ENGINE == "ruby" && !RUBY_PLATFORM.match?(/mswin/)
     $CFLAGS << " -O3 "
   end
 
-  cc_version = `#{RbConfig::expand("$(CC) --version".dup)}`
+  cc_version = `#{RbConfig.expand("$(CC) --version".dup)}`
   if cc_version.match?(/clang/i)
-    unless RbConfig::CONFIG['DLDFLAGS'].to_s.include?("dynamic_lookup")
-      # Ref: https://github.com/redis-rb/redis-client/issues/58
-      # Ref: https://bugs.ruby-lang.org/issues/19005
-      $DLDFLAGS << ' -Wl,-undefined,dynamic_lookup '
-    end
     $LDFLAGS << ' -Wl,-exported_symbols_list,"' << File.join(__dir__, 'export.clang') << '"'
+    if RUBY_VERSION >= "3.2"
+      $LDFLAGS << " -Wl,-exported_symbol,_ruby_abi_version"
+    end
   elsif cc_version.match?(/gcc/i)
     $LDFLAGS << ' -Wl,--version-script="' << File.join(__dir__, 'export.gcc') << '"'
   end
