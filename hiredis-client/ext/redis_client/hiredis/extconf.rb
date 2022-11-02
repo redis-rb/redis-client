@@ -56,6 +56,7 @@ if RUBY_ENGINE == "ruby" && !RUBY_PLATFORM.match?(/mswin/)
 
   if `cc --version`.match?(/ clang /i) || RbConfig::CONFIG['CC'].match?(/clang/i)
     $LDFLAGS << ' -Wl,-exported_symbols_list,"' << File.join(__dir__, 'export.clang') << '"'
+    $LDFLAGS << " -Wl,-exported_symbol,_ruby_abi_version" if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('3.2.0')
   elsif RbConfig::CONFIG['CC'].match?(/gcc/i)
     $LDFLAGS << ' -Wl,--version-script="' << File.join(__dir__, 'export.gcc') << '"'
   end
