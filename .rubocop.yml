@@ -192,3 +192,6 @@ Style/CombinableLoops:
 
 Style/DocumentDynamicEvalDefinition:
   Enabled: false
+
+Style/CaseLikeIf:
+  Enabled: false

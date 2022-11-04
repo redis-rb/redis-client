@@ -54,9 +54,13 @@ if RUBY_ENGINE == "ruby" && !RUBY_PLATFORM.match?(/mswin/)
     $CFLAGS << " -O3 "
   end
 
-  if `cc --version`.match?(/ clang /i) || RbConfig::CONFIG['CC'].match?(/clang/i)
+  cc_version = `#{RbConfig.expand("$(CC) --version".dup)}`
+  if cc_version.match?(/clang/i)
     $LDFLAGS << ' -Wl,-exported_symbols_list,"' << File.join(__dir__, 'export.clang') << '"'
-  elsif RbConfig::CONFIG['CC'].match?(/gcc/i)
+    if RUBY_VERSION >= "3.2"
+      $LDFLAGS << " -Wl,-exported_symbol,_ruby_abi_version"
+    end
+  elsif cc_version.match?(/gcc/i)
     $LDFLAGS << ' -Wl,--version-script="' << File.join(__dir__, 'export.gcc') << '"'
   end
 
