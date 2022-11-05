@@ -19,6 +19,14 @@ class RedisClient
       assert_equal "example.com", config.host
     end
 
+    def test_invalid_url
+      error = assert_raises ArgumentError do
+        Config.new(url: "example.com")
+      end
+      assert_includes error.message, "Invalid URL"
+      assert_includes error.message, "example.com"
+    end
+
     def test_ipv6_uri
       config = Config.new(url: "redis://[::1]")
       assert_equal "::1", config.host

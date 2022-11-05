@@ -155,6 +155,10 @@ class RedisClient
     )
       if url
         uri = URI(url)
+        unless uri.scheme == "redis" || uri.scheme == "rediss"
+          raise ArgumentError, "Invalid URL: #{url.inspect}"
+        end
+
         kwargs[:ssl] = uri.scheme == "rediss" unless kwargs.key?(:ssl)
 
         kwargs[:username] ||= uri.user if uri.password && !uri.user.empty?
