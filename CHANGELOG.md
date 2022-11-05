@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.11.1
+
 - hiredis: Workaround a compilation bug with Xcode 14.0, Fix: #58
 - Accept `URI` instances as `uri` parameter.
 
