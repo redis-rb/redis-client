@@ -300,6 +300,39 @@ class RedisClient
       server_thread&.kill
     end
 
+    def test_reconnect_on_readonly
+      tcp_server = TCPServer.new("127.0.0.1", 0)
+      tcp_server.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
+      port = tcp_server.addr[1]
+
+      server_thread = Thread.new do
+        session = tcp_server.accept
+        io = RubyConnection::BufferedIO.new(session, read_timeout: 1, write_timeout: 1)
+        while command = RESP3.load(io)
+          case command.first
+          when "HELLO"
+            session.write("_\r\n")
+          when "PING"
+            session.write("+PING\r\n")
+          when "SET"
+            session.write("-READONLY You can't write against a read only replica.\r\n")
+          else
+            session.write("-ERR Unknown command #{command.first}\r\n")
+          end
+        end
+        session.close
+      end
+
+      client = new_client(host: "127.0.0.1", port: port)
+      client.call("PING")
+      assert_raises RedisClient::ReadOnlyError do
+        client.call("SET", "foo", "bar")
+      end
+      refute_predicate client, :connected?
+    ensure
+      server_thread&.kill
+    end
+
     private
 
     def new_client(**overrides)

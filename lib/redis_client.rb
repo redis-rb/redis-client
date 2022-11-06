@@ -90,8 +90,16 @@ class RedisClient
   WriteTimeoutError = Class.new(TimeoutError)
   CheckoutTimeoutError = Class.new(TimeoutError)
 
-  class CommandError < Error
+  module HasCommand
     attr_reader :command
+
+    def _set_command(command)
+      @command = command
+    end
+  end
+
+  class CommandError < Error
+    include HasCommand
 
     class << self
       def parse(error_message)
@@ -107,17 +115,15 @@ class RedisClient
         klass.new(error_message)
       end
     end
-
-    def _set_command(command)
-      @command = command
-    end
   end
 
   AuthenticationError = Class.new(CommandError)
   PermissionError = Class.new(CommandError)
-  ReadOnlyError = Class.new(CommandError)
   WrongTypeError = Class.new(CommandError)
   OutOfMemoryError = Class.new(CommandError)
+
+  ReadOnlyError = Class.new(ConnectionError)
+  ReadOnlyError.include(HasCommand)
 
   CommandError::ERRORS = {
     "WRONGPASS" => AuthenticationError,
