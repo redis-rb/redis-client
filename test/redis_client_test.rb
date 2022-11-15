@@ -63,7 +63,25 @@ class RedisClientTest < Minitest::Test
     error = assert_raises RedisClient::UnsupportedServer do
       client.call("PING")
     end
-    assert_includes error.message, "Your Redis server version is too old"
+    assert_includes error.message, "redis-client requires Redis 6+ with HELLO command available"
+  end
+
+  def test_redis_6_server_with_missing_hello_command
+    fake_redis6_driver = Class.new(RedisClient::RubyConnection) do
+      def call_pipelined(commands, *)
+        if commands.any? { |c| c == ["HELLO", "3"] }
+          raise RedisClient::CommandError, "ERR unknown command 'HELLO'"
+        else
+          super
+        end
+      end
+    end
+    client = new_client(driver: fake_redis6_driver)
+
+    error = assert_raises RedisClient::UnsupportedServer do
+      client.call("PING")
+    end
+    assert_includes error.message, "redis-client requires Redis 6+ with HELLO command available"
   end
 
   def test_handle_async_raise
