@@ -17,7 +17,7 @@ class RedisClient
       write(command)
       result = read(timeout)
       @pending_reads -= 1
-      if result.is_a?(CommandError)
+      if result.is_a?(Error)
         result._set_command(command)
         raise result
       else
@@ -37,7 +37,7 @@ class RedisClient
         timeout = timeouts && timeouts[index]
         result = read(timeout)
         @pending_reads -= 1
-        if result.is_a?(CommandError)
+        if result.is_a?(Error)
           result._set_command(commands[index])
           exception ||= result
         end

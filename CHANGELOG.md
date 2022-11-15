@@ -1,5 +1,6 @@
 # Unreleased
 
+- Close connection on READONLY errors. Fix: #64
 - Handle Redis 6+ servers with a missing HELLO command. See: #67
 - Validate `url` parameters a bit more strictly. Fix #61
 
