@@ -62,7 +62,7 @@ class RedisClient
       write_timeout: config.write_timeout
     )
       @config = config
-      @id = id
+      @id = id&.to_s
       @connect_timeout = connect_timeout
       @read_timeout = read_timeout
       @write_timeout = write_timeout
@@ -668,7 +668,7 @@ class RedisClient
     prelude = config.connection_prelude.dup
 
     if id
-      prelude << ["CLIENT", "SETNAME", id.to_s]
+      prelude << ["CLIENT", "SETNAME", id]
     end
 
     # The connection prelude is deliberately not sent to Middlewares
