@@ -687,7 +687,7 @@ class RedisClient
     end
 
     connection
-  rescue FailoverError
+  rescue FailoverError, CannotConnectError
     raise
   rescue ConnectionError => error
     raise CannotConnectError, error.message, error.backtrace
@@ -702,5 +702,6 @@ class RedisClient
 end
 
 require "redis_client/pooled"
+require "redis_client/circuit_breaker"
 
 RedisClient.default_driver
