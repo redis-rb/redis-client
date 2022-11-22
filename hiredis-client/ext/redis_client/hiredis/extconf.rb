@@ -55,7 +55,7 @@ if RUBY_ENGINE == "ruby" && !RUBY_PLATFORM.match?(/mswin/)
   end
 
   cc_version = `#{RbConfig.expand("$(CC) --version".dup)}`
-  if cc_version.match?(/clang/i)
+  if cc_version.match?(/clang/i) && RUBY_PLATFORM =~ /darwin/
     $LDFLAGS << ' -Wl,-exported_symbols_list,"' << File.join(__dir__, 'export.clang') << '"'
     if RUBY_VERSION >= "3.2"
       $LDFLAGS << " -Wl,-exported_symbol,_ruby_abi_version"
