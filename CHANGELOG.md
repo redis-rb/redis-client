@@ -1,5 +1,7 @@
 # Unreleased
 
+- Add a `circuit_breaker` configuration option for cache servers and other disposable Redis servers. See #55 / #70
+
 # 0.11.2
 
 - Close connection on READONLY errors. Fix: #64

@@ -40,6 +40,11 @@ module ClientTestHelper
 
   private
 
+  def travel(seconds, &block)
+    now = Process.clock_gettime(Process::CLOCK_MONOTONIC) + seconds
+    Process.stub(:clock_gettime, now, &block)
+  end
+
   def tcp_config
     {
       host: Servers::HOST,

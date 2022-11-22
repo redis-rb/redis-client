@@ -192,6 +192,34 @@ class RedisClient
       assert_equal "1", client.call("GET", "counter")
     end
 
+    def test_circuit_breaker
+      circuit_breaker = CircuitBreaker.new(error_threshold: 3, success_threshold: 2, error_timeout: 1)
+      @redis = new_client(circuit_breaker: circuit_breaker)
+
+      assert_equal "PONG", @redis.call("PING")
+      Toxiproxy[/redis/].down do
+        circuit_breaker.error_threshold.times do
+          assert_raises ConnectionError do
+            @redis.call("PING")
+          end
+        end
+      end
+
+      assert_equal "PONG", new_client.call("PING")
+
+      assert_raises CircuitBreaker::OpenCircuitError do
+        @redis.call("PING")
+      end
+
+      assert_raises CircuitBreaker::OpenCircuitError do
+        @redis.config.new_client.call("PING")
+      end
+
+      travel(circuit_breaker.error_timeout) do
+        assert_equal "PONG", @redis.call("PING")
+      end
+    end
+
     def test_killed_connection
       client = new_client(reconnect_attempts: 1, id: "background")
 

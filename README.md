@@ -81,6 +81,7 @@ redis.call("GET", "mykey")
 - `read_timeout`: The read timeout, takes precedence over the general timeout when reading responses from the server.
 - `write_timeout`: The write timeout, takes precedence over the general timeout when sending commands to the server.
 - `reconnect_attempts`: Specify how many times the client should retry to send queries. Defaults to `0`. Makes sure to read the [reconnection section](#reconnection) before enabling it.
+- `circuit_breaker`: A Hash with circuit breaker configuration. Defaults to `nil`. See the [circuit breakers section](#circuit-breakers) for details.
 - `protocol:` The version of the RESP protocol to use. Default to `3`.
 - `custom`: A user owned value ignored by `redis-client` but available as `Config#custom`. This can be used to hold middleware configurations and other user specific metadatas.
 
@@ -426,22 +427,60 @@ It can be set as a number of retries:
 redis_config = RedisClient.config(reconnect_attempts: 1)
 ```
 
-Or as a list of sleep durations for implementing exponential backoff:
-
-```ruby
-redis_config = RedisClient.config(reconnect_attempts: [0, 0.05, 0.1])
-```
-
 **Important Note**: Retrying may cause commands to be issued more than once to the server, so in the case of
 non-idempotent commands such as `LPUSH` or `INCR`, it may cause consistency issues.
 
 To selectively disable automatic retries, you can use the `#call_once` method:
 
 ```ruby
-redis_config = RedisClient.config(reconnect_attempts: [0, 0.05, 0.1])
+redis_config = RedisClient.config(reconnect_attempts: 3)
 redis = redis_config.new_client
 redis.call("GET", "counter") # Will be retried up to 3 times.
 redis.call_once("INCR", "counter") # Won't be retried.
+```
+
+### Exponential backoff
+
+Alternatively, `reconnect_attempts` accepts a list of sleep durations for implementing exponential backoff:
+
+```ruby
+redis_config = RedisClient.config(reconnect_attempts: [0, 0.05, 0.1])
+```
+
+This configuration is generally used when the Redis server is expected to failover or recover relatively quickly and
+that it's not really possibe to continue without issuing the command.
+
+When the Redis server is used as an ephemeral cache, circuit breakers are generally prefered.
+
+### Circuit Breaker
+
+When Redis is used as a cache and a connection error happens, you may not want to retry as it might take
+longer than to recompute the value. Instead it's likely preferable to mark the server as unavailable and let it
+recover for a while.
+
+[Circuit breakers are a pattern that does exactly that](https://en.wikipedia.org/wiki/Circuit_breaker_design_pattern).
+
+Configuation options:
+
+  - `error_threshold`. The amount of errors to encounter within `error_threshold_timeout` amount of time before opening the circuit, that is to start rejecting requests instantly.
+  - `error_threshold_timeout`. The amount of time in seconds that `error_threshold` errors must occur to open the circuit. Defaults to `error_timeout` seconds if not set.
+  - `error_timeout`. The amount of time in seconds until trying to query the resource again.
+  - `success_threshold`. The amount of successes on the circuit until closing it again, that is to start accepting all requests to the circuit.
+
+```ruby
+RedisClient.config(
+  circuit_breaker: {
+    # Stop querying the server after 3 errors happened in a 2 seconds window
+    error_threshold: 3,
+    error_threshold_timeout: 2,
+
+    # Try querying again after 1 second
+    error_timeout: 1,
+
+    # Stay in half-open state until 3 queries succeeded.
+    success_threshold: 3,
+  }
+)
 ```
 
 ### Drivers
