@@ -1,5 +1,6 @@
 # Unreleased
 
+- Close connection on MASTERDOWN errors. Similar to READONLY.
 - Add a `circuit_breaker` configuration option for cache servers and other disposable Redis servers. See #55 / #70
 
 # 0.11.2

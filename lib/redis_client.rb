@@ -125,10 +125,14 @@ class RedisClient
   ReadOnlyError = Class.new(ConnectionError)
   ReadOnlyError.include(HasCommand)
 
+  MasterDownError = Class.new(ConnectionError)
+  MasterDownError.include(HasCommand)
+
   CommandError::ERRORS = {
     "WRONGPASS" => AuthenticationError,
     "NOPERM" => PermissionError,
     "READONLY" => ReadOnlyError,
+    "MASTERDOWN" => MasterDownError,
     "WRONGTYPE" => WrongTypeError,
     "OOM" => OutOfMemoryError,
   }.freeze
