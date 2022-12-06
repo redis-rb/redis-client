@@ -142,7 +142,7 @@ class RedisClient
           when :wait_writable
             @io.to_io.wait_writable(@write_timeout) or raise WriteTimeoutError
           when nil
-            raise Errno::ECONNRESET
+            raise EOFError
           else
             raise "Unexpected `read_nonblock` return: #{bytes.inspect}"
           end
