@@ -67,7 +67,7 @@ class RedisClient
 
         command.map! do |element|
           case element
-          when String
+          when String, Array
             element
           when Integer, Float, Symbol
             element.to_s
