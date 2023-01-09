@@ -1,5 +1,8 @@
 # Unreleased
 
+# 0.12.0
+
+- hiredis: fix a compilation issue on macOS and Ruby 3.2.0. See: #79
 - Close connection on MASTERDOWN errors. Similar to READONLY.
 - Add a `circuit_breaker` configuration option for cache servers and other disposable Redis servers. See #55 / #70
 
