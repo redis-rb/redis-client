@@ -1,5 +1,7 @@
 # Unreleased
 
+- Improve compatibility with `uri 0.12.0`.
+
 # 0.12.0
 
 - hiredis: fix a compilation issue on macOS and Ruby 3.2.0. See: #79

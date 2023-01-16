@@ -27,6 +27,12 @@ class RedisClient
       assert_includes error.message, "example.com"
     end
 
+    def test_defaults_to_localhost
+      config = Config.new(url: "redis://")
+
+      assert_equal "localhost", config.host
+    end
+
     def test_ipv6_uri
       config = Config.new(url: "redis://[::1]")
       assert_equal "::1", config.host
