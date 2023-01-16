@@ -1,6 +1,8 @@
 # Unreleased
 
-- Improve compatibility with `uri 0.12.0`.
+# 0.12.1
+
+- Improve compatibility with `uri 0.12.0` (default in Ruby 3.2.0).
 
 # 0.12.0
 
