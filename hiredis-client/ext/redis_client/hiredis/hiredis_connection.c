@@ -706,7 +706,7 @@ static VALUE hiredis_read(VALUE self) {
         case HIREDIS_CLIENT_TIMEOUT:
             // The timeout might have been expected (e.g. `PubSub#next_event`).
             // we let the caller decide if the connection should be closed.
-            rb_raise(rb_eRedisClientReadTimeoutError, "Unknown Error");
+            rb_raise(rb_eRedisClientReadTimeoutError, "Unknown Error (hiredis_read)");
             break;
     }
 
