@@ -50,29 +50,33 @@ class HiredisConnectionExtconf
 
   def configure_openssl(original_env)
     original_env.dup.tap do |env|
-      openssl_include, openssl_lib = dir_config("openssl")
-
-      openssl_include ||= dir_config("opt").first
-                            &.split(File::PATH_SEPARATOR)
-                            &.detect { |dir| dir.include?("openssl") }
-
-      openssl_lib ||= dir_config("opt").last
-                        &.split(File::PATH_SEPARATOR)
-                        &.detect { |dir| dir.include?("openssl") }
-
-      if (!openssl_include || !openssl_lib) && !have_header("openssl/ssl.h")
-        raise "OpenSSL library could not be found. " \
-              "Use --with-openssl-dir=<dir> option to specify the prefix where OpenSSL is installed."
+      config = dir_config("openssl")
+      if config.none?
+        config = dir_config("opt").map { |c| detect_openssl_dir(c) }
       end
 
-      if openssl_lib
-        env["CFLAGS"] = concat_flags(env["CFLAGS"], "-I#{openssl_include}")
-        env["SSL_LDFLAGS"] = "-L#{openssl_lib}"
+      unless have_header("openssl/ssl.h")
+        message = "ERROR: OpenSSL library could not be found."
+        if config.none?
+          message += "\nUse --with-openssl-dir=<dir> option to specify the prefix where OpenSSL is installed."
+        end
+        abort message
+      end
+
+      if config.any?
+        env["CFLAGS"] = concat_flags(env["CFLAGS"], "-I#{config.first}")
+        env["SSL_LDFLAGS"] = "-L#{config.last}"
       end
     end
   end
 
   private
+
+  def detect_openssl_dir(paths)
+    paths
+      &.split(File::PATH_SEPARATOR)
+      &.detect { |dir| dir.include?("openssl") }
+  end
 
   def concat_flags(*args)
     args.compact.join(" ")
