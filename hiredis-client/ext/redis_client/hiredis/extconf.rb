@@ -2,6 +2,10 @@
 
 require "mkmf"
 
+def concat_flags(*args)
+  args.compact.join(" ")
+end
+
 if RUBY_ENGINE == "ruby" && !RUBY_PLATFORM.match?(/mswin/)
   have_func("rb_hash_new_capa", "ruby.h")
 
@@ -31,27 +35,29 @@ if RUBY_ENGINE == "ruby" && !RUBY_PLATFORM.match?(/mswin/)
   end
 
   Dir.chdir(hiredis_dir) do
-    flags = ["static", "USE_SSL=1"]
+    env = {
+      "USE_SSL" => 1,
+      "CFLAGS" => ENV["CFLAGS"],
+    }
     if openssl_lib
-      flags << %(CFLAGS="-I#{openssl_include}") << %(SSL_LDFLAGS="-L#{openssl_lib}")
+      env["CFLAGS"] = concat_flags(env["CFLAGS"], "-I#{openssl_include}")
+      env["SSL_LDFLAGS"] = "-L#{openssl_lib}"
     end
+    env["OPTIMIZATION"] = "-g" if ENV["EXT_PEDANTIC"]
 
-    flags << "OPTIMIZATION=-g" if ENV["EXT_PEDANTIC"]
-
-    unless system(make_program, *flags)
+    env_args = env.map { |k, v| "#{k}=#{v}" }
+    unless system(make_program, "static", *env_args)
       raise "Building hiredis failed"
     end
   end
 
-  $CFLAGS << " -I#{hiredis_dir}"
-  $LDFLAGS << " -lssl -lcrypto"
-  $libs << " #{hiredis_dir}/libhiredis.a #{hiredis_dir}/libhiredis_ssl.a "
-  $CFLAGS << " -std=c99 "
-  if ENV["EXT_PEDANTIC"]
-    $CFLAGS << " -Werror"
-    $CFLAGS << " -g "
+  $CFLAGS = concat_flags($CFLAGS, "-I#{hiredis_dir}", "-std=c99")
+  $LDFLAGS = concat_flags($LDFLAGS, "-lssl", "-lcrypto")
+  $libs = concat_flags($libs, "#{hiredis_dir}/libhiredis.a", "#{hiredis_dir}/libhiredis_ssl.a")
+  $CFLAGS = if ENV["EXT_PEDANTIC"]
+    concat_flags($CFLAGS, "-Werror", "-g")
   else
-    $CFLAGS << " -O3 "
+    concat_flags($CFLAGS, "-O3")
   end
 
   cc_version = `#{RbConfig.expand("$(CC) --version".dup)}`
@@ -64,8 +70,8 @@ if RUBY_ENGINE == "ruby" && !RUBY_PLATFORM.match?(/mswin/)
     $LDFLAGS << ' -Wl,--version-script="' << File.join(__dir__, 'export.gcc') << '"'
   end
 
-  $CFLAGS << " -Wno-declaration-after-statement" # Older compilers
-  $CFLAGS << " -Wno-compound-token-split-by-macro" # Older rubies on macos
+  append_cflags("-Wno-declaration-after-statement") # Older compilers
+  append_cflags("-Wno-compound-token-split-by-macro") # Older rubies on macos
 
   create_makefile("redis_client/hiredis_connection")
 else
