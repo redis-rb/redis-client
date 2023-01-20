@@ -1,7 +1,0 @@
-hiredis_connection_1.0 { 
-  global: 
-    Init_hiredis_connection;
-    ruby_abi_version;
-  local: 
-    *;
-};

@@ -726,7 +726,7 @@ static VALUE hiredis_close(VALUE self) {
     return Qnil;
 }
 
-void Init_hiredis_connection(void) {
+RUBY_FUNC_EXPORTED void Init_hiredis_connection(void) {
 #ifdef RUBY_ASSERT
         // Qfalse == NULL, so we can't return Qfalse in `reply_create_bool()`
         RUBY_ASSERT((void *)Qfalse == NULL);
