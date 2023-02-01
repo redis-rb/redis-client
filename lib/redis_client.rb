@@ -642,7 +642,11 @@ class RedisClient
       connection = ensure_connected
       begin
         @disable_reconnection = true
-        yield connection
+        if block_given?
+          yield connection
+        else
+          connection
+        end
       rescue ConnectionError, ProtocolError
         close
         raise
