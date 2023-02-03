@@ -90,7 +90,7 @@ static const rb_data_type_t hiredis_ssl_context_data_type = {
         .dcompact = NULL
 #endif
     },
-    .flags = RUBY_TYPED_FREE_IMMEDIATELY
+    .flags = RUBY_TYPED_FREE_IMMEDIATELY | RUBY_TYPED_WB_PROTECTED
 };
 
 static VALUE hiredis_ssl_context_alloc(VALUE klass) {
