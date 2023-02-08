@@ -64,8 +64,6 @@ typedef struct {
         rb_raise(rb_eArgError, "NULL found for " # name " when shouldn't be."); \
     }
 
-void hiredis_ssl_context_mark(void *ptr) { }
-
 void hiredis_ssl_context_free(void *ptr) {
     hiredis_ssl_context_t *ssl_context = (hiredis_ssl_context_t *)ptr;
     if (ssl_context->context) {
@@ -83,7 +81,7 @@ static size_t hiredis_ssl_context_memsize(const void *ptr) {
 static const rb_data_type_t hiredis_ssl_context_data_type = {
     .wrap_struct_name = "redis-client:hiredis_ssl_context",
     .function = {
-        .dmark = hiredis_ssl_context_mark,
+        .dmark = NULL,
         .dfree = hiredis_ssl_context_free,
         .dsize = hiredis_ssl_context_memsize,
 #ifdef HAS_GC_COMPACT
