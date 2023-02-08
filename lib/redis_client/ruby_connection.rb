@@ -77,6 +77,8 @@ class RedisClient
         read_timeout: read_timeout,
         write_timeout: write_timeout,
       )
+
+      @buffer = String.new(encoding: Encoding::BINARY, capacity: 127)
     rescue SystemCallError, OpenSSL::SSL::SSLError, SocketError => error
       raise CannotConnectError, error.message, error.backtrace
     end
@@ -98,21 +100,22 @@ class RedisClient
     end
 
     def write(command)
-      buffer = RESP3.dump(command)
+      @buffer.clear
+      RESP3.dump(command, @buffer)
       begin
-        @io.write(buffer)
+        @io.write(@buffer)
       rescue SystemCallError, IOError => error
         raise ConnectionError, error.message
       end
     end
 
     def write_multi(commands)
-      buffer = nil
+      @buffer.clear
       commands.each do |command|
-        buffer = RESP3.dump(command, buffer)
+        RESP3.dump(command, @buffer)
       end
       begin
-        @io.write(buffer)
+        @io.write(@buffer)
       rescue SystemCallError, IOError => error
         raise ConnectionError, error.message
       end
