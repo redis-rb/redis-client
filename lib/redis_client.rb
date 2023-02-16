@@ -3,6 +3,7 @@
 require "redis_client/version"
 require "redis_client/command_builder"
 require "redis_client/config"
+require "redis_client/pid_cache"
 require "redis_client/sentinel_config"
 require "redis_client/middlewares"
 
@@ -67,7 +68,7 @@ class RedisClient
       @read_timeout = read_timeout
       @write_timeout = write_timeout
       @command_builder = config.command_builder
-      @pid = Process.pid
+      @pid = PIDCache.pid
     end
 
     def timeout=(timeout)
@@ -609,7 +610,7 @@ class RedisClient
   end
 
   def ensure_connected(retryable: true)
-    close if !config.inherit_socket && @pid != Process.pid
+    close if !config.inherit_socket && @pid != PIDCache.pid
 
     if @disable_reconnection
       if block_given?
@@ -658,7 +659,7 @@ class RedisClient
   end
 
   def connect
-    @pid = Process.pid
+    @pid = PIDCache.pid
 
     connection = @middlewares.connect(config) do
       config.driver.new(
