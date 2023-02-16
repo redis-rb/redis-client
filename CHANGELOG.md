@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.12.2
+
 - Cache calls to `Process.pid` on Ruby 3.1+. #91.
 
 # 0.12.1
