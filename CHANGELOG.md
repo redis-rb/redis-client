@@ -1,5 +1,7 @@
 # Unreleased
 
+- Cache calls to `Process.pid` on Ruby 3.1+. #91.
+
 # 0.12.1
 
 - Improve compatibility with `uri 0.12.0` (default in Ruby 3.2.0).
