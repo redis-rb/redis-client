@@ -52,6 +52,7 @@ class RedisClient
         end
         # disables Nagle's Algorithm, prevents multiple round trips with MULTI
         sock.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
+        enable_socket_keep_alive(sock)
         sock
       end
 
@@ -128,6 +129,37 @@ class RedisClient
       raise RedisClient::ProtocolError, error.message
     rescue SystemCallError, IOError, OpenSSL::SSL::SSLError => error
       raise ConnectionError, error.message
+    end
+
+    private
+
+    KEEP_ALIVE_INTERVAL = 15 # Same as hiredis defaults
+    KEEP_ALIVE_TTL = 120 # Longer than hiredis defaults
+    KEEP_ALIVE_PROBES = (KEEP_ALIVE_TTL / KEEP_ALIVE_INTERVAL) - 1
+    private_constant :KEEP_ALIVE_INTERVAL
+    private_constant :KEEP_ALIVE_TTL
+    private_constant :KEEP_ALIVE_PROBES
+
+    if %i[SOL_SOCKET TCP_KEEPIDLE TCP_KEEPINTVL TCP_KEEPCNT].all? { |c| Socket.const_defined? c } # Linux
+      def enable_socket_keep_alive(socket)
+        socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
+        socket.setsockopt(Socket::SOL_TCP, Socket::TCP_KEEPIDLE, KEEP_ALIVE_INTERVAL)
+        socket.setsockopt(Socket::SOL_TCP, Socket::TCP_KEEPINTVL, KEEP_ALIVE_INTERVAL)
+        socket.setsockopt(Socket::SOL_TCP, Socket::TCP_KEEPCNT, KEEP_ALIVE_PROBES)
+      end
+    elsif %i[IPPROTO_TCP TCP_KEEPINTVL TCP_KEEPCNT].all? { |c| Socket.const_defined? c } # macOS
+      def enable_socket_keep_alive(socket)
+        socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
+        socket.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPINTVL, KEEP_ALIVE_INTERVAL)
+        socket.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_KEEPCNT, KEEP_ALIVE_PROBES)
+      end
+    elsif %i[SOL_SOCKET SO_KEEPALIVE].all? { |c| Socket.const_defined? c } # unknown POSIX
+      def enable_socket_keep_alive(socket)
+        socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
+      end
+    else # unknown
+      def enable_socket_keep_alive(_socket)
+      end
     end
   end
 end
