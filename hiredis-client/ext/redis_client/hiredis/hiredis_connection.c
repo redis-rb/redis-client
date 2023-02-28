@@ -480,7 +480,11 @@ static VALUE hiredis_connect_tcp(VALUE self, VALUE host, VALUE port) {
         redisFree(connection->context);
         connection->context = NULL;
     }
-    return hiredis_connect_finish(connection, redisConnectNonBlock(StringValuePtr(host), NUM2INT(port)));
+    redisContext *context = redisConnectNonBlock(StringValuePtr(host), NUM2INT(port));
+    if (context) {
+        redisEnableKeepAlive(context);
+    }
+    return hiredis_connect_finish(connection, context);
 }
 
 static VALUE hiredis_connect_unix(VALUE self, VALUE path) {

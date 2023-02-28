@@ -913,7 +913,7 @@ int redisSetTimeout(redisContext *c, const struct timeval tv) {
 
 /* Enable connection KeepAlive. */
 int redisEnableKeepAlive(redisContext *c) {
-    if (redisKeepAlive(c, REDIS_KEEPALIVE_INTERVAL) != REDIS_OK)
+    if (redisKeepAlive(c, REDIS_KEEPALIVE_TTL, REDIS_KEEPALIVE_INTERVAL) != REDIS_OK)
         return REDIS_ERR;
     return REDIS_OK;
 }

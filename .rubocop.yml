@@ -195,3 +195,6 @@ Style/DocumentDynamicEvalDefinition:
 
 Style/CaseLikeIf:
   Enabled: false
+
+Style/EmptyMethod:
+  Enabled: false

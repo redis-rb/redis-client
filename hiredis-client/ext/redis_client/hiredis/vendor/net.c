@@ -162,7 +162,7 @@ static int redisSetBlocking(redisContext *c, int blocking) {
     return REDIS_OK;
 }
 
-int redisKeepAlive(redisContext *c, int interval) {
+int redisKeepAlive(redisContext *c, int ttl, int interval) {
     int val = 1;
     redisFD fd = c->fd;
 
@@ -171,28 +171,28 @@ int redisKeepAlive(redisContext *c, int interval) {
         return REDIS_ERR;
     }
 
-    val = interval;
-
 #if defined(__APPLE__) && defined(__MACH__)
+    val = ttl;
     if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, &val, sizeof(val)) < 0) {
         __redisSetError(c,REDIS_ERR_OTHER,strerror(errno));
         return REDIS_ERR;
     }
 #else
 #if defined(__GLIBC__) && !defined(__FreeBSD_kernel__)
+    val = interval;
     if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &val, sizeof(val)) < 0) {
         __redisSetError(c,REDIS_ERR_OTHER,strerror(errno));
         return REDIS_ERR;
     }
 
-    val = interval/3;
-    if (val == 0) val = 1;
+    val = interval;
     if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &val, sizeof(val)) < 0) {
         __redisSetError(c,REDIS_ERR_OTHER,strerror(errno));
         return REDIS_ERR;
     }
 
-    val = 3;
+    val = (ttl / interval) - 1;
+    if (val <= 0) val = 1;
     if (setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &val, sizeof(val)) < 0) {
         __redisSetError(c,REDIS_ERR_OTHER,strerror(errno));
         return REDIS_ERR;

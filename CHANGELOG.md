@@ -1,5 +1,7 @@
 # Unreleased
 
+- Enable TCP keepalive on redis sockets. It sends a keep alive probe every 15 seconds for 2 minutes. #94.
+
 # 0.12.2
 
 - Cache calls to `Process.pid` on Ruby 3.1+. #91.

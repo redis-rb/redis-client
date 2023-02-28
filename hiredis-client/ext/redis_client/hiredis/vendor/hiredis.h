@@ -87,6 +87,7 @@ typedef long long ssize_t;
 #define REDIS_NO_AUTO_FREE 0x200
 
 #define REDIS_KEEPALIVE_INTERVAL 15 /* seconds */
+#define REDIS_KEEPALIVE_TTL 120 /* seconds */
 
 /* number of times we retry to connect in the case of EADDRNOTAVAIL and
  * SO_REUSEADDR is being used. */
