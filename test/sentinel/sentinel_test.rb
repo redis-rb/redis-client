@@ -79,8 +79,11 @@ class RedisClient
     def test_master_failover_not_ready
       sentinel_client_mock = SentinelClientMock.new([
         [["SENTINEL", "get-master-addr-by-name", "cache"], [Servers::REDIS_REPLICA.host, Servers::REDIS_REPLICA.port.to_s]],
+        sentinel_refresh_command_mock,
         [["SENTINEL", "get-master-addr-by-name", "cache"], [Servers::REDIS_REPLICA.host, Servers::REDIS_REPLICA.port.to_s]],
+        sentinel_refresh_command_mock,
         [["SENTINEL", "get-master-addr-by-name", "cache"], [Servers::REDIS_REPLICA.host, Servers::REDIS_REPLICA.port.to_s]],
+        sentinel_refresh_command_mock,
       ])
       @config.stub(:sentinel_client, ->(_config) { sentinel_client_mock }) do
         client = @config.new_client
@@ -93,7 +96,9 @@ class RedisClient
     def test_master_failover_ready
       sentinel_client_mock = SentinelClientMock.new([
         [["SENTINEL", "get-master-addr-by-name", "cache"], [Servers::REDIS.host, Servers::REDIS.port.to_s]],
+        sentinel_refresh_command_mock,
         [["SENTINEL", "get-master-addr-by-name", "cache"], [Servers::REDIS_REPLICA.host, Servers::REDIS_REPLICA.port.to_s]],
+        sentinel_refresh_command_mock,
       ])
       replica = RedisClient.new(host: Servers::REDIS_REPLICA.host, port: Servers::REDIS_REPLICA.port)
       assert_equal "OK", replica.call("REPLICAOF", "NO", "ONE")
@@ -158,6 +163,29 @@ class RedisClient
       end
     end
 
+    def test_successful_connection_refreshes_sentinels_list
+      assert_equal Servers::SENTINELS.length, @config.sentinels.length
+
+      new_sentinel_ip = "10.0.0.1"
+      new_sentinel_port = 1234
+
+      # Trigger sentinel refresh to make the client aware of a new sentinel
+      sentinel_client_mock = SentinelClientMock.new([
+        [["SENTINEL", "get-master-addr-by-name", "cache"], [Servers::REDIS.host, Servers::REDIS.port.to_s]],
+        sentinel_refresh_command_mock(
+          additional_sentinels: [response_hash("ip" => new_sentinel_ip, "port" => new_sentinel_port.to_s)],
+        ),
+      ])
+      @config.stub(:sentinel_client, ->(_config) { sentinel_client_mock }) do
+        client = @config.new_client
+        assert_equal "PONG", client.call("PING")
+      end
+
+      assert_equal Servers::SENTINELS.length + 1, @config.sentinels.length
+      assert_equal new_sentinel_ip, @config.sentinels.last.host
+      assert_equal new_sentinel_port, @config.sentinels.last.port
+    end
+
     private
 
     def response_hash(hash)
@@ -174,6 +202,14 @@ class RedisClient
         driver: ENV.fetch("DRIVER", "ruby").to_sym,
         **kwargs,
       )
+    end
+
+    def sentinel_refresh_command_mock(additional_sentinels: [])
+      sentinels = Servers::SENTINELS.map do |sentinel|
+        response_hash("ip" => sentinel.host, "port" => sentinel.port.to_s)
+      end
+
+      [["SENTINEL", "sentinels", "cache"], sentinels.concat(additional_sentinels)]
     end
   end
 
