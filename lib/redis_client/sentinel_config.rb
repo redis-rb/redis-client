@@ -13,9 +13,9 @@ class RedisClient
       end
 
       @to_list_of_hash = @to_hash = nil
-      extra_config = {}
+      @extra_config = {}
       if client_config[:protocol] == 2
-        extra_config[:protocol] = client_config[:protocol]
+        @extra_config[:protocol] = client_config[:protocol]
         @to_list_of_hash = lambda do |may_be_a_list|
           if may_be_a_list.is_a?(Array)
             may_be_a_list.map { |l| l.each_slice(2).to_h }
@@ -26,14 +26,7 @@ class RedisClient
       end
 
       @name = name
-      @sentinel_configs = sentinels.map do |s|
-        case s
-        when String
-          Config.new(**extra_config, url: s)
-        else
-          Config.new(**extra_config, **s)
-        end
-      end
+      @sentinel_configs = sentinels_to_configs(sentinels)
       @sentinels = {}.compare_by_identity
       @role = role
       @mutex = Mutex.new
@@ -93,6 +86,17 @@ class RedisClient
 
     private
 
+    def sentinels_to_configs(sentinels)
+      sentinels.map do |sentinel|
+        case sentinel
+        when String
+          Config.new(**@extra_config, url: sentinel)
+        else
+          Config.new(**@extra_config, **sentinel)
+        end
+      end
+    end
+
     def config
       @mutex.synchronize do
         @config ||= if @role == :master
@@ -106,9 +110,11 @@ class RedisClient
     def resolve_master
       each_sentinel do |sentinel_client|
         host, port = sentinel_client.call("SENTINEL", "get-master-addr-by-name", @name)
-        if host && port
-          return Config.new(host: host, port: Integer(port), **@client_config)
-        end
+        next unless host && port
+
+        refresh_sentinels(sentinel_client)
+
+        return Config.new(host: host, port: Integer(port), **@client_config)
       end
     rescue ConnectionError
       raise ConnectionError, "No sentinels available"
@@ -158,6 +164,20 @@ class RedisClient
       end
 
       raise last_error if last_error
+    end
+
+    def refresh_sentinels(sentinel_client)
+      sentinel_response = sentinel_client.call("SENTINEL", "sentinels", @name, &@to_list_of_hash)
+      sentinels = sentinel_response.map do |sentinel|
+        { host: sentinel.fetch("ip"), port: sentinel.fetch("port").to_i }
+      end
+      new_sentinels = sentinels.select do |sentinel|
+        @sentinel_configs.none? do |sentinel_config|
+          sentinel_config.host == sentinel.fetch(:host) && sentinel_config.port == sentinel.fetch(:port)
+        end
+      end
+
+      @sentinel_configs.concat sentinels_to_configs(new_sentinels)
     end
   end
 end
