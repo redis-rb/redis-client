@@ -169,7 +169,7 @@ class RedisClient
     def refresh_sentinels(sentinel_client)
       sentinel_response = sentinel_client.call("SENTINEL", "sentinels", @name, &@to_list_of_hash)
       sentinels = sentinel_response.map do |sentinel|
-        { host: sentinel.fetch("ip"), port: sentinel.fetch("port").to_i }
+        { host: sentinel.fetch("ip"), port: Integer(sentinel.fetch("port")) }
       end
       new_sentinels = sentinels.select do |sentinel|
         @sentinel_configs.none? do |sentinel_config|
