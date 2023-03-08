@@ -60,7 +60,7 @@ typedef struct {
 #define SSL_CONTEXT(from, name) \
     hiredis_ssl_context_t *name = NULL; \
     TypedData_Get_Struct(from, hiredis_ssl_context_t, &hiredis_ssl_context_data_type, name); \
-    if(name == NULL) { \
+    if (name == NULL) { \
         rb_raise(rb_eArgError, "NULL found for " # name " when shouldn't be."); \
     }
 
@@ -260,9 +260,39 @@ int hiredis_buffer_write_nogvl(redisContext *context, int *done) {
 #define CONNECTION(from, name) \
     hiredis_connection_t *name = NULL; \
     TypedData_Get_Struct(from, hiredis_connection_t, &hiredis_connection_data_type, name); \
-    if(name == NULL) { \
+    if (name == NULL) { \
         rb_raise(rb_eArgError, "NULL found for " # name " when shouldn't be."); \
     }
+
+static void *hiredis_free_safe(void *_context) {
+    redisContext *context = (redisContext *)_context;
+    redisFree(context);
+    return NULL;
+}
+
+static void hiredis_free_nogvl(redisContext *context) {
+    rb_thread_call_without_gvl(hiredis_free_safe, context, RUBY_UBF_IO, 0);
+}
+
+static void *hiredis_connect_with_options_safe(void *options) {
+    return (void *)redisConnectWithOptions(options);
+}
+
+static redisContext *hiredis_connect_with_timeout_nogvl(const char *ip, int port, struct timeval connect_timeout) {
+    redisOptions options = {0};
+    REDIS_OPTIONS_SET_TCP(&options, ip, port);
+    options.connect_timeout = &connect_timeout;
+    options.options |= REDIS_OPT_NONBLOCK;
+    return (redisContext *)rb_thread_call_without_gvl(hiredis_connect_with_options_safe, &options, RUBY_UBF_IO, 0);
+}
+
+static redisContext *hiredis_connect_unix_with_timeout_nogvl(const char *path, struct timeval connect_timeout) {
+    redisOptions options = {0};
+    REDIS_OPTIONS_SET_UNIX(&options, path);
+    options.connect_timeout = &connect_timeout;
+    options.options |= REDIS_OPT_NONBLOCK;
+    return (redisContext *)rb_thread_call_without_gvl(hiredis_connect_with_options_safe, &options, RUBY_UBF_IO, 0);
+}
 
 
 typedef struct {
@@ -290,11 +320,13 @@ void hiredis_connection_mark(void *ptr) {
         }
     }
 }
+
 void hiredis_connection_free(void *ptr) {
     hiredis_connection_t *connection = ptr;
     if (connection) {
          if (connection->context) {
-             redisFree(connection->context);
+             // redisFree calls close(), we it's best to relase the GVL.
+             hiredis_free_nogvl(connection->context);
          }
          xfree(connection);
     }
@@ -328,7 +360,7 @@ static const rb_data_type_t hiredis_connection_data_type = {
         .dcompact = NULL
 #endif
     },
-    .flags = RUBY_TYPED_FREE_IMMEDIATELY
+    .flags = 0
 };
 
 static VALUE hiredis_alloc(VALUE klass) {
@@ -352,7 +384,7 @@ static inline void redis_raise_error_and_disconnect(redisContext *context, VALUE
     if (context->err) {
       strncpy(errstr, context->errstr, 128);
     }
-    redisFree(context);
+    hiredis_free_nogvl(context);
 
     if (!err) {
       rb_raise(timeout_error, "Unknown Error");
@@ -504,10 +536,10 @@ static VALUE hiredis_connect_finish(hiredis_connection_t *connection, redisConte
 static VALUE hiredis_connect_tcp(VALUE self, VALUE host, VALUE port) {
     CONNECTION(self, connection);
     if (connection->context) {
-        redisFree(connection->context);
+        hiredis_free_nogvl(connection->context);
         connection->context = NULL;
     }
-    redisContext *context = redisConnectNonBlock(StringValuePtr(host), NUM2INT(port));
+    redisContext *context = hiredis_connect_with_timeout_nogvl(StringValuePtr(host), NUM2INT(port), connection->connect_timeout);
     if (context) {
         redisEnableKeepAlive(context);
     }
@@ -517,10 +549,11 @@ static VALUE hiredis_connect_tcp(VALUE self, VALUE host, VALUE port) {
 static VALUE hiredis_connect_unix(VALUE self, VALUE path) {
     CONNECTION(self, connection);
     if (connection->context) {
-        redisFree(connection->context);
+        hiredis_free_nogvl(connection->context);
         connection->context = NULL;
     }
-    return hiredis_connect_finish(connection, redisConnectUnixNonBlock(StringValuePtr(path)));
+    redisContext *context = hiredis_connect_unix_with_timeout_nogvl(StringValuePtr(path), connection->connect_timeout);
+    return hiredis_connect_finish(connection, context);
 }
 
 static VALUE hiredis_init_ssl(VALUE self, VALUE ssl_param) {
@@ -711,7 +744,7 @@ static VALUE hiredis_read(VALUE self) {
 static VALUE hiredis_close(VALUE self) {
     CONNECTION(self, connection);
     if (connection->context) {
-        redisFree(connection->context);
+        hiredis_free_nogvl(connection->context);
         connection->context = NULL;
     }
     return Qnil;
