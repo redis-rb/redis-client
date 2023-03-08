@@ -299,15 +299,6 @@ void hiredis_connection_free(void *ptr) {
     }
 }
 
-static size_t hiredis_connection_task_memsize(redisReadTask *task) {
-    size_t size = 0;
-    while (task) {
-        size += sizeof(redisReadTask);
-        task = task->parent;
-    }
-    return size;
-}
-
 static size_t hiredis_connection_memsize(const void *ptr) {
     hiredis_connection_t *connection = (hiredis_connection_t *)ptr;
 
@@ -319,10 +310,7 @@ static size_t hiredis_connection_memsize(const void *ptr) {
             redisReader *reader = connection->context->reader;
             size += sizeof(redisReader);
             size += reader->maxbuf;
-
-            for (int index = 0; index < reader->tasks; index++) {
-                size += hiredis_connection_task_memsize(reader->task[index]);
-            }
+            size += reader->tasks * sizeof(redisReadTask);
         }
     }
 
