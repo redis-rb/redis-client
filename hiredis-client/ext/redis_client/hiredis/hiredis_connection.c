@@ -282,10 +282,11 @@ void hiredis_connection_mark(void *ptr) {
     hiredis_connection_t *connection = ptr;
     if (connection->context) {
         redisReader *reader = connection->context->reader;
-        for (int index = 0; index < reader->tasks; index++) {
-          redisReadTask *task = reader->task[index];
-          if (task->obj) { rb_gc_mark((VALUE)task->obj); }
-          if (task->privdata) { rb_gc_mark((VALUE)task->privdata); }
+        // reader->ridx == -1 when there is no active task
+        for (int index = 0; index <= reader->ridx; index++) {
+            redisReadTask *task = reader->task[index];
+            if (task->obj) { rb_gc_mark((VALUE)task->obj); }
+            if (task->privdata) { rb_gc_mark((VALUE)task->privdata); }
         }
     }
 }
