@@ -236,8 +236,6 @@ typedef struct {
 
 void hiredis_connection_mark_task(redisReadTask *task) {
     while (task) {
-        if (task->obj) { rb_gc_mark((VALUE)task->obj); }
-        if (task->privdata) { rb_gc_mark((VALUE)task->privdata); }
         task = task->parent;
     }
 }
@@ -247,7 +245,9 @@ void hiredis_connection_mark(void *ptr) {
     if (connection->context) {
         redisReader *reader = connection->context->reader;
         for (int index = 0; index < reader->tasks; index++) {
-            hiredis_connection_mark_task(reader->task[index]);
+          redisReadTask *task = reader->task[index];
+          if (task->obj) { rb_gc_mark((VALUE)task->obj); }
+          if (task->privdata) { rb_gc_mark((VALUE)task->privdata); }
         }
     }
 }
