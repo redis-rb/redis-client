@@ -219,6 +219,44 @@ static redisReplyObjectFunctions reply_functions = {
     reply_free,
 };
 
+typedef struct {
+    redisContext *context;
+    int return_value;
+} hiredis_buffer_read_args_t;
+
+void *hiredis_buffer_read_safe(void *_args) {
+    hiredis_buffer_read_args_t *args = _args;
+    args->return_value = redisBufferRead(args->context);
+    return NULL;
+}
+int hiredis_buffer_read_nogvl(redisContext *context) {
+    hiredis_buffer_read_args_t args = {
+        .context = context,
+    };
+    rb_thread_call_without_gvl(hiredis_buffer_read_safe, &args, RUBY_UBF_IO, 0);
+    return args.return_value;
+}
+
+typedef struct {
+    redisContext *context;
+    int *done;
+    int return_value;
+} hiredis_buffer_write_args_t;
+
+void *hiredis_buffer_write_safe(void *_args) {
+    hiredis_buffer_write_args_t *args = _args;
+    args->return_value = redisBufferWrite(args->context, args->done);
+    return NULL;
+}
+int hiredis_buffer_write_nogvl(redisContext *context, int *done) {
+    hiredis_buffer_write_args_t args = {
+        .context = context,
+        .done = done,
+    };
+    rb_thread_call_without_gvl(hiredis_buffer_write_safe, &args, RUBY_UBF_IO, 0);
+    return args.return_value;
+}
+
 #define CONNECTION(from, name) \
     hiredis_connection_t *name = NULL; \
     TypedData_Get_Struct(from, hiredis_connection_t, &hiredis_connection_data_type, name); \
@@ -552,44 +590,6 @@ static VALUE hiredis_write(VALUE self, VALUE command) {
 
     redisAppendCommandArgv(connection->context, size, (const char **)argv, argv_len);
     return Qnil;
-}
-
-typedef struct {
-    redisContext *context;
-    int return_value;
-} hiredis_buffer_read_args_t;
-
-void *hiredis_buffer_read_safe(void *_args) {
-    hiredis_buffer_read_args_t *args = _args;
-    args->return_value = redisBufferRead(args->context);
-    return NULL;
-}
-int hiredis_buffer_read_nogvl(redisContext *context) {
-    hiredis_buffer_read_args_t args = {
-        .context = context,
-    };
-    rb_thread_call_without_gvl(hiredis_buffer_read_safe, &args, RUBY_UBF_IO, 0);
-    return args.return_value;
-}
-
-typedef struct {
-    redisContext *context;
-    int *done;
-    int return_value;
-} hiredis_buffer_write_args_t;
-
-void *hiredis_buffer_write_safe(void *_args) {
-    hiredis_buffer_write_args_t *args = _args;
-    args->return_value = redisBufferWrite(args->context, args->done);
-    return NULL;
-}
-int hiredis_buffer_write_nogvl(redisContext *context, int *done) {
-    hiredis_buffer_write_args_t args = {
-        .context = context,
-        .done = done,
-    };
-    rb_thread_call_without_gvl(hiredis_buffer_write_safe, &args, RUBY_UBF_IO, 0);
-    return args.return_value;
 }
 
 static VALUE hiredis_flush(VALUE self) {
