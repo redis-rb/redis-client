@@ -346,7 +346,6 @@ class RedisClient
 
   def close
     @raw_connection&.close
-    @raw_connection = nil
     self
   end
 
@@ -430,7 +429,7 @@ class RedisClient
 
     def close
       @raw_connection&.close
-      @raw_connection = nil
+      @raw_connection = nil # PubSub can't just reconnect
       self
     end
 
@@ -654,20 +653,28 @@ class RedisClient
   end
 
   def raw_connection
-    @raw_connection = @raw_connection&.revalidate
-    @raw_connection ||= connect
+    if @raw_connection.nil? || !@raw_connection.revalidate
+      connect
+    end
+    @raw_connection
   end
 
   def connect
     @pid = PIDCache.pid
 
-    connection = @middlewares.connect(config) do
-      config.driver.new(
-        config,
-        connect_timeout: connect_timeout,
-        read_timeout: read_timeout,
-        write_timeout: write_timeout,
-      )
+    if @raw_connection
+      @middlewares.connect(config) do
+        @raw_connection.reconnect
+      end
+    else
+      @raw_connection = @middlewares.connect(config) do
+        config.driver.new(
+          config,
+          connect_timeout: connect_timeout,
+          read_timeout: read_timeout,
+          write_timeout: write_timeout,
+        )
+      end
     end
 
     prelude = config.connection_prelude.dup
@@ -680,18 +687,16 @@ class RedisClient
     if config.sentinel?
       prelude << ["ROLE"]
       role, = @middlewares.call_pipelined(prelude, config) do
-        connection.call_pipelined(prelude, nil).last
+        @raw_connection.call_pipelined(prelude, nil).last
       end
       config.check_role!(role)
     else
       unless prelude.empty?
         @middlewares.call_pipelined(prelude, config) do
-          connection.call_pipelined(prelude, nil)
+          @raw_connection.call_pipelined(prelude, nil)
         end
       end
     end
-
-    connection
   rescue FailoverError, CannotConnectError
     raise
   rescue ConnectionError => error

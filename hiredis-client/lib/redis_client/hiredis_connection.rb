@@ -30,27 +30,39 @@ class RedisClient
 
     def initialize(config, connect_timeout:, read_timeout:, write_timeout:)
       super()
+      @config = config
       self.connect_timeout = connect_timeout
       self.read_timeout = read_timeout
       self.write_timeout = write_timeout
+      connect
+    end
 
-      if config.path
-        begin
-          connect_unix(config.path)
-        rescue SystemCallError => error
+    def close
+      _close
+      super
+    end
+
+    def reconnect
+      reconnected = begin
+        _reconnect
+      rescue SystemCallError => error
+        if @config.path
           raise CannotConnectError, error.message, error.backtrace
-        end
-      else
-        begin
-          connect_tcp(config.host, config.port)
-        rescue SystemCallError => error
+        else
           error_code = error.class.name.split("::").last
-          raise CannotConnectError, "Failed to connect to #{config.host}:#{config.port} (#{error_code})"
+          raise CannotConnectError, "Failed to connect to #{@config.host}:#{@config.port} (#{error_code})"
         end
       end
 
-      if config.ssl
-        init_ssl(config.ssl_context)
+      if reconnected
+        if @config.ssl
+          return init_ssl(@config.ssl_context)
+        end
+
+        true
+      else
+        # Reusing the hiredis connection didn't work let's create a fresh one
+        super
       end
     end
 
@@ -99,6 +111,29 @@ class RedisClient
       flush
     rescue SystemCallError, IOError => error
       raise ConnectionError, error.message
+    end
+
+    private
+
+    def connect
+      if @config.path
+        begin
+          connect_unix(@config.path)
+        rescue SystemCallError => error
+          raise CannotConnectError, error.message, error.backtrace
+        end
+      else
+        begin
+          connect_tcp(@config.host, @config.port)
+        rescue SystemCallError => error
+          error_code = error.class.name.split("::").last
+          raise CannotConnectError, "Failed to connect to #{@config.host}:#{@config.port} (#{error_code})"
+        end
+      end
+
+      if @config.ssl
+        init_ssl(@config.ssl_context)
+      end
     end
   end
 end

@@ -42,44 +42,11 @@ class RedisClient
 
     def initialize(config, connect_timeout:, read_timeout:, write_timeout:)
       super()
-      socket = if config.path
-        UNIXSocket.new(config.path)
-      else
-        sock = if SUPPORTS_RESOLV_TIMEOUT
-          Socket.tcp(config.host, config.port, connect_timeout: connect_timeout, resolv_timeout: connect_timeout)
-        else
-          Socket.tcp(config.host, config.port, connect_timeout: connect_timeout)
-        end
-        # disables Nagle's Algorithm, prevents multiple round trips with MULTI
-        sock.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
-        enable_socket_keep_alive(sock)
-        sock
-      end
-
-      if config.ssl
-        socket = OpenSSL::SSL::SSLSocket.new(socket, config.ssl_context)
-        socket.hostname = config.host
-        loop do
-          case status = socket.connect_nonblock(exception: false)
-          when :wait_readable
-            socket.to_io.wait_readable(connect_timeout) or raise CannotConnectError
-          when :wait_writable
-            socket.to_io.wait_writable(connect_timeout) or raise CannotConnectError
-          when socket
-            break
-          else
-            raise "Unexpected `connect_nonblock` return: #{status.inspect}"
-          end
-        end
-      end
-
-      @io = BufferedIO.new(
-        socket,
-        read_timeout: read_timeout,
-        write_timeout: write_timeout,
-      )
-    rescue SystemCallError, OpenSSL::SSL::SSLError, SocketError => error
-      raise CannotConnectError, error.message, error.backtrace
+      @config = config
+      @connect_timeout = connect_timeout
+      @read_timeout = read_timeout
+      @write_timeout = write_timeout
+      connect
     end
 
     def connected?
@@ -88,13 +55,16 @@ class RedisClient
 
     def close
       @io.close
+      super
     end
 
     def read_timeout=(timeout)
+      @read_timeout = timeout
       @io.read_timeout = timeout if @io
     end
 
     def write_timeout=(timeout)
+      @write_timeout = timeout
       @io.write_timeout = timeout if @io
     end
 
@@ -132,6 +102,48 @@ class RedisClient
     end
 
     private
+
+    def connect
+      socket = if @config.path
+        UNIXSocket.new(@config.path)
+      else
+        sock = if SUPPORTS_RESOLV_TIMEOUT
+          Socket.tcp(@config.host, @config.port, connect_timeout: @connect_timeout, resolv_timeout: @connect_timeout)
+        else
+          Socket.tcp(@config.host, @config.port, connect_timeout: @connect_timeout)
+        end
+        # disables Nagle's Algorithm, prevents multiple round trips with MULTI
+        sock.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
+        enable_socket_keep_alive(sock)
+        sock
+      end
+
+      if @config.ssl
+        socket = OpenSSL::SSL::SSLSocket.new(socket, @config.ssl_context)
+        socket.hostname = @config.host
+        loop do
+          case status = socket.connect_nonblock(exception: false)
+          when :wait_readable
+            socket.to_io.wait_readable(@connect_timeout) or raise CannotConnectError
+          when :wait_writable
+            socket.to_io.wait_writable(@connect_timeout) or raise CannotConnectError
+          when socket
+            break
+          else
+            raise "Unexpected `connect_nonblock` return: #{status.inspect}"
+          end
+        end
+      end
+
+      @io = BufferedIO.new(
+        socket,
+        read_timeout: @read_timeout,
+        write_timeout: @write_timeout,
+      )
+      true
+    rescue SystemCallError, OpenSSL::SSL::SSLError, SocketError => error
+      raise CannotConnectError, error.message, error.backtrace
+    end
 
     KEEP_ALIVE_INTERVAL = 15 # Same as hiredis defaults
     KEEP_ALIVE_TTL = 120 # Longer than hiredis defaults
