@@ -26,6 +26,7 @@ namespace :test do
     t.libs << "test"
     t.libs << "lib"
     t.test_files = FileList["test/**/*_test.rb"].exclude("test/sentinel/*_test.rb")
+    t.options = '-v' if ENV['CI'] || ENV['VERBOSE']
   end
 
   Rake::TestTask.new(:sentinel) do |t|
@@ -33,13 +34,16 @@ namespace :test do
     t.libs << "test"
     t.libs << "lib"
     t.test_files = FileList["test/sentinel/*_test.rb"]
+    t.options = '-v' if ENV['CI'] || ENV['VERBOSE']
   end
 
   Rake::TestTask.new(:hiredis) do |t|
     t.libs << "test/hiredis"
     t.libs << "test"
+    t.libs << "hiredis-client/lib"
     t.libs << "lib"
     t.test_files = FileList["test/**/*_test.rb"].exclude("test/sentinel/*_test.rb")
+    t.options = '-v' if ENV['CI'] || ENV['VERBOSE']
   end
 end
 
