@@ -75,7 +75,7 @@ typedef struct {
         rb_raise(rb_eArgError, "NULL found for " # name " when shouldn't be."); \
     }
 
-void hiredis_ssl_context_free(void *ptr) {
+static void hiredis_ssl_context_free(void *ptr) {
     hiredis_ssl_context_t *ssl_context = (hiredis_ssl_context_t *)ptr;
     if (ssl_context->context) {
         redisFreeSSLContext(ssl_context->context);
@@ -235,12 +235,12 @@ typedef struct {
     int return_value;
 } hiredis_buffer_read_args_t;
 
-void *hiredis_buffer_read_safe(void *_args) {
+static void *hiredis_buffer_read_safe(void *_args) {
     hiredis_buffer_read_args_t *args = _args;
     args->return_value = redisBufferRead(args->context);
     return NULL;
 }
-int hiredis_buffer_read_nogvl(redisContext *context) {
+static int hiredis_buffer_read_nogvl(redisContext *context) {
     hiredis_buffer_read_args_t args = {
         .context = context,
     };
@@ -254,12 +254,12 @@ typedef struct {
     int return_value;
 } hiredis_buffer_write_args_t;
 
-void *hiredis_buffer_write_safe(void *_args) {
+static void *hiredis_buffer_write_safe(void *_args) {
     hiredis_buffer_write_args_t *args = _args;
     args->return_value = redisBufferWrite(args->context, args->done);
     return NULL;
 }
-int hiredis_buffer_write_nogvl(redisContext *context, int *done) {
+static int hiredis_buffer_write_nogvl(redisContext *context, int *done) {
     hiredis_buffer_write_args_t args = {
         .context = context,
         .done = done,
@@ -330,13 +330,7 @@ typedef struct {
     struct timeval write_timeout;
 } hiredis_connection_t;
 
-void hiredis_connection_mark_task(redisReadTask *task) {
-    while (task) {
-        task = task->parent;
-    }
-}
-
-void hiredis_connection_mark(void *ptr) {
+static void hiredis_connection_mark(void *ptr) {
     hiredis_connection_t *connection = ptr;
     if (connection->context) {
         redisReader *reader = connection->context->reader;
@@ -349,7 +343,7 @@ void hiredis_connection_mark(void *ptr) {
     }
 }
 
-void hiredis_connection_free_nogvl(void *ptr) {
+static void hiredis_connection_free_nogvl(void *ptr) {
     hiredis_connection_t *connection = ptr;
     if (connection) {
          if (connection->context) {
@@ -396,7 +390,7 @@ static VALUE hiredis_alloc(VALUE klass) {
     return TypedData_Make_Struct(klass, hiredis_connection_t, &hiredis_connection_data_type, connection);
 }
 
-void redis_set_io_error(redisContext *context, int err) {
+static void redis_set_io_error(redisContext *context, int err) {
     if (err) {
         errno = err;
     }
