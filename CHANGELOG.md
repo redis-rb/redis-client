@@ -1,5 +1,8 @@
 # Unreleased
 
+- hiredis binding improvements. The GVL is now released in places it wasn't before.
+  The hiredis client is now re-used on reconnection when possible to reduce allocation churn.
+
 # 0.13.0
 
 - Enable TCP keepalive on redis sockets. It sends a keep alive probe every 15 seconds for 2 minutes. #94.
