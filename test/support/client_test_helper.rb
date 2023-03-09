@@ -27,6 +27,11 @@ module ClientTestHelper
       super
     end
 
+    def reconnect
+      @fail_now = false
+      super
+    end
+
     def write_multi(commands)
       commands.each { |c| write(c) }
       nil
@@ -80,6 +85,8 @@ module ClientTestHelper
 
   def simulate_network_errors(client, failures)
     client.close
+    client.instance_variable_set(:@raw_connection, nil)
+
     original_config = client.config
     flaky_driver = Class.new(original_config.driver)
     flaky_driver.include(FlakyDriver)
@@ -91,6 +98,8 @@ module ClientTestHelper
       yield
     ensure
       client.instance_variable_set(:@config, original_config)
+      client.close
+      client.instance_variable_set(:@raw_connection, nil)
     end
   end
 end

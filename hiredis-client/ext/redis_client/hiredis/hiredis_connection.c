@@ -37,6 +37,7 @@
 #include <sys/socket.h>
 #include <stdbool.h>
 #include "hiredis.h"
+#include "net.h"
 #include "hiredis_ssl.h"
 
 #if !defined(HAVE_RB_HASH_NEW_CAPA)
@@ -45,6 +46,16 @@ static inline VALUE rb_hash_new_capa(long capa)
   return rb_hash_new();
 }
 #endif
+
+static void redis_set_error(redisContext *c, int type, const char *str) {
+    size_t len;
+
+    c->err = type;
+    len = strlen(str);
+    len = len < (sizeof(c->errstr) - 1) ? len : (sizeof(c->errstr) - 1);
+    memcpy(c->errstr, str, len);
+    c->errstr[len] = '\0';
+}
 
 static VALUE rb_eRedisClientCommandError, rb_eRedisClientConnectionError, rb_eRedisClientCannotConnectError, rb_eRedisClientProtocolError;
 static VALUE rb_eRedisClientReadTimeoutError, rb_eRedisClientWriteTimeoutError;
@@ -60,7 +71,7 @@ typedef struct {
 #define SSL_CONTEXT(from, name) \
     hiredis_ssl_context_t *name = NULL; \
     TypedData_Get_Struct(from, hiredis_ssl_context_t, &hiredis_ssl_context_data_type, name); \
-    if(name == NULL) { \
+    if (name == NULL) { \
         rb_raise(rb_eArgError, "NULL found for " # name " when shouldn't be."); \
     }
 
@@ -260,10 +271,57 @@ int hiredis_buffer_write_nogvl(redisContext *context, int *done) {
 #define CONNECTION(from, name) \
     hiredis_connection_t *name = NULL; \
     TypedData_Get_Struct(from, hiredis_connection_t, &hiredis_connection_data_type, name); \
-    if(name == NULL) { \
+    if (name == NULL) { \
         rb_raise(rb_eArgError, "NULL found for " # name " when shouldn't be."); \
     }
 
+static void *hiredis_net_close_safe(void *_context) {
+    redisContext *context = (redisContext *)_context;
+    redisNetClose(context);
+    return NULL;
+}
+
+static void hiredis_net_close_nogvl(redisContext *context) {
+    rb_thread_call_without_gvl(hiredis_net_close_safe, context, RUBY_UBF_IO, 0);
+}
+
+static void *hiredis_free_safe(void *_context) {
+    redisContext *context = (redisContext *)_context;
+    redisFree(context);
+    return NULL;
+}
+
+static void hiredis_free_nogvl(redisContext *context) {
+    rb_thread_call_without_gvl(hiredis_free_safe, context, RUBY_UBF_IO, 0);
+}
+
+typedef struct {
+    redisContext *context;
+    int return_value;
+} hiredis_reconnect_args_t;
+
+static void *hiredis_reconnect_safe(void *_args) {
+    hiredis_reconnect_args_t *args = _args;
+    args->return_value = redisReconnect(args->context);
+    return NULL;
+}
+
+static int hiredis_reconnect_nogvl(redisContext *context) {
+    hiredis_reconnect_args_t args = {
+        .context = context,
+        .return_value = 0
+    };
+    rb_thread_call_without_gvl(hiredis_reconnect_safe, &args, RUBY_UBF_IO, 0);
+    return args.return_value;
+}
+
+static void *hiredis_connect_with_options_safe(void *options) {
+    return (void *)redisConnectWithOptions(options);
+}
+
+static redisContext *hiredis_connect_with_options_nogvl(redisOptions *options) {
+    return (redisContext *)rb_thread_call_without_gvl(hiredis_connect_with_options_safe, options, RUBY_UBF_IO, 0);
+}
 
 typedef struct {
     redisContext *context;
@@ -290,11 +348,13 @@ void hiredis_connection_mark(void *ptr) {
         }
     }
 }
-void hiredis_connection_free(void *ptr) {
+
+void hiredis_connection_free_nogvl(void *ptr) {
     hiredis_connection_t *connection = ptr;
     if (connection) {
          if (connection->context) {
-             redisFree(connection->context);
+             // redisFree may calls close() if we're still connected, we it's best to release the GVL.
+             hiredis_free_nogvl(connection->context);
          }
          xfree(connection);
     }
@@ -322,13 +382,13 @@ static const rb_data_type_t hiredis_connection_data_type = {
     .wrap_struct_name = "redis-client:hiredis_connection",
     .function = {
         .dmark = hiredis_connection_mark,
-        .dfree = hiredis_connection_free,
+        .dfree = hiredis_connection_free_nogvl,
         .dsize = hiredis_connection_memsize,
 #ifdef HAS_GC_COMPACT
         .dcompact = NULL
 #endif
     },
-    .flags = RUBY_TYPED_FREE_IMMEDIATELY
+    .flags = 0
 };
 
 static VALUE hiredis_alloc(VALUE klass) {
@@ -352,10 +412,10 @@ static inline void redis_raise_error_and_disconnect(redisContext *context, VALUE
     if (context->err) {
       strncpy(errstr, context->errstr, 128);
     }
-    redisFree(context);
+    hiredis_net_close_nogvl(context);
 
     if (!err) {
-      rb_raise(timeout_error, "Unknown Error");
+        rb_raise(timeout_error, "Unknown Error (redis_raise_error_and_disconnect)");
     }
 
     // OpenSSL bug: The SSL_ERROR_SYSCALL with errno value of 0 indicates unexpected EOF from the peer.
@@ -464,6 +524,12 @@ static int hiredis_wait_writable(int fd, const struct timeval *timeout, int *iss
 }
 
 static VALUE hiredis_connect_finish(hiredis_connection_t *connection, redisContext *context) {
+    if (connection->context && connection->context != context) {
+        redisFree(context);
+        rb_raise(rb_eRuntimeError, "HiredisConnection is already connected, must be a bug");
+    }
+    connection->context = context;
+
     if (context->err) {
         redis_raise_error_and_disconnect(context, rb_eRedisClientCannotConnectError);
     }
@@ -497,34 +563,10 @@ static VALUE hiredis_connect_finish(hiredis_connection_t *connection, redisConte
 
     context->reader->fn = &reply_functions;
     redisSetPushCallback(context, NULL);
-    connection->context = context;
     return Qtrue;
 }
 
-static VALUE hiredis_connect_tcp(VALUE self, VALUE host, VALUE port) {
-    CONNECTION(self, connection);
-    if (connection->context) {
-        redisFree(connection->context);
-        connection->context = NULL;
-    }
-    redisContext *context = redisConnectNonBlock(StringValuePtr(host), NUM2INT(port));
-    if (context) {
-        redisEnableKeepAlive(context);
-    }
-    return hiredis_connect_finish(connection, context);
-}
-
-static VALUE hiredis_connect_unix(VALUE self, VALUE path) {
-    CONNECTION(self, connection);
-    if (connection->context) {
-        redisFree(connection->context);
-        connection->context = NULL;
-    }
-    return hiredis_connect_finish(connection, redisConnectUnixNonBlock(StringValuePtr(path)));
-}
-
-static VALUE hiredis_init_ssl(VALUE self, VALUE ssl_param) {
-    CONNECTION(self, connection);
+static void hiredis_init_ssl(hiredis_connection_t *connection, VALUE ssl_param) {
     SSL_CONTEXT(ssl_param, ssl_context)
 
     if (redisInitiateSSLWithContext(connection->context, ssl_context->context) != REDIS_OK) {
@@ -532,7 +574,7 @@ static VALUE hiredis_init_ssl(VALUE self, VALUE ssl_param) {
     }
 
     redisSSL *redis_ssl = redisGetSSLSocket(connection->context);
- 
+
     if (redis_ssl->wantRead) {
         int readable = 0;
         if (hiredis_wait_readable(connection->context->fd, &connection->connect_timeout, &readable) < 0) {
@@ -540,21 +582,81 @@ static VALUE hiredis_init_ssl(VALUE self, VALUE ssl_param) {
         }
         if (!readable) {
             errno = EAGAIN;
-            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientCannotConnectError);
+            redis_set_error(connection->context, REDIS_ERR_IO, "SSL Connection Timeout");
+            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientReadTimeoutError);
         }
 
         if (redisInitiateSSLContinue(connection->context) != REDIS_OK) {
             hiredis_raise_error_and_disconnect(connection, rb_eRedisClientCannotConnectError);
         };
     }
+}
 
-    return Qtrue;
+static VALUE hiredis_connect(VALUE self, VALUE path, VALUE host, VALUE port, VALUE ssl_param) {
+    CONNECTION(self, connection);
+    if (connection->context) {
+        rb_raise(rb_eRuntimeError, "HiredisConnection is already connected, must be a bug");
+    }
+
+    redisOptions options = {
+        .connect_timeout = &connection->connect_timeout,
+        .options = REDIS_OPT_NONBLOCK
+    };
+    if (RTEST(path)) {
+        REDIS_OPTIONS_SET_UNIX(&options, StringValuePtr(path));
+    } else {
+        REDIS_OPTIONS_SET_TCP(&options, StringValuePtr(host), NUM2INT(port));
+    }
+
+    redisContext *context = hiredis_connect_with_options_nogvl(&options);
+    if (context && !RTEST(path)) {
+        redisEnableKeepAlive(context);
+    }
+
+    VALUE success = hiredis_connect_finish(connection, context);
+
+    if (RTEST(success) && !NIL_P(ssl_param)) {
+        hiredis_init_ssl(connection, ssl_param);
+    }
+
+    return success;
+}
+
+static VALUE hiredis_reconnect(VALUE self, VALUE unix, VALUE ssl_param) {
+    CONNECTION(self, connection);
+    if (!connection->context) {
+        return Qfalse;
+    }
+
+    hiredis_reconnect_nogvl(connection->context);
+
+    VALUE success = hiredis_connect_finish(connection, connection->context);
+
+    if (RTEST(success)) {
+        if (!RTEST(unix)) {
+            redisEnableKeepAlive(connection->context);
+        }
+
+        if (RTEST(ssl_param)) {
+            hiredis_init_ssl(connection, ssl_param);
+        }
+    }
+
+    return success;
 }
 
 static VALUE hiredis_connected_p(VALUE self) {
     CONNECTION(self, connection);
 
-    return connection->context ? Qtrue : Qfalse;
+    if (!connection->context) {
+        return Qfalse;
+    }
+
+    if (connection->context->fd == REDIS_INVALID_FD) {
+        return Qfalse;
+    }
+
+    return Qtrue;
 }
 
 static VALUE hiredis_write(VALUE self, VALUE command) {
@@ -711,8 +813,7 @@ static VALUE hiredis_read(VALUE self) {
 static VALUE hiredis_close(VALUE self) {
     CONNECTION(self, connection);
     if (connection->context) {
-        redisFree(connection->context);
-        connection->context = NULL;
+        hiredis_net_close_nogvl(connection->context);
     }
     return Qnil;
 }
@@ -757,15 +858,14 @@ RUBY_FUNC_EXPORTED void Init_hiredis_connection(void) {
     rb_define_private_method(rb_cHiredisConnection, "read_timeout_us=", hiredis_set_read_timeout, 1);
     rb_define_private_method(rb_cHiredisConnection, "write_timeout_us=", hiredis_set_write_timeout, 1);
 
-    rb_define_private_method(rb_cHiredisConnection, "connect_tcp", hiredis_connect_tcp, 2);
-    rb_define_private_method(rb_cHiredisConnection, "connect_unix", hiredis_connect_unix, 1);
-    rb_define_private_method(rb_cHiredisConnection, "init_ssl", hiredis_init_ssl, 1);
+    rb_define_private_method(rb_cHiredisConnection, "_connect", hiredis_connect, 4);
+    rb_define_private_method(rb_cHiredisConnection, "_reconnect", hiredis_reconnect, 2);
     rb_define_method(rb_cHiredisConnection, "connected?", hiredis_connected_p, 0);
 
     rb_define_private_method(rb_cHiredisConnection, "_write", hiredis_write, 1);
     rb_define_private_method(rb_cHiredisConnection, "_read", hiredis_read, 0);
     rb_define_private_method(rb_cHiredisConnection, "flush", hiredis_flush, 0);
-    rb_define_method(rb_cHiredisConnection, "close", hiredis_close, 0);
+    rb_define_private_method(rb_cHiredisConnection, "_close", hiredis_close, 0);
 
     VALUE rb_cHiredisSSLContext = rb_define_class_under(rb_cHiredisConnection, "SSLContext", rb_cObject);
     rb_define_alloc_func(rb_cHiredisSSLContext, hiredis_ssl_context_alloc);

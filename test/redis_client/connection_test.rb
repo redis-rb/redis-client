@@ -192,6 +192,13 @@ class RedisClient
       assert_equal "1", client.call("GET", "counter")
     end
 
+    def test_reconnect_reuse
+      5.times do
+        @redis.close
+        assert_equal "PONG", @redis.call("PING")
+      end
+    end
+
     def test_circuit_breaker
       circuit_breaker = CircuitBreaker.new(error_threshold: 3, success_threshold: 2, error_timeout: 1)
       @redis = new_client(circuit_breaker: circuit_breaker)

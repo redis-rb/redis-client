@@ -6,9 +6,22 @@ class RedisClient
       @pending_reads = 0
     end
 
+    def reconnect
+      close
+      connect
+    end
+
+    def close
+      @pending_reads = 0
+      nil
+    end
+
     def revalidate
-      if @pending_reads == 0 && connected?
-        self
+      if @pending_reads > 0
+        close
+        false
+      else
+        connected?
       end
     end
 
