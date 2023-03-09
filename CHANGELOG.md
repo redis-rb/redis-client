@@ -1,5 +1,6 @@
 # Unreleased
 
+- hiredis binding now implement GC compaction.
 - hiredis binding improvements. The GVL is now released in places it wasn't before.
   The hiredis client is now re-used on reconnection when possible to reduce allocation churn.
 
