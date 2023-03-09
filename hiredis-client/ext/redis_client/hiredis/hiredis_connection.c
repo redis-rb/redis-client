@@ -330,6 +330,24 @@ typedef struct {
     struct timeval write_timeout;
 } hiredis_connection_t;
 
+
+#ifdef HAS_GC_COMPACT
+static void hiredis_connection_compact(void *ptr) {
+    hiredis_connection_t *connection = ptr;
+    if (connection->context) {
+        redisReader *reader = connection->context->reader;
+        // reader->ridx == -1 when there is no active task
+        for (int index = 0; index <= reader->ridx; index++) {
+            redisReadTask *task = reader->task[index];
+            if (task->obj) { task->obj = (void *)rb_gc_location((VALUE)task->obj); }
+            if (task->privdata) { task->privdata = (void *)rb_gc_location((VALUE)task->privdata); }
+        }
+    }
+}
+#else
+#define rb_gc_mark_movable rb_gc_mark
+#endif
+
 static void hiredis_connection_mark(void *ptr) {
     hiredis_connection_t *connection = ptr;
     if (connection->context) {
@@ -337,8 +355,8 @@ static void hiredis_connection_mark(void *ptr) {
         // reader->ridx == -1 when there is no active task
         for (int index = 0; index <= reader->ridx; index++) {
             redisReadTask *task = reader->task[index];
-            if (task->obj) { rb_gc_mark((VALUE)task->obj); }
-            if (task->privdata) { rb_gc_mark((VALUE)task->privdata); }
+            if (task->obj) { rb_gc_mark_movable((VALUE)task->obj); }
+            if (task->privdata) { rb_gc_mark_movable((VALUE)task->privdata); }
         }
     }
 }
@@ -379,7 +397,7 @@ static const rb_data_type_t hiredis_connection_data_type = {
         .dfree = hiredis_connection_free_nogvl,
         .dsize = hiredis_connection_memsize,
 #ifdef HAS_GC_COMPACT
-        .dcompact = NULL
+        .dcompact = hiredis_connection_compact
 #endif
     },
     .flags = 0
