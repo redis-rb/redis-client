@@ -275,26 +275,6 @@ static int hiredis_buffer_write_nogvl(redisContext *context, int *done) {
         rb_raise(rb_eArgError, "NULL found for " # name " when shouldn't be."); \
     }
 
-static void *hiredis_net_close_safe(void *_context) {
-    redisContext *context = (redisContext *)_context;
-    redisNetClose(context);
-    return NULL;
-}
-
-static void hiredis_net_close_nogvl(redisContext *context) {
-    rb_thread_call_without_gvl(hiredis_net_close_safe, context, RUBY_UBF_IO, 0);
-}
-
-static void *hiredis_free_safe(void *_context) {
-    redisContext *context = (redisContext *)_context;
-    redisFree(context);
-    return NULL;
-}
-
-static void hiredis_free_nogvl(redisContext *context) {
-    rb_thread_call_without_gvl(hiredis_free_safe, context, RUBY_UBF_IO, 0);
-}
-
 typedef struct {
     redisContext *context;
     int return_value;
@@ -361,12 +341,14 @@ static void hiredis_connection_mark(void *ptr) {
     }
 }
 
-static void hiredis_connection_free_nogvl(void *ptr) {
+static void hiredis_connection_free(void *ptr) {
     hiredis_connection_t *connection = ptr;
     if (connection) {
          if (connection->context) {
-             // redisFree may calls close() if we're still connected, we it's best to release the GVL.
-             hiredis_free_nogvl(connection->context);
+           // redisFree may calls close() if we're still connected, but
+           // it shoudln't be considered a "blocking" call given we don't
+           // use any socket option that may make it a blocking operation.
+           redisFree(connection->context);
          }
          xfree(connection);
     }
@@ -394,13 +376,13 @@ static const rb_data_type_t hiredis_connection_data_type = {
     .wrap_struct_name = "redis-client:hiredis_connection",
     .function = {
         .dmark = hiredis_connection_mark,
-        .dfree = hiredis_connection_free_nogvl,
+        .dfree = hiredis_connection_free,
         .dsize = hiredis_connection_memsize,
 #ifdef HAS_GC_COMPACT
         .dcompact = hiredis_connection_compact
 #endif
     },
-    .flags = 0
+    .flags = RUBY_TYPED_FREE_IMMEDIATELY
 };
 
 static VALUE hiredis_alloc(VALUE klass) {
@@ -424,7 +406,7 @@ static inline void redis_raise_error_and_disconnect(redisContext *context, VALUE
     if (context->err) {
       strncpy(errstr, context->errstr, 128);
     }
-    hiredis_net_close_nogvl(context);
+    redisNetClose(context);
 
     if (!err) {
         rb_raise(timeout_error, "Unknown Error (redis_raise_error_and_disconnect)");
@@ -825,7 +807,7 @@ static VALUE hiredis_read(VALUE self) {
 static VALUE hiredis_close(VALUE self) {
     CONNECTION(self, connection);
     if (connection->context) {
-        hiredis_net_close_nogvl(connection->context);
+        redisNetClose(connection->context);
     }
     return Qnil;
 }
