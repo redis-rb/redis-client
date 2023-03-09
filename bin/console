@@ -4,6 +4,10 @@
 require "bundler/setup"
 $LOAD_PATH.unshift(File.expand_path("../hiredis-client/lib", __dir__))
 require "redis-client"
+require "hiredis-client"
+
+$redis = RedisClient.new(driver: :ruby)
+$hiredis = RedisClient.new(driver: :hiredis)
 
 require "irb"
 IRB.start(__FILE__)
