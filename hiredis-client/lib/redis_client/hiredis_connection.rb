@@ -44,21 +44,14 @@ class RedisClient
 
     def reconnect
       reconnected = begin
-        _reconnect
+        _reconnect(@config.path, @config.ssl_context)
       rescue SystemCallError => error
-        if @config.path
-          raise CannotConnectError, error.message, error.backtrace
-        else
-          error_code = error.class.name.split("::").last
-          raise CannotConnectError, "Failed to connect to #{@config.host}:#{@config.port} (#{error_code})"
-        end
+        host = @config.path || "#{@config.host}:#{@config.port}"
+        error_code = error.class.name.split("::").last
+        raise CannotConnectError, "Failed to reconnect to #{host} (#{error_code})"
       end
 
       if reconnected
-        if @config.ssl
-          return init_ssl(@config.ssl_context)
-        end
-
         true
       else
         # Reusing the hiredis connection didn't work let's create a fresh one
@@ -116,24 +109,11 @@ class RedisClient
     private
 
     def connect
-      if @config.path
-        begin
-          connect_unix(@config.path)
-        rescue SystemCallError => error
-          raise CannotConnectError, error.message, error.backtrace
-        end
-      else
-        begin
-          connect_tcp(@config.host, @config.port)
-        rescue SystemCallError => error
-          error_code = error.class.name.split("::").last
-          raise CannotConnectError, "Failed to connect to #{@config.host}:#{@config.port} (#{error_code})"
-        end
-      end
-
-      if @config.ssl
-        init_ssl(@config.ssl_context)
-      end
+      _connect(@config.path, @config.host, @config.port, @config.ssl_context)
+    rescue SystemCallError => error
+      host = @config.path || "#{@config.host}:#{@config.port}"
+      error_code = error.class.name.split("::").last
+      raise CannotConnectError, "Failed to connect to #{host} (#{error_code})"
     end
   end
 end

@@ -319,22 +319,9 @@ static void *hiredis_connect_with_options_safe(void *options) {
     return (void *)redisConnectWithOptions(options);
 }
 
-static redisContext *hiredis_connect_with_timeout_nogvl(const char *ip, int port, struct timeval connect_timeout) {
-    redisOptions options = {0};
-    REDIS_OPTIONS_SET_TCP(&options, ip, port);
-    options.connect_timeout = &connect_timeout;
-    options.options |= REDIS_OPT_NONBLOCK;
-    return (redisContext *)rb_thread_call_without_gvl(hiredis_connect_with_options_safe, &options, RUBY_UBF_IO, 0);
+static redisContext *hiredis_connect_with_options_nogvl(redisOptions *options) {
+    return (redisContext *)rb_thread_call_without_gvl(hiredis_connect_with_options_safe, options, RUBY_UBF_IO, 0);
 }
-
-static redisContext *hiredis_connect_unix_with_timeout_nogvl(const char *path, struct timeval connect_timeout) {
-    redisOptions options = {0};
-    REDIS_OPTIONS_SET_UNIX(&options, path);
-    options.connect_timeout = &connect_timeout;
-    options.options |= REDIS_OPT_NONBLOCK;
-    return (redisContext *)rb_thread_call_without_gvl(hiredis_connect_with_options_safe, &options, RUBY_UBF_IO, 0);
-}
-
 
 typedef struct {
     redisContext *context;
@@ -579,29 +566,7 @@ static VALUE hiredis_connect_finish(hiredis_connection_t *connection, redisConte
     return Qtrue;
 }
 
-static VALUE hiredis_connect_tcp(VALUE self, VALUE host, VALUE port) {
-    CONNECTION(self, connection);
-    if (connection->context) {
-        rb_raise(rb_eRuntimeError, "HiredisConnection is already connected, must be a bug");
-    }
-    redisContext *context = hiredis_connect_with_timeout_nogvl(StringValuePtr(host), NUM2INT(port), connection->connect_timeout);
-    if (context) {
-        redisEnableKeepAlive(context);
-    }
-    return hiredis_connect_finish(connection, context);
-}
-
-static VALUE hiredis_connect_unix(VALUE self, VALUE path) {
-    CONNECTION(self, connection);
-    if (connection->context) {
-        rb_raise(rb_eRuntimeError, "HiredisConnection is already connected, must be a bug");
-    }
-    redisContext *context = hiredis_connect_unix_with_timeout_nogvl(StringValuePtr(path), connection->connect_timeout);
-    return hiredis_connect_finish(connection, context);
-}
-
-static VALUE hiredis_init_ssl(VALUE self, VALUE ssl_param) {
-    CONNECTION(self, connection);
+static void hiredis_init_ssl(hiredis_connection_t *connection, VALUE ssl_param) {
     SSL_CONTEXT(ssl_param, ssl_context)
 
     if (redisInitiateSSLWithContext(connection->context, ssl_context->context) != REDIS_OK) {
@@ -609,7 +574,7 @@ static VALUE hiredis_init_ssl(VALUE self, VALUE ssl_param) {
     }
 
     redisSSL *redis_ssl = redisGetSSLSocket(connection->context);
- 
+
     if (redis_ssl->wantRead) {
         int readable = 0;
         if (hiredis_wait_readable(connection->context->fd, &connection->connect_timeout, &readable) < 0) {
@@ -625,18 +590,59 @@ static VALUE hiredis_init_ssl(VALUE self, VALUE ssl_param) {
             hiredis_raise_error_and_disconnect(connection, rb_eRedisClientCannotConnectError);
         };
     }
-
-    return Qtrue;
 }
 
-static VALUE hiredis_reconnect(VALUE self) {
+static VALUE hiredis_connect(VALUE self, VALUE path, VALUE host, VALUE port, VALUE ssl_param) {
+    CONNECTION(self, connection);
+    if (connection->context) {
+        rb_raise(rb_eRuntimeError, "HiredisConnection is already connected, must be a bug");
+    }
+
+    redisOptions options = {
+        .connect_timeout = &connection->connect_timeout,
+        .options = REDIS_OPT_NONBLOCK
+    };
+    if (RTEST(path)) {
+        REDIS_OPTIONS_SET_UNIX(&options, StringValuePtr(path));
+    } else {
+        REDIS_OPTIONS_SET_TCP(&options, StringValuePtr(host), NUM2INT(port));
+    }
+
+    redisContext *context = hiredis_connect_with_options_nogvl(&options);
+    if (context && !RTEST(path)) {
+        redisEnableKeepAlive(context);
+    }
+
+    VALUE success = hiredis_connect_finish(connection, context);
+
+    if (RTEST(success) && !NIL_P(ssl_param)) {
+        hiredis_init_ssl(connection, ssl_param);
+    }
+
+    return success;
+}
+
+static VALUE hiredis_reconnect(VALUE self, VALUE unix, VALUE ssl_param) {
     CONNECTION(self, connection);
     if (!connection->context) {
         return Qfalse;
     }
 
     hiredis_reconnect_nogvl(connection->context);
-    return hiredis_connect_finish(connection, connection->context);
+
+    VALUE success = hiredis_connect_finish(connection, connection->context);
+
+    if (RTEST(success)) {
+        if (!RTEST(unix)) {
+            redisEnableKeepAlive(connection->context);
+        }
+
+        if (RTEST(ssl_param)) {
+            hiredis_init_ssl(connection, ssl_param);
+        }
+    }
+
+    return success;
 }
 
 static VALUE hiredis_connected_p(VALUE self) {
@@ -852,10 +858,8 @@ RUBY_FUNC_EXPORTED void Init_hiredis_connection(void) {
     rb_define_private_method(rb_cHiredisConnection, "read_timeout_us=", hiredis_set_read_timeout, 1);
     rb_define_private_method(rb_cHiredisConnection, "write_timeout_us=", hiredis_set_write_timeout, 1);
 
-    rb_define_private_method(rb_cHiredisConnection, "connect_tcp", hiredis_connect_tcp, 2);
-    rb_define_private_method(rb_cHiredisConnection, "connect_unix", hiredis_connect_unix, 1);
-    rb_define_private_method(rb_cHiredisConnection, "init_ssl", hiredis_init_ssl, 1);
-    rb_define_private_method(rb_cHiredisConnection, "_reconnect", hiredis_reconnect, 0);
+    rb_define_private_method(rb_cHiredisConnection, "_connect", hiredis_connect, 4);
+    rb_define_private_method(rb_cHiredisConnection, "_reconnect", hiredis_reconnect, 2);
     rb_define_method(rb_cHiredisConnection, "connected?", hiredis_connected_p, 0);
 
     rb_define_private_method(rb_cHiredisConnection, "_write", hiredis_write, 1);
