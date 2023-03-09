@@ -3,6 +3,10 @@
 require "mkmf"
 
 class HiredisConnectionExtconf
+  def initialize(debug)
+    @debug = debug
+  end
+
   def configure
     if RUBY_ENGINE == "ruby" && !RUBY_PLATFORM.match?(/mswin/)
       configure_extension
@@ -18,10 +22,14 @@ class HiredisConnectionExtconf
     have_func("rb_hash_new_capa", "ruby.h")
 
     $CFLAGS = concat_flags($CFLAGS, "-I#{hiredis_dir}", "-std=c99", "-fvisibility=hidden")
-    $CFLAGS = if ENV["EXT_PEDANTIC"]
-      concat_flags($CFLAGS, "-Werror", "-g")
+    $CFLAGS = if @debug
+      concat_flags($CFLAGS, "-Werror", "-g", RbConfig::CONFIG["debugflags"])
     else
       concat_flags($CFLAGS, "-O3")
+    end
+
+    if @debug
+      $CPPFLAGS = concat_flags($CPPFLAGS, "-DRUBY_DEBUG=1")
     end
 
     append_cflags("-Wno-declaration-after-statement") # Older compilers
@@ -33,7 +41,7 @@ class HiredisConnectionExtconf
       "USE_SSL" => 1,
       "CFLAGS" => concat_flags(ENV["CFLAGS"], "-fvisibility=hidden"),
     }
-    env["OPTIMIZATION"] = "-g" if ENV["EXT_PEDANTIC"]
+    env["OPTIMIZATION"] = "-g" if @debug
 
     env = configure_openssl(env)
 
@@ -97,4 +105,4 @@ class HiredisConnectionExtconf
   end
 end
 
-HiredisConnectionExtconf.new.configure
+HiredisConnectionExtconf.new(ENV["EXT_PEDANTIC"]).configure

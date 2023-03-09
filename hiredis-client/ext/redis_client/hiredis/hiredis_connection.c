@@ -40,6 +40,10 @@
 #include "net.h"
 #include "hiredis_ssl.h"
 
+#if !defined(RUBY_ASSERT)
+#  define RUBY_ASSERT(condition) ((void)0)
+#endif
+
 #if !defined(HAVE_RB_HASH_NEW_CAPA)
 static inline VALUE rb_hash_new_capa(long capa)
 {
@@ -813,11 +817,9 @@ static VALUE hiredis_close(VALUE self) {
 }
 
 RUBY_FUNC_EXPORTED void Init_hiredis_connection(void) {
-#ifdef RUBY_ASSERT
-        // Qfalse == NULL, so we can't return Qfalse in `reply_create_bool()`
-        RUBY_ASSERT((void *)Qfalse == NULL);
-        RUBY_ASSERT((void *)Qnil != NULL);
-#endif
+    // Qfalse == NULL, so we can't return Qfalse in `reply_create_bool()`
+    RUBY_ASSERT((void *)Qfalse == NULL);
+    RUBY_ASSERT((void *)Qnil != NULL);
 
     redisInitOpenSSL();
 
