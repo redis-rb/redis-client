@@ -2,6 +2,7 @@
 
 # 0.14.0
 
+- Implement Sentinels list automatic refresh.
 - hiredis binding now implement GC compaction and write barriers.
 - hiredis binding now properly release the GVL around `connect(2)`.
 - hiredis the client memory is now re-used on reconnection when possible to reduce allocation churn.
