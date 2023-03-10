@@ -1,7 +1,7 @@
 # Unreleased
 
-- hiredis binding now implement GC compaction.
-- hiredis binding improvements. The GVL is now properly released around `connect(2)`.
+- hiredis binding now implement GC compaction and write barriers.
+- hiredis binding now properly release the GVL around `connect(2)`.
 - hiredis the client memory is now re-used on reconnection when possible to reduce allocation churn.
 
 # 0.13.0
