@@ -31,7 +31,7 @@ class RedisClient
             element
           when Symbol
             element.name
-          when Integer, Float
+          when Integer, Float, BigDecimal
             element.to_s
           else
             raise TypeError, "Unsupported command argument type: #{element.class}"

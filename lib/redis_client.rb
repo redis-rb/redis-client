@@ -6,7 +6,7 @@ require "redis_client/config"
 require "redis_client/pid_cache"
 require "redis_client/sentinel_config"
 require "redis_client/middlewares"
-
+require 'bigdecimal'
 class RedisClient
   @driver_definitions = {}
   @drivers = {}
