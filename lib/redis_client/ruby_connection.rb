@@ -152,7 +152,7 @@ class RedisClient
     private_constant :KEEP_ALIVE_TTL
     private_constant :KEEP_ALIVE_PROBES
 
-    if %i[SOL_SOCKET TCP_KEEPIDLE TCP_KEEPINTVL TCP_KEEPCNT].all? { |c| Socket.const_defined? c } # Linux
+    if %i[SOL_TCP SOL_SOCKET TCP_KEEPIDLE TCP_KEEPINTVL TCP_KEEPCNT].all? { |c| Socket.const_defined? c } # Linux
       def enable_socket_keep_alive(socket)
         socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
         socket.setsockopt(Socket::SOL_TCP, Socket::TCP_KEEPIDLE, KEEP_ALIVE_INTERVAL)
