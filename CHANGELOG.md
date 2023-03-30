@@ -1,6 +1,9 @@
 # Unreleased
 
+# 0.14.1
+
 - Include the timeout value in TimeoutError messages.
+- Fix connection keep-alive on FreeBSD. #102.
 
 # 0.14.0
 
