@@ -70,9 +70,9 @@ class RedisClient
               return total
             end
           when :wait_readable
-            @io.to_io.wait_readable(@read_timeout) or raise ReadTimeoutError
+            @io.to_io.wait_readable(@read_timeout) or raise(ReadTimeoutError, "Waited #{@read_timeout} seconds")
           when :wait_writable
-            @io.to_io.wait_writable(@write_timeout) or raise WriteTimeoutError
+            @io.to_io.wait_writable(@write_timeout) or raise(WriteTimeoutError, "Waited #{@write_timeout} seconds")
           when nil
             raise Errno::ECONNRESET
           else
@@ -137,10 +137,10 @@ class RedisClient
             return if !strict || remaining <= 0
           when :wait_readable
             unless @io.to_io.wait_readable(@read_timeout)
-              raise ReadTimeoutError unless @blocking_reads
+              raise ReadTimeoutError, "Waited #{@read_timeout} seconds" unless @blocking_reads
             end
           when :wait_writable
-            @io.to_io.wait_writable(@write_timeout) or raise WriteTimeoutError
+            @io.to_io.wait_writable(@write_timeout) or raise(WriteTimeoutError, "Waited #{@write_timeout} seconds")
           when nil
             raise EOFError
           else

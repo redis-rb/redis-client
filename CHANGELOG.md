@@ -1,5 +1,7 @@
 # Unreleased
 
+- Include the timeout value in TimeoutError messages.
+
 # 0.14.0
 
 - Implement Sentinels list automatic refresh.
