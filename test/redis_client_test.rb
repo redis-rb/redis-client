@@ -113,19 +113,4 @@ class RedisClientTest < Minitest::Test
       assert_equal i.to_s, @redis.call("GET", "key#{i}")
     end
   end
-
-  if Process.respond_to?(:fork)
-    def test_handle_fork
-      pid = fork do
-        1000.times do
-          assert_equal "OK", @redis.call("SET", "key", "foo")
-        end
-      end
-      1000.times do
-        assert_equal "PONG", @redis.call("PING")
-      end
-      _, status = Process.wait2(pid)
-      assert_predicate(status, :success?)
-    end
-  end
 end

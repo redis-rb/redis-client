@@ -553,4 +553,31 @@ module RedisClientTests
     @redis.call("HMSET", "hash", "foo", "bar")
     assert_equal ["foo", "bar"], @redis.call("HGETALL", "hash")
   end
+
+  if Process.respond_to?(:fork)
+    def test_handle_fork
+      pid = fork do
+        1000.times do
+          assert_equal "OK", @redis.call("SET", "key", "foo")
+        end
+      end
+      1000.times do
+        assert_equal "PONG", @redis.call("PING")
+      end
+      _, status = Process.wait2(pid)
+      assert_predicate(status, :success?)
+    end
+
+    def test_closing_in_child_doesnt_impact_parent
+      pid = fork do
+        @redis.close
+        exit(0)
+      end
+
+      _, status = Process.wait2(pid)
+      assert_predicate(status, :success?)
+
+      assert_equal "PONG", @redis.call("PING")
+    end
+  end
 end
