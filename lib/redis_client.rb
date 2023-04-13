@@ -217,6 +217,8 @@ class RedisClient
     else
       result
     end
+  rescue NoMethodError => error
+    raise NoMethodError, "method: #{method(__callee__)}, self: #{inspect}, #{error.message}"
   end
 
   def call_v(command)
