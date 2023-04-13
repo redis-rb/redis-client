@@ -26,7 +26,6 @@ class RedisClient
       end
 
       @name = name
-      @sentinel_configs = sentinels_to_configs(sentinels)
       @sentinels = {}.compare_by_identity
       @role = role
       @mutex = Mutex.new
@@ -35,6 +34,7 @@ class RedisClient
       client_config[:reconnect_attempts] ||= DEFAULT_RECONNECT_ATTEMPTS
       @client_config = client_config || {}
       super(**client_config)
+      @sentinel_configs = sentinels_to_configs(sentinels)
     end
 
     def sentinels
@@ -90,9 +90,9 @@ class RedisClient
       sentinels.map do |sentinel|
         case sentinel
         when String
-          Config.new(**@extra_config, url: sentinel)
+          Config.new(**@client_config, **@extra_config, url: sentinel, db: nil)
         else
-          Config.new(**@extra_config, **sentinel)
+          Config.new(**@client_config, **@extra_config, **sentinel, db: nil)
         end
       end
     end

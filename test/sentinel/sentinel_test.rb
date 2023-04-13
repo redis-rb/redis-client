@@ -186,6 +186,33 @@ class RedisClient
       assert_equal new_sentinel_port, @config.sentinels.last.port
     end
 
+    def test_sentinel_refresh_password
+      @config = new_config(password: "hunter2")
+
+      assert_equal Servers::SENTINELS.length, @config.sentinels.length
+
+      new_sentinel_ip = "10.0.0.1"
+      new_sentinel_port = 1234
+
+      # Trigger sentinel refresh to make the client aware of a new sentinel
+      sentinel_client_mock = SentinelClientMock.new([
+        [["SENTINEL", "get-master-addr-by-name", "cache"], [Servers::REDIS.host, Servers::REDIS.port.to_s]],
+        sentinel_refresh_command_mock(
+          additional_sentinels: [response_hash("ip" => new_sentinel_ip, "port" => new_sentinel_port.to_s)],
+        ),
+      ])
+
+      @config.stub(:sentinel_client, ->(_config) { sentinel_client_mock }) do
+        client = @config.new_client
+        assert_equal "PONG", client.call("PING")
+      end
+
+      assert_equal Servers::SENTINELS.length + 1, @config.sentinels.length
+      @config.sentinels.each do |sentinel|
+        refute_nil sentinel.password
+      end
+    end
+
     private
 
     def response_hash(hash)
@@ -214,6 +241,12 @@ class RedisClient
   end
 
   class RESP2SentinelTest < SentinelTest
+    def test_sentinel_refresh_password
+      skip("On RESP2, AUTH require the redis server to have a default password")
+    end
+
+    private
+
     def new_config(**kwargs)
       super(**kwargs, protocol: 2)
     end
