@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fix sentinel to preverse the auth/password when refreshing the sentinel list. #107.
+
 # 0.14.1
 
 - Include the timeout value in TimeoutError messages.
