@@ -113,4 +113,12 @@ class RedisClientTest < Minitest::Test
       assert_equal i.to_s, @redis.call("GET", "key#{i}")
     end
   end
+
+  def test_measure_round_trip_delay
+    assert_equal "OK", @redis.call("SET", "foo", "bar")
+    assert_instance_of Float, @redis.measure_round_trip_delay
+    assert_equal "OK", @redis.call("SET", "foo", "bar")
+    @redis.close
+    assert_instance_of Float, @redis.measure_round_trip_delay
+  end
 end

@@ -101,6 +101,12 @@ class RedisClient
       raise ConnectionError, error.message
     end
 
+    def measure_round_trip_delay
+      start = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
+      call(["PING"], @read_timeout)
+      Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond) - start
+    end
+
     private
 
     def connect

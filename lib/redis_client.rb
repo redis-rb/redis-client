@@ -204,6 +204,14 @@ class RedisClient
     sub
   end
 
+  def measure_round_trip_delay
+    ensure_connected do |connection|
+      @middlewares.call(["PING"], config) do
+        connection.measure_round_trip_delay
+      end
+    end
+  end
+
   def call(*command, **kwargs)
     command = @command_builder.generate(command, kwargs)
     result = ensure_connected do |connection|
