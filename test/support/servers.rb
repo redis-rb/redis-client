@@ -108,6 +108,7 @@ module Servers
         sentinel down-after-milliseconds #{SENTINEL_NAME} 10
         sentinel failover-timeout #{SENTINEL_NAME} 2000
         sentinel parallel-syncs #{SENTINEL_NAME} 1
+        user george on allcommands allkeys >hunter2
       EOS
     end
 

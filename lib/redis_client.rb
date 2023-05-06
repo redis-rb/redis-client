@@ -2,6 +2,7 @@
 
 require "redis_client/version"
 require "redis_client/command_builder"
+require "redis_client/url_parser"
 require "redis_client/config"
 require "redis_client/pid_cache"
 require "redis_client/sentinel_config"

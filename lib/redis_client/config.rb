@@ -161,38 +161,13 @@ class RedisClient
       path: nil,
       **kwargs
     )
-      if url
-        uri = URI(url)
-        unless uri.scheme == "redis" || uri.scheme == "rediss"
-          raise ArgumentError, "Invalid URL: #{url.inspect}"
-        end
-
-        kwargs[:ssl] = uri.scheme == "rediss" unless kwargs.key?(:ssl)
-
-        kwargs[:username] ||= uri.user if uri.password && !uri.user.empty?
-
-        kwargs[:password] ||= if uri.user && !uri.password
-          URI.decode_www_form_component(uri.user)
-        elsif uri.user && uri.password
-          URI.decode_www_form_component(uri.password)
-        end
-
-        db_path = uri.path&.delete_prefix("/")
-        kwargs[:db] ||= Integer(db_path) if db_path && !db_path.empty?
-      end
+      options_from_url = url ? UrlParser.new(url).to_h : {}
+      kwargs = options_from_url.slice(:ssl, :username, :password, :db).merge(kwargs)
 
       super(**kwargs)
 
-      @host = host
-      unless @host
-        uri_host = uri&.host
-        uri_host = nil if uri_host&.empty?
-        if uri_host
-          @host = uri_host&.sub(/\A\[(.*)\]\z/, '\1')
-        end
-      end
-      @host ||= DEFAULT_HOST
-      @port = Integer(port || uri&.port || DEFAULT_PORT)
+      @host = host || options_from_url[:host] || DEFAULT_HOST
+      @port = Integer(port || options_from_url[:port] || DEFAULT_PORT)
       @path = path
     end
   end
