@@ -1,5 +1,6 @@
 # Unreleased
 
+- Allow to configure sentinel client via url. #117.
 - Fix sentinel to preverse the auth/password when refreshing the sentinel list. #107.
 
 # 0.14.1

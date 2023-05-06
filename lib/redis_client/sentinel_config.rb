@@ -7,9 +7,26 @@ class RedisClient
     SENTINEL_DELAY = 0.25
     DEFAULT_RECONNECT_ATTEMPTS = 2
 
-    def initialize(name:, sentinels:, role: :master, **client_config)
+    attr_reader :name
+
+    def initialize(sentinels:, role: :master, name: nil, url: nil, **client_config)
       unless %i(master replica slave).include?(role)
         raise ArgumentError, "Expected role to be either :master or :replica, got: #{role.inspect}"
+      end
+
+      if url
+        url_config = URLConfig.new(url)
+        client_config = {
+          username: url_config.username,
+          password: url_config.password,
+          db: url_config.db,
+        }.compact.merge(client_config)
+        name ||= url_config.host
+      end
+
+      @name = name
+      unless @name
+        raise ArgumentError, "RedisClient::SentinelConfig requires either a name or an url with a host"
       end
 
       @to_list_of_hash = @to_hash = nil
@@ -25,7 +42,6 @@ class RedisClient
         end
       end
 
-      @name = name
       @sentinels = {}.compare_by_identity
       @role = role
       @mutex = Mutex.new

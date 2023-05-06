@@ -213,6 +213,15 @@ class RedisClient
       end
     end
 
+    def test_config_from_url
+      config = new_config(url: "redis://george:hunter2@cache/10", name: nil)
+      assert_equal "hunter2", config.password
+      assert_equal "george", config.username
+      assert_equal "cache", config.name
+      assert_equal 10, config.db
+      assert_equal [Servers::REDIS.host, Servers::REDIS.port], [config.host, config.port]
+    end
+
     private
 
     def response_hash(hash)
