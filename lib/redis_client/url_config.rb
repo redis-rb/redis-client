@@ -3,7 +3,7 @@
 require "uri"
 
 class RedisClient
-  class UrlParser
+  class UrlConfig
     DEFAULT_SCHEMA = "redis"
     SSL_SCHEMA = "rediss"
 
@@ -48,17 +48,6 @@ class RedisClient
       return unless uri.port
 
       Integer(uri.port)
-    end
-
-    def to_h
-      {
-        ssl: ssl?,
-        username: username,
-        password: password,
-        db: db,
-        host: host,
-        port: port,
-      }
     end
   end
 end

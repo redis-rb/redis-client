@@ -14,8 +14,15 @@ class RedisClient
         raise ArgumentError, "Expected role to be either :master or :replica, got: #{role.inspect}"
       end
 
-      options_from_url = url ? UrlParser.new(url).to_h : {}
-      @name = name || options_from_url[:host]
+      if url
+        url_config = UrlConfig.new(url)
+        client_config[:username] ||= url_config.username
+        client_config[:password] ||= url_config.password
+        client_config[:db] ||= url_config.db
+        name ||= url_config.host
+      end
+
+      @name = name
       raise ArgumentError, "Expected either name or url" unless @name
 
       @to_list_of_hash = @to_hash = nil
@@ -37,7 +44,6 @@ class RedisClient
       @config = nil
 
       client_config[:reconnect_attempts] ||= DEFAULT_RECONNECT_ATTEMPTS
-      client_config = options_from_url.slice(:username, :password, :db).merge(client_config)
       @client_config = client_config || {}
       super(**client_config)
       @sentinel_configs = sentinels_to_configs(sentinels)

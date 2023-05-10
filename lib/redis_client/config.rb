@@ -161,13 +161,20 @@ class RedisClient
       path: nil,
       **kwargs
     )
-      options_from_url = url ? UrlParser.new(url).to_h : {}
-      kwargs = options_from_url.slice(:ssl, :username, :password, :db).merge(kwargs)
+      if url
+        url_config = UrlConfig.new(url)
+        kwargs[:ssl] ||= url_config.ssl?
+        kwargs[:username] ||= url_config.username
+        kwargs[:password] ||= url_config.password
+        kwargs[:db] ||= url_config.db
+        host ||= url_config.host
+        port ||= url_config.port
+      end
 
       super(**kwargs)
 
-      @host = host || options_from_url[:host] || DEFAULT_HOST
-      @port = Integer(port || options_from_url[:port] || DEFAULT_PORT)
+      @host = host || DEFAULT_HOST
+      @port = Integer(port || DEFAULT_PORT)
       @path = path
     end
   end
