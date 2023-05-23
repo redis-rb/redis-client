@@ -343,6 +343,10 @@ loop do
 end
 ```
 
+*Note*: pubsub connections are stateful, as such they won't ever reconnect automatically.
+The caller is resonsible for reconnecting if the connection is lost and to resubscribe to
+all channels.
+
 ## Production
 
 ### Instrumentation and Middlewares
@@ -438,6 +442,8 @@ redis = redis_config.new_client
 redis.call("GET", "counter") # Will be retried up to 3 times.
 redis.call_once("INCR", "counter") # Won't be retried.
 ```
+
+**Note**: automatic reconnection doesn't apply to pubsub clients as their connection is stateful.
 
 ### Exponential backoff
 
