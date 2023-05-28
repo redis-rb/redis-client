@@ -222,6 +222,11 @@ class RedisClient
       assert_equal [Servers::REDIS.host, Servers::REDIS.port], [config.host, config.port]
     end
 
+    def test_config_with_string_arguments
+      config = new_config(sentinels: Servers::SENTINELS.map { |sentinel| { "host" => sentinel.host, "port" => sentinel.port } })
+      assert_equal Servers::SENTINELS.length, config.sentinels.length
+    end
+
     private
 
     def response_hash(hash)

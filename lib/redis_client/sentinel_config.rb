@@ -108,7 +108,7 @@ class RedisClient
         when String
           Config.new(**@client_config, **@extra_config, url: sentinel, db: nil)
         else
-          Config.new(**@client_config, **@extra_config, **sentinel, db: nil)
+          Config.new(**@client_config, **@extra_config, **sentinel.transform_keys(&:to_sym), db: nil)
         end
       end
     end
