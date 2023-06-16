@@ -10,6 +10,17 @@ class RedisClient
 
     class << self
       def ssl_context(ssl_params)
+        unless ssl_params[:ca_file] || ssl_params[:ca_path]
+          default_ca_file = OpenSSL::X509::DEFAULT_CERT_FILE
+          default_ca_path = OpenSSL::X509::DEFAULT_CERT_DIR
+
+          if File.readable? default_ca_file
+            ssl_params[:ca_file] = default_ca_file
+          elsif File.directory? default_ca_path
+            ssl_params[:ca_path] = default_ca_path
+          end
+        end
+
         HiredisConnection::SSLContext.new(
           ca_file: ssl_params[:ca_file],
           ca_path: ssl_params[:ca_path],
