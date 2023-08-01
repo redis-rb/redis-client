@@ -1,6 +1,8 @@
 # Unreleased
 
-- Discard sockets rather than explictly close them when a fork is detected.
+# 0.15.0
+
+- Discard sockets rather than explictly close them when a fork is detected. #126.
 - Allow to configure sentinel client via url. #117.
 - Fix sentinel to preverse the auth/password when refreshing the sentinel list. #107.
 
