@@ -36,6 +36,8 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <fcntl.h> 
 #include "hiredis.h"
 #include "net.h"
 #include "hiredis_ssl.h"
@@ -798,6 +800,33 @@ static VALUE hiredis_close(VALUE self) {
     return Qnil;
 }
 
+static VALUE hiredis_reopen(VALUE self) {
+    CONNECTION(self, connection);
+    if (!connection->context) {
+        return Qfalse;
+    }
+
+    if (connection->context->fd == REDIS_INVALID_FD) {
+        return Qfalse;
+    }
+
+    int null_fd = open("/dev/null", O_RDWR | O_CLOEXEC);
+    if (null_fd <= 0) {
+        return Qfalse;
+    }
+
+    int rc = dup2(null_fd, connection->context->fd);
+    if (close(null_fd) < 0) {
+        return Qfalse;
+    }
+
+    if (rc < 0) {
+        return Qfalse;
+    }
+
+    return Qtrue;
+}
+
 static inline double diff_timespec_ms(const struct timespec *time1, const struct timespec *time0) {
   return ((time1->tv_sec - time0->tv_sec) * 1000.0)
       + (time1->tv_nsec - time0->tv_nsec) / 1000000.0;
@@ -931,6 +960,7 @@ RUBY_FUNC_EXPORTED void Init_hiredis_connection(void) {
     rb_define_private_method(rb_cHiredisConnection, "_read", hiredis_read, 0);
     rb_define_private_method(rb_cHiredisConnection, "flush", hiredis_flush, 0);
     rb_define_private_method(rb_cHiredisConnection, "_close", hiredis_close, 0);
+    rb_define_private_method(rb_cHiredisConnection, "_reopen", hiredis_reopen, 0);
     rb_define_method(rb_cHiredisConnection, "measure_round_trip_delay", hiredis_measure_round_trip_delay, 0);
 
     VALUE rb_cHiredisSSLContext = rb_define_class_under(rb_cHiredisConnection, "SSLContext", rb_cObject);

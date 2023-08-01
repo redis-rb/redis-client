@@ -24,6 +24,10 @@ class RedisClient
         @io.to_io.close
       end
 
+      def reopen(*args)
+        @io.to_io.reopen(*args)
+      end
+
       def closed?
         @io.to_io.closed?
       end
