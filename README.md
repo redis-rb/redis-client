@@ -344,7 +344,7 @@ end
 ```
 
 *Note*: pubsub connections are stateful, as such they won't ever reconnect automatically.
-The caller is resonsible for reconnecting if the connection is lost and to resubscribe to
+The caller is responsible for reconnecting if the connection is lost and to resubscribe to
 all channels.
 
 ## Production
