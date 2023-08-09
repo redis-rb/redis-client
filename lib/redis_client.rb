@@ -358,11 +358,6 @@ class RedisClient
     self
   end
 
-  def discard
-    @raw_connection&.discard
-    self
-  end
-
   def pipelined
     pipeline = Pipeline.new(@command_builder)
     yield pipeline
@@ -623,7 +618,7 @@ class RedisClient
   end
 
   def ensure_connected(retryable: true)
-    discard if !config.inherit_socket && @pid != PIDCache.pid
+    close if !config.inherit_socket && @pid != PIDCache.pid
 
     if @disable_reconnection
       if block_given?

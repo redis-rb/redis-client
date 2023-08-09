@@ -1,5 +1,7 @@
 # Unreleased
 
+- Reverted the special discard of connection. A regular `close(2)` should be enough.
+
 # 0.15.0
 
 - Discard sockets rather than explictly close them when a fork is detected. #126.

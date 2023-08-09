@@ -58,13 +58,6 @@ class RedisClient
       super
     end
 
-    def discard
-      unless @io.closed?
-        @io.reopen(File::NULL)
-      end
-      close
-    end
-
     def read_timeout=(timeout)
       @read_timeout = timeout
       @io.read_timeout = timeout if @io

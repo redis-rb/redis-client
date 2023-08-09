@@ -53,11 +53,6 @@ class RedisClient
       super
     end
 
-    def discard
-      _reopen
-      close
-    end
-
     def reconnect
       reconnected = begin
         _reconnect(@config.path, @config.ssl_context)
