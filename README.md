@@ -42,7 +42,7 @@ redis.with do |r|
 end
 ```
 
-If you are working in a single threaded environment, or wish to use your own connection pooling mechanism,
+If you are working in a single-threaded environment, or wish to use your own connection pooling mechanism,
 you can obtain a raw client with `#new_client`
 
 ```ruby
@@ -67,11 +67,11 @@ redis.call("GET", "mykey")
 - `host`: The server hostname or IP address. Defaults to `"localhost"`.
 - `port`: The server port. Defaults to `6379`.
 - `path`: The path to a UNIX socket, if set `url`, `host` and `port` are ignored.
-- `ssl`: Wether to connect using SSL or not.
+- `ssl`: Whether to connect using SSL or not.
 - `ssl_params`: A configuration Hash passed to [`OpenSSL::SSL::SSLContext#set_params`](https://www.rubydoc.info/stdlib/openssl/OpenSSL%2FSSL%2FSSLContext:set_params), notable options include:
   - `cert`: The path to the client certificate (e.g. `client.crt`).
   - `key`: The path to the client key (e.g. `client.key`).
-  - `ca_file`: The certificate authority to use, useful for self signed certificates (e.g. `ca.crt`),
+  - `ca_file`: The certificate authority to use, useful for self-signed certificates (e.g. `ca.crt`),
 - `db`: The database to select after connecting, defaults to `0`.
 - `id` ID for the client connection, assigns name to current connection by sending `CLIENT SETNAME`.
 - `username` Username to authenticate against server, defaults to `"default"`.
@@ -83,7 +83,7 @@ redis.call("GET", "mykey")
 - `reconnect_attempts`: Specify how many times the client should retry to send queries. Defaults to `0`. Makes sure to read the [reconnection section](#reconnection) before enabling it.
 - `circuit_breaker`: A Hash with circuit breaker configuration. Defaults to `nil`. See the [circuit breaker section](#circuit-breaker) for details.
 - `protocol:` The version of the RESP protocol to use. Default to `3`.
-- `custom`: A user owned value ignored by `redis-client` but available as `Config#custom`. This can be used to hold middleware configurations and other user specific metadatas.
+- `custom`: A user-owned value ignored by `redis-client` but available as `Config#custom`. This can be used to hold middleware configurations and other user-specific metadata.
 
 ### Sentinel support
 
@@ -380,7 +380,7 @@ redis_config = RedisClient.config(middlewares: [AnotherRedisInstrumentation])
 redis_config.new_client
 ```
 
-If middlewares need a client specific configuration, `Config#custom` can be used
+If middlewares need a client-specific configuration, `Config#custom` can be used
 
 ```ruby
 module MyGlobalRedisInstrumentation
@@ -454,9 +454,9 @@ redis_config = RedisClient.config(reconnect_attempts: [0, 0.05, 0.1])
 ```
 
 This configuration is generally used when the Redis server is expected to failover or recover relatively quickly and
-that it's not really possibe to continue without issuing the command.
+that it's not really possible to continue without issuing the command.
 
-When the Redis server is used as an ephemeral cache, circuit breakers are generally prefered.
+When the Redis server is used as an ephemeral cache, circuit breakers are generally preferred.
 
 ### Circuit Breaker
 
