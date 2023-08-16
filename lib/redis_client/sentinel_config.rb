@@ -10,7 +10,7 @@ class RedisClient
     attr_reader :name
 
     def initialize(sentinels:, role: :master, name: nil, url: nil, **client_config)
-      unless %i(master replica slave).include?(role)
+      unless %i(master replica slave).include?(role.to_sym)
         raise ArgumentError, "Expected role to be either :master or :replica, got: #{role.inspect}"
       end
 
@@ -43,7 +43,7 @@ class RedisClient
       end
 
       @sentinels = {}.compare_by_identity
-      @role = role
+      @role = role.to_sym
       @mutex = Mutex.new
       @config = nil
 
