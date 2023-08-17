@@ -121,4 +121,8 @@ class RedisClientTest < Minitest::Test
     @redis.close
     assert_instance_of Float, @redis.measure_round_trip_delay
   end
+
+  def test_server_url
+    assert_equal "redis://#{Servers::HOST}:#{Servers::REDIS_TCP_PORT}/0", @redis.server_url
+  end
 end

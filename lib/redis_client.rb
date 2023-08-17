@@ -175,6 +175,10 @@ class RedisClient
     "#<#{self.class.name} #{config.server_url}#{id_string}>"
   end
 
+  def server_url
+    config.server_url
+  end
+
   def size
     1
   end
