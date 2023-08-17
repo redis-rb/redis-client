@@ -59,8 +59,8 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        redis: ["7.0"]
-        ruby: ["3.1"]
+        redis: ["7.0", "7.2"]
+        ruby: ["3.2"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out code
