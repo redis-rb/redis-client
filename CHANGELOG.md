@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.16.0
+
 - Add `RedisClient#disable_reconnection`.
 - Reverted the special discard of connection. A regular `close(2)` should be enough.
 
