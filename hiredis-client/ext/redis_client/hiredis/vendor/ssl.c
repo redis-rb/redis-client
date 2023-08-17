@@ -71,29 +71,6 @@ struct redisSSLContext {
     char *server_name;
 };
 
-/* The SSL connection context is attached to SSL/TLS connections as a privdata. */
-typedef struct redisSSL {
-    /**
-     * OpenSSL SSL object.
-     */
-    SSL *ssl;
-
-    /**
-     * SSL_write() requires to be called again with the same arguments it was
-     * previously called with in the event of an SSL_read/SSL_write situation
-     */
-    size_t lastLen;
-
-    /** Whether the SSL layer requires read (possibly before a write) */
-    int wantRead;
-
-    /**
-     * Whether a write was requested prior to a read. If set, the write()
-     * should resume whenever a read takes place, if possible
-     */
-    int pendingWrite;
-} redisSSL;
-
 /* Forward declaration */
 redisContextFuncs redisContextSSLFuncs;
 
@@ -615,3 +592,43 @@ redisContextFuncs redisContextSSLFuncs = {
     .write = redisSSLWrite
 };
 
+/* PATCH, see https://github.com/redis/hiredis/issues/1059 */
+redisSSL *patch_redisGetSSLSocket(redisContext *c) {
+    return c->privctx;
+}
+
+int patch_redisInitiateSSLContinue(redisContext *c) {
+    if (!c->privctx) {
+        __redisSetError(c, REDIS_ERR_OTHER, "redisContext is not associated");
+        return REDIS_ERR;
+    }
+
+    redisSSL *rssl = (redisSSL *)c->privctx;
+    ERR_clear_error();
+    int rv = SSL_connect(rssl->ssl);
+    if (rv == 1) {
+        c->privctx = rssl;
+        return REDIS_OK;
+    }
+
+    rv = SSL_get_error(rssl->ssl, rv);
+    if (((c->flags & REDIS_BLOCK) == 0) &&
+        (rv == SSL_ERROR_WANT_READ || rv == SSL_ERROR_WANT_WRITE)) {
+        maybeCheckWant(rssl, rv);
+        c->privctx = rssl;
+        return REDIS_OK;
+    }
+
+    if (c->err == 0) {
+        char err[512];
+        if (rv == SSL_ERROR_SYSCALL)
+            snprintf(err,sizeof(err)-1,"SSL_connect failed: %s",strerror(errno));
+        else {
+            unsigned long e = ERR_peek_last_error();
+            snprintf(err,sizeof(err)-1,"SSL_connect failed: %s",
+                    ERR_reason_error_string(e));
+        }
+        __redisSetError(c, REDIS_ERR_IO, err);
+    }
+    return REDIS_ERR;
+}

@@ -543,7 +543,7 @@ static void hiredis_init_ssl(hiredis_connection_t *connection, VALUE ssl_param) 
         hiredis_raise_error_and_disconnect(connection, rb_eRedisClientCannotConnectError);
     }
 
-    redisSSL *redis_ssl = redisGetSSLSocket(connection->context);
+    redisSSL *redis_ssl = patch_redisGetSSLSocket(connection->context);
 
     if (redis_ssl->wantRead) {
         int readable = 0;
@@ -556,7 +556,7 @@ static void hiredis_init_ssl(hiredis_connection_t *connection, VALUE ssl_param) 
             hiredis_raise_error_and_disconnect(connection, rb_eRedisClientReadTimeoutError);
         }
 
-        if (redisInitiateSSLContinue(connection->context) != REDIS_OK) {
+        if (patch_redisInitiateSSLContinue(connection->context) != REDIS_OK) {
             hiredis_raise_error_and_disconnect(connection, rb_eRedisClientCannotConnectError);
         };
     }

@@ -46,6 +46,36 @@ struct ssl_st;
  */
 typedef struct redisSSLContext redisSSLContext;
 
+
+/* PATCH, see https://github.com/redis/hiredis/issues/1059 */
+#include <openssl/ssl.h>
+/* The SSL connection context is attached to SSL/TLS connections as a privdata. */
+typedef struct redisSSL {
+    /**
+     * OpenSSL SSL object.
+     */
+    SSL *ssl;
+
+    /**
+     * SSL_write() requires to be called again with the same arguments it was
+     * previously called with in the event of an SSL_read/SSL_write situation
+     */
+    size_t lastLen;
+
+    /** Whether the SSL layer requires read (possibly before a write) */
+    int wantRead;
+
+    /**
+     * Whether a write was requested prior to a read. If set, the write()
+     * should resume whenever a read takes place, if possible
+     */
+    int pendingWrite;
+} redisSSL;
+
+redisSSL *patch_redisGetSSLSocket(redisContext *c);
+int patch_redisInitiateSSLContinue(redisContext *c);
+/* END OF PATCH */
+
 /**
  * Initialization errors that redisCreateSSLContext() may return.
  */
