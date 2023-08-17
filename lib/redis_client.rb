@@ -358,6 +358,10 @@ class RedisClient
     self
   end
 
+  def disable_reconnection(&block)
+    ensure_connected(retryable: false, &block)
+  end
+
   def pipelined
     pipeline = Pipeline.new(@command_builder)
     yield pipeline
