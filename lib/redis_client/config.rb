@@ -167,8 +167,6 @@ class RedisClient
         url_config = URLConfig.new(url)
         kwargs = {
           ssl: url_config.ssl?,
-          username: url_config.username,
-          password: url_config.password,
           db: url_config.db,
         }.compact.merge(kwargs)
         host ||= url_config.host
