@@ -187,7 +187,7 @@ class RedisClient
     end
 
     def test_sentinel_refresh_password
-      @config = new_config(password: "hunter2")
+      @config = new_config(sentinel_password: "hunter2")
 
       assert_equal Servers::SENTINELS.length, @config.sentinels.length
 
@@ -213,13 +213,50 @@ class RedisClient
       end
     end
 
-    def test_config_from_url
+    def test_config_user_password_from_url_for_redis_master_replica_only
       config = new_config(url: "redis://george:hunter2@cache/10", name: nil)
       assert_equal "hunter2", config.password
       assert_equal "george", config.username
-      assert_equal "cache", config.name
       assert_equal 10, config.db
       assert_equal [Servers::REDIS.host, Servers::REDIS.port], [config.host, config.port]
+
+      config.sentinels.each do |sentinel|
+        assert_nil sentinel.password
+      end
+    end
+
+    def test_sentinel_shared_username_password
+      config = new_config(sentinel_username: "alice", sentinel_password: "superpassword")
+
+      config.sentinels.each do |sentinel|
+        assert_equal "alice", sentinel.username
+        assert_equal "superpassword", sentinel.password
+      end
+    end
+
+    def test_sentinel_explicit_username_password
+      sentinels = Servers::SENTINELS.map do |sentinel|
+        { host: sentinel.host, port: sentinel.port, username: "alice", password: "superpassword" }
+      end
+
+      config = new_config(sentinels: sentinels)
+      config.sentinels.each do |sentinel|
+        assert_equal "alice", sentinel.username
+        assert_equal "superpassword", sentinel.password
+      end
+    end
+
+    def test_sentinel_config_from_url
+      sentinels = Servers::SENTINELS.map do |sentinel|
+        "redis://alice:superpassword@#{sentinel.host}:#{sentinel.port}"
+      end
+
+      config = new_config(sentinels: sentinels)
+      assert_equal Servers::SENTINELS.length, config.sentinels.length
+      config.sentinels.each do |sentinel|
+        assert_equal "alice", sentinel.username
+        assert_equal "superpassword", sentinel.password
+      end
     end
 
     private
