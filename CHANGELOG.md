@@ -1,5 +1,7 @@
 # Unreleased
 
+- Adds `sentinel_username` and `sentinel_password` options for `RedisClient#sentinel`
+
 # 0.16.0
 
 - Add `RedisClient#disable_reconnection`.
@@ -71,7 +73,7 @@
 
 - Make the client resilient to `Timeout.timeout` or `Thread#kill` use (it still is very much discouraged to use either).
   Use of async interrupts could cause responses to be interleaved.
-- hiredis: handle commands returning a top-level `false` (no command does this today, but some extensions might). 
+- hiredis: handle commands returning a top-level `false` (no command does this today, but some extensions might).
 - Workaround a bug in Ruby 2.6 causing a crash if the `debug` gem is enabled when `redis-client` is being required. Fix: #48
 
 # 0.8.0
@@ -90,7 +92,7 @@
 
 - Raise a distinct `RedisClient::OutOfMemoryError`, for Redis `OOM` errors.
 - Fix the instrumentation API to be called even for authentication commands.
-- Fix `url:` configuration to accept a trailing slash. 
+- Fix `url:` configuration to accept a trailing slash.
 
 # 0.7.1
 

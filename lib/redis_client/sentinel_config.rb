@@ -9,7 +9,15 @@ class RedisClient
 
     attr_reader :name
 
-    def initialize(sentinels:, role: :master, name: nil, url: nil, **client_config)
+    def initialize(
+      sentinels:,
+      sentinel_password: nil,
+      sentinel_username: nil,
+      role: :master,
+      name: nil,
+      url: nil,
+      **client_config
+    )
       unless %i(master replica slave).include?(role.to_sym)
         raise ArgumentError, "Expected role to be either :master or :replica, got: #{role.inspect}"
       end
@@ -30,7 +38,11 @@ class RedisClient
       end
 
       @to_list_of_hash = @to_hash = nil
-      @extra_config = {}
+      @extra_config = {
+        username: sentinel_username,
+        password: sentinel_password,
+        db: nil,
+      }
       if client_config[:protocol] == 2
         @extra_config[:protocol] = client_config[:protocol]
         @to_list_of_hash = lambda do |may_be_a_list|
@@ -106,9 +118,9 @@ class RedisClient
       sentinels.map do |sentinel|
         case sentinel
         when String
-          Config.new(**@client_config, **@extra_config, url: sentinel, db: nil)
+          Config.new(**@client_config, **@extra_config, url: sentinel)
         else
-          Config.new(**@client_config, **@extra_config, **sentinel, db: nil)
+          Config.new(**@client_config, **@extra_config, **sentinel)
         end
       end
     end
