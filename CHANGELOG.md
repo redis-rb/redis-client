@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.17.0
+
 - Adds `sentinel_username` and `sentinel_password` options for `RedisClient#sentinel`
 
 # 0.16.0
