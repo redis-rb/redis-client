@@ -32,8 +32,6 @@
 #ifndef __HIREDIS_SSL_H
 #define __HIREDIS_SSL_H
 
-#include <openssl/ssl.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,6 +46,9 @@ struct ssl_st;
  */
 typedef struct redisSSLContext redisSSLContext;
 
+
+/* PATCH, see https://github.com/redis/hiredis/issues/1059 */
+#include <openssl/ssl.h>
 /* The SSL connection context is attached to SSL/TLS connections as a privdata. */
 typedef struct redisSSL {
     /**
@@ -71,6 +72,10 @@ typedef struct redisSSL {
     int pendingWrite;
 } redisSSL;
 
+redisSSL *patch_redisGetSSLSocket(redisContext *c);
+int patch_redisInitiateSSLContinue(redisContext *c);
+/* END OF PATCH */
+
 /**
  * Initialization errors that redisCreateSSLContext() may return.
  */
@@ -81,8 +86,32 @@ typedef enum {
     REDIS_SSL_CTX_CERT_KEY_REQUIRED,            /* Client cert and key must both be specified or skipped */
     REDIS_SSL_CTX_CA_CERT_LOAD_FAILED,          /* Failed to load CA Certificate or CA Path */
     REDIS_SSL_CTX_CLIENT_CERT_LOAD_FAILED,      /* Failed to load client certificate */
-    REDIS_SSL_CTX_PRIVATE_KEY_LOAD_FAILED       /* Failed to load private key */
+    REDIS_SSL_CTX_CLIENT_DEFAULT_CERT_FAILED,   /* Failed to set client default certificate directory */
+    REDIS_SSL_CTX_PRIVATE_KEY_LOAD_FAILED,      /* Failed to load private key */
+    REDIS_SSL_CTX_OS_CERTSTORE_OPEN_FAILED,     /* Failed to open system certificate store */
+    REDIS_SSL_CTX_OS_CERT_ADD_FAILED            /* Failed to add CA certificates obtained from system to the SSL context */
 } redisSSLContextError;
+
+/* Constants that mirror OpenSSL's verify modes. By default,
+ * REDIS_SSL_VERIFY_PEER is used with redisCreateSSLContext().
+ * Some Redis clients disable peer verification if there are no
+ * certificates specified.
+ */
+#define REDIS_SSL_VERIFY_NONE 0x00
+#define REDIS_SSL_VERIFY_PEER 0x01
+#define REDIS_SSL_VERIFY_FAIL_IF_NO_PEER_CERT 0x02
+#define REDIS_SSL_VERIFY_CLIENT_ONCE 0x04
+#define REDIS_SSL_VERIFY_POST_HANDSHAKE 0x08
+
+/* Options to create an OpenSSL context. */
+typedef struct {
+    const char *cacert_filename;
+    const char *capath;
+    const char *cert_filename;
+    const char *private_key_filename;
+    const char *server_name;
+    int verify_mode;
+} redisSSLOptions;
 
 /**
  * Return the error message corresponding with the specified error code.
@@ -125,6 +154,18 @@ redisSSLContext *redisCreateSSLContext(const char *cacert_filename, const char *
         const char *server_name, redisSSLContextError *error);
 
 /**
+  * Helper function to initialize an OpenSSL context that can be used
+  * to initiate SSL connections. This is a more extensible version of redisCreateSSLContext().
+  *
+  * options contains a structure of SSL options to use.
+  *
+  * If error is non-null, it will be populated in case the context creation fails
+  * (returning a NULL).
+*/
+redisSSLContext *redisCreateSSLContextWithOptions(redisSSLOptions *options,
+        redisSSLContextError *error);
+
+/**
  * Free a previously created OpenSSL context.
  */
 void redisFreeSSLContext(redisSSLContext *redis_ssl_ctx);
@@ -139,16 +180,11 @@ void redisFreeSSLContext(redisSSLContext *redis_ssl_ctx);
 
 int redisInitiateSSLWithContext(redisContext *c, redisSSLContext *redis_ssl_ctx);
 
-int redisInitiateSSLContinue(redisContext *c);
-
 /**
  * Initiate SSL/TLS negotiation on a provided OpenSSL SSL object.
  */
 
 int redisInitiateSSL(redisContext *c, struct ssl_st *ssl);
-
-
-redisSSL *redisGetSSLSocket(redisContext *c);
 
 #ifdef __cplusplus
 }

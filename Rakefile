@@ -56,7 +56,7 @@ end
 
 namespace :hiredis do
   task :download do
-    version = "1.0.2"
+    version = "1.2.0"
     archive_path = "tmp/hiredis-#{version}.tar.gz"
     url = "https://github.com/redis/hiredis/archive/refs/tags/v#{version}.tar.gz"
     system("curl", "-L", url, out: archive_path) or raise "Downloading of #{url} failed"

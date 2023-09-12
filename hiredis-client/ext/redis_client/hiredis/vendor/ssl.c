@@ -32,12 +32,22 @@
 
 #include "hiredis.h"
 #include "async.h"
+#include "net.h"
 
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
 #ifdef _WIN32
 #include <windows.h>
+#include <wincrypt.h>
+#ifdef OPENSSL_IS_BORINGSSL
+#undef X509_NAME
+#undef X509_EXTENSIONS
+#undef PKCS7_ISSUER_AND_SERIAL
+#undef PKCS7_SIGNER_INFO
+#undef OCSP_REQUEST
+#undef OCSP_RESPONSE
+#endif
 #else
 #include <pthread.h>
 #endif
@@ -48,6 +58,8 @@
 #include "win32.h"
 #include "async_private.h"
 #include "hiredis_ssl.h"
+
+#define OPENSSL_1_1_0 0x10100000L
 
 void __redisSetError(redisContext *c, int type, const char *str);
 
@@ -67,7 +79,7 @@ redisContextFuncs redisContextSSLFuncs;
  * Note that this is only required for OpenSSL < 1.1.0.
  */
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if OPENSSL_VERSION_NUMBER < OPENSSL_1_1_0
 #define HIREDIS_USE_CRYPTO_LOCKS
 #endif
 
@@ -140,22 +152,6 @@ int redisInitOpenSSL(void)
     return REDIS_OK;
 }
 
-static int maybeCheckWant(redisSSL *rssl, int rv) {
-    /**
-     * If the error is WANT_READ or WANT_WRITE, the appropriate flags are set
-     * and true is returned. False is returned otherwise
-     */
-    if (rv == SSL_ERROR_WANT_READ) {
-        rssl->wantRead = 1;
-        return 1;
-    } else if (rv == SSL_ERROR_WANT_WRITE) {
-        rssl->pendingWrite = 1;
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
 /**
  * redisSSLContext helper context destruction.
  */
@@ -175,6 +171,10 @@ const char *redisSSLContextGetError(redisSSLContextError error)
             return "Failed to load client certificate";
         case REDIS_SSL_CTX_PRIVATE_KEY_LOAD_FAILED:
             return "Failed to load private key";
+        case REDIS_SSL_CTX_OS_CERTSTORE_OPEN_FAILED:
+            return "Failed to open system certificate store";
+        case REDIS_SSL_CTX_OS_CERT_ADD_FAILED:
+            return "Failed to add CA certificates obtained from system to the SSL context";
         default:
             return "Unknown error code";
     }
@@ -207,18 +207,54 @@ redisSSLContext *redisCreateSSLContext(const char *cacert_filename, const char *
         const char *cert_filename, const char *private_key_filename,
         const char *server_name, redisSSLContextError *error)
 {
+    redisSSLOptions options = {
+        .cacert_filename = cacert_filename,
+        .capath = capath,
+        .cert_filename = cert_filename,
+        .private_key_filename = private_key_filename,
+        .server_name = server_name,
+        .verify_mode = REDIS_SSL_VERIFY_PEER,
+    };
+
+    return redisCreateSSLContextWithOptions(&options, error);
+}
+
+redisSSLContext *redisCreateSSLContextWithOptions(redisSSLOptions *options, redisSSLContextError *error) {
+    const char *cacert_filename = options->cacert_filename;
+    const char *capath = options->capath;
+    const char *cert_filename = options->cert_filename;
+    const char *private_key_filename = options->private_key_filename;
+    const char *server_name = options->server_name;
+
+#ifdef _WIN32
+    HCERTSTORE win_store = NULL;
+    PCCERT_CONTEXT win_ctx = NULL;
+#endif
+
     redisSSLContext *ctx = hi_calloc(1, sizeof(redisSSLContext));
     if (ctx == NULL)
         goto error;
 
-    ctx->ssl_ctx = SSL_CTX_new(SSLv23_client_method());
+    const SSL_METHOD *ssl_method;
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_1_1_0
+    ssl_method = TLS_client_method();
+#else
+    ssl_method = SSLv23_client_method();
+#endif
+
+    ctx->ssl_ctx = SSL_CTX_new(ssl_method);
     if (!ctx->ssl_ctx) {
         if (error) *error = REDIS_SSL_CTX_CREATE_FAILED;
         goto error;
     }
 
-    SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
-    SSL_CTX_set_verify(ctx->ssl_ctx, SSL_VERIFY_PEER, NULL);
+#if OPENSSL_VERSION_NUMBER >= OPENSSL_1_1_0
+    SSL_CTX_set_min_proto_version(ctx->ssl_ctx, TLS1_2_VERSION);
+#else
+    SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
+#endif
+
+    SSL_CTX_set_verify(ctx->ssl_ctx, options->verify_mode, NULL);
 
     if ((cert_filename != NULL && private_key_filename == NULL) ||
             (private_key_filename != NULL && cert_filename == NULL)) {
@@ -227,8 +263,38 @@ redisSSLContext *redisCreateSSLContext(const char *cacert_filename, const char *
     }
 
     if (capath || cacert_filename) {
+#ifdef _WIN32
+        if (0 == strcmp(cacert_filename, "wincert")) {
+            win_store = CertOpenSystemStore(NULL, "Root");
+            if (!win_store) {
+                if (error) *error = REDIS_SSL_CTX_OS_CERTSTORE_OPEN_FAILED;
+                goto error;
+            }
+            X509_STORE* store = SSL_CTX_get_cert_store(ctx->ssl_ctx);
+            while (win_ctx = CertEnumCertificatesInStore(win_store, win_ctx)) {
+                X509* x509 = NULL;
+                x509 = d2i_X509(NULL, (const unsigned char**)&win_ctx->pbCertEncoded, win_ctx->cbCertEncoded);
+                if (x509) {
+                    if ((1 != X509_STORE_add_cert(store, x509)) ||
+                        (1 != SSL_CTX_add_client_CA(ctx->ssl_ctx, x509)))
+                    {
+                        if (error) *error = REDIS_SSL_CTX_OS_CERT_ADD_FAILED;
+                        goto error;
+                    }
+                    X509_free(x509);
+                }
+            }
+            CertFreeCertificateContext(win_ctx);
+            CertCloseStore(win_store, 0);
+        } else
+#endif
         if (!SSL_CTX_load_verify_locations(ctx->ssl_ctx, cacert_filename, capath)) {
             if (error) *error = REDIS_SSL_CTX_CA_CERT_LOAD_FAILED;
+            goto error;
+        }
+    } else {
+        if (!SSL_CTX_set_default_verify_paths(ctx->ssl_ctx)) {
+            if (error) *error = REDIS_SSL_CTX_CLIENT_DEFAULT_CERT_FAILED;
             goto error;
         }
     }
@@ -250,44 +316,12 @@ redisSSLContext *redisCreateSSLContext(const char *cacert_filename, const char *
     return ctx;
 
 error:
+#ifdef _WIN32
+    CertFreeCertificateContext(win_ctx);
+    CertCloseStore(win_store, 0);
+#endif
     redisFreeSSLContext(ctx);
     return NULL;
-}
-
-int redisInitiateSSLContinue(redisContext *c) {
-    if (!c->privctx) {
-        __redisSetError(c, REDIS_ERR_OTHER, "redisContext is not associated");
-        return REDIS_ERR;
-    }
-
-    redisSSL *rssl = (redisSSL *)c->privctx;
-    ERR_clear_error();
-    int rv = SSL_connect(rssl->ssl);
-    if (rv == 1) {
-        c->privctx = rssl;
-        return REDIS_OK;
-    }
-
-    rv = SSL_get_error(rssl->ssl, rv);
-    if (((c->flags & REDIS_BLOCK) == 0) &&
-        (rv == SSL_ERROR_WANT_READ || rv == SSL_ERROR_WANT_WRITE)) {
-        maybeCheckWant(rssl, rv);
-        c->privctx = rssl;
-        return REDIS_OK;
-    }
-
-    if (c->err == 0) {
-        char err[512];
-        if (rv == SSL_ERROR_SYSCALL)
-            snprintf(err,sizeof(err)-1,"SSL_connect failed: %s",strerror(errno));
-        else {
-            unsigned long e = ERR_peek_last_error();
-            snprintf(err,sizeof(err)-1,"SSL_connect failed: %s",
-                    ERR_reason_error_string(e));
-        }
-        __redisSetError(c, REDIS_ERR_IO, err);
-    }
-    return REDIS_ERR;
 }
 
 /**
@@ -324,7 +358,6 @@ static int redisSSLConnect(redisContext *c, SSL *ssl) {
     rv = SSL_get_error(rssl->ssl, rv);
     if (((c->flags & REDIS_BLOCK) == 0) &&
         (rv == SSL_ERROR_WANT_READ || rv == SSL_ERROR_WANT_WRITE)) {
-        maybeCheckWant(rssl, rv);
         c->privctx = rssl;
         return REDIS_OK;
     }
@@ -343,10 +376,6 @@ static int redisSSLConnect(redisContext *c, SSL *ssl) {
 
     hi_free(rssl);
     return REDIS_ERR;
-}
-
-redisSSL *redisGetSSLSocket(redisContext *c) {
-    return c->privctx;
 }
 
 /**
@@ -387,12 +416,32 @@ int redisInitiateSSLWithContext(redisContext *c, redisSSLContext *redis_ssl_ctx)
         }
     }
 
-    return redisSSLConnect(c, ssl);
+    if (redisSSLConnect(c, ssl) != REDIS_OK) {
+        goto error;
+    }
+
+    return REDIS_OK;
 
 error:
     if (ssl)
         SSL_free(ssl);
     return REDIS_ERR;
+}
+
+static int maybeCheckWant(redisSSL *rssl, int rv) {
+    /**
+     * If the error is WANT_READ or WANT_WRITE, the appropriate flags are set
+     * and true is returned. False is returned otherwise
+     */
+    if (rv == SSL_ERROR_WANT_READ) {
+        rssl->wantRead = 1;
+        return 1;
+    } else if (rv == SSL_ERROR_WANT_WRITE) {
+        rssl->pendingWrite = 1;
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 /**
@@ -535,6 +584,7 @@ static void redisSSLAsyncWrite(redisAsyncContext *ac) {
 }
 
 redisContextFuncs redisContextSSLFuncs = {
+    .close = redisNetClose,
     .free_privctx = redisSSLFree,
     .async_read = redisSSLAsyncRead,
     .async_write = redisSSLAsyncWrite,
@@ -542,3 +592,43 @@ redisContextFuncs redisContextSSLFuncs = {
     .write = redisSSLWrite
 };
 
+/* PATCH, see https://github.com/redis/hiredis/issues/1059 */
+redisSSL *patch_redisGetSSLSocket(redisContext *c) {
+    return c->privctx;
+}
+
+int patch_redisInitiateSSLContinue(redisContext *c) {
+    if (!c->privctx) {
+        __redisSetError(c, REDIS_ERR_OTHER, "redisContext is not associated");
+        return REDIS_ERR;
+    }
+
+    redisSSL *rssl = (redisSSL *)c->privctx;
+    ERR_clear_error();
+    int rv = SSL_connect(rssl->ssl);
+    if (rv == 1) {
+        c->privctx = rssl;
+        return REDIS_OK;
+    }
+
+    rv = SSL_get_error(rssl->ssl, rv);
+    if (((c->flags & REDIS_BLOCK) == 0) &&
+        (rv == SSL_ERROR_WANT_READ || rv == SSL_ERROR_WANT_WRITE)) {
+        maybeCheckWant(rssl, rv);
+        c->privctx = rssl;
+        return REDIS_OK;
+    }
+
+    if (c->err == 0) {
+        char err[512];
+        if (rv == SSL_ERROR_SYSCALL)
+            snprintf(err,sizeof(err)-1,"SSL_connect failed: %s",strerror(errno));
+        else {
+            unsigned long e = ERR_peek_last_error();
+            snprintf(err,sizeof(err)-1,"SSL_connect failed: %s",
+                    ERR_reason_error_string(e));
+        }
+        __redisSetError(c, REDIS_ERR_IO, err);
+    }
+    return REDIS_ERR;
+}

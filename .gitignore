@@ -9,6 +9,8 @@
 /tmp/
 /hiredis-client/tmp/
 /bin/toxiproxy-server
+*.a
+*.o
 *.so
 *.bundle
 *.dll
