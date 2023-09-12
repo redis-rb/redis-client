@@ -145,10 +145,16 @@ static void *reply_append(const redisReadTask *task, VALUE value) {
     if (task->parent) {
         RUBY_ASSERT(task_index > 0);
         VALUE parent = rb_ary_entry(state->stack, task_index - 1);
+
         switch (task->parent->type) {
             case REDIS_REPLY_ARRAY:
             case REDIS_REPLY_SET:
             case REDIS_REPLY_PUSH:
+                if (RB_UNLIKELY(!RB_TYPE_P(parent, T_ARRAY))) {
+                    fprintf(stderr, "[hiredis] Parent isn't a T_ARRAY index=%d\n", task_index);
+                    rb_p(parent);
+                    rb_bug("[hiredis] Invalid Parent (nested)");
+                }
                 rb_ary_store(parent, task->idx, value);
                 break;
             case REDIS_REPLY_MAP:
@@ -164,6 +170,13 @@ static void *reply_append(const redisReadTask *task, VALUE value) {
                 break;
         }
     }
+
+    if (RB_UNLIKELY(!RB_TYPE_P(state->stack, T_ARRAY))) {
+        fprintf(stderr, "[hiredis] Stack isn't a T_ARRAY index=%d\n", task_index);
+        rb_p(state->stack);
+        rb_bug("[hiredis] Invalid Stack");
+    }
+
     rb_ary_store(state->stack, task_index, value);
     return (void*)value;
 }
