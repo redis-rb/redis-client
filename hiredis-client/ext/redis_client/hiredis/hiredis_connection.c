@@ -762,6 +762,8 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
         *reply = (VALUE)redis_reply;
     }
 
+    RB_GC_GUARD(reader_state.stack);
+
     return 0;
 }
 
