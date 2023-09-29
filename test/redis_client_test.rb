@@ -125,4 +125,21 @@ class RedisClientTest < Minitest::Test
   def test_server_url
     assert_equal "redis://#{Servers::HOST}:#{Servers::REDIS_TCP_PORT}/0", @redis.server_url
   end
+
+  if File.exist?("/proc/self")
+    def test_fd_leak
+      puts '-' * 40
+      @redis.call("PING")
+      fd_count = Dir.children("/proc/self/fd").size
+      p [:parent, fd_count]
+      pid = fork do
+        p [:after_fork, Dir.children("/proc/self/fd").size]
+        @redis.close
+        p [:after_fork_close, Dir.children("/proc/self/fd").size]
+        @redis.call("PING")
+        p [:after_fork_reconnect, Dir.children("/proc/self/fd").size]
+      end
+      Process.wait(pid)
+    end
+  end
 end
