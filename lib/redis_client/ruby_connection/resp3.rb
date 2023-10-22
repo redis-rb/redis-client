@@ -175,6 +175,8 @@ class RedisClient
 
     def parse_double(io)
       case value = io.gets_chomp
+      when "nan"
+        Float::NAN
       when "inf"
         Float::INFINITY
       when "-inf"

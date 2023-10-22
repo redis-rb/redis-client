@@ -303,6 +303,9 @@ static int processLineItem(redisReader *r) {
                     d = INFINITY; /* Positive infinite. */
                 } else if (strcasecmp(buf,",-inf") == 0) {
                     d = -INFINITY; /* Negative infinite. */
+                } else if ((len == 3 && strcasecmp(buf,"nan") == 0) ||
+                            (len == 4 && strcasecmp(buf, "-nan") == 0)) {
+                     d = NAN; /* nan. */
                 } else {
                     d = strtod((char*)buf,&eptr);
                     if (buf[0] == '\0' || eptr[0] != '\0' || isnan(d)) {

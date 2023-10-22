@@ -90,6 +90,9 @@ class RedisClient
       assert_parses(-42.42, ",-42.42\r\n")
       assert_parses Float::INFINITY, ",inf\r\n"
       assert_parses(-Float::INFINITY, ",-inf\r\n")
+      assert_parses(nil, ",nan\r\n") do |actual|
+        assert_predicate actual, :nan?
+      end
     end
 
     def test_load_null
@@ -132,10 +135,13 @@ class RedisClient
     def assert_parses(expected, payload)
       raw_io = StringIO.new(payload.b)
       io = RedisClient::RubyConnection::BufferedIO.new(raw_io, read_timeout: 1, write_timeout: 1)
-      if expected.nil?
-        assert_nil RESP3.load(io)
+      actual = RESP3.load(io)
+      if block_given?
+        yield actual
+      elsif expected.nil?
+        assert_nil actual
       else
-        assert_equal(expected, RESP3.load(io))
+        assert_equal(expected, actual)
       end
 
       assert io.eof?, "Expected IO to be fully consumed: #{raw_io.read.inspect}"
