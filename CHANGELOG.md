@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.17.1
+
 - Add support for `NaN` in RESP3 protocol doubles.
   This was initially missing from the spec and added about a year ago.
 
