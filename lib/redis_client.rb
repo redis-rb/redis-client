@@ -179,6 +179,38 @@ class RedisClient
     config.server_url
   end
 
+  def id
+    config.id
+  end
+
+  def timeout
+    config.read_timeout
+  end
+
+  def db
+    config.db
+  end
+
+  def host
+    config.host unless config.path
+  end
+
+  def port
+    config.port unless config.path
+  end
+
+  def path
+    config.path
+  end
+
+  def username
+    config.username
+  end
+
+  def password
+    config.password
+  end
+
   def size
     1
   end

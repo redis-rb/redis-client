@@ -125,4 +125,41 @@ class RedisClientTest < Minitest::Test
   def test_server_url
     assert_equal "redis://#{Servers::HOST}:#{Servers::REDIS_TCP_PORT}/0", @redis.server_url
   end
+
+  def test_timeout
+    assert_equal 0.1, @redis.timeout
+  end
+
+  def test_db
+    assert_equal 0, @redis.db
+  end
+
+  def test_id
+    assert_nil @redis.id
+  end
+
+  def test_host
+    assert_equal Servers::HOST, @redis.host
+  end
+
+  def test_port
+    assert_equal Servers::REDIS_TCP_PORT, @redis.port
+  end
+
+  def test_path
+    client = new_client(**unix_config)
+    assert_equal Servers::REDIS_SOCKET_FILE.to_s, client.path
+  end
+
+  def test_username
+    username = "test"
+    client = new_client(**{ username: username })
+    assert_equal username, client.username
+  end
+
+  def test_password
+    password = "test"
+    client = new_client(**{ password: password })
+    assert_equal password, client.password
+  end
 end
