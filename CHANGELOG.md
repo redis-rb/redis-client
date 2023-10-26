@@ -1,5 +1,9 @@
 # Unreleased
 
+# 0.18.0
+
+- Expose more connection details such as `host`, `db`, etc on `RedisClient`.
+
 # 0.17.1
 
 - Add support for `NaN` in RESP3 protocol doubles.
