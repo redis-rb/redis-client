@@ -669,6 +669,7 @@ class RedisClient
     elsif retryable
       tries = 0
       connection = nil
+      preferred_error = nil
       begin
         connection = raw_connection
         if block_given?
@@ -677,13 +678,14 @@ class RedisClient
           connection
         end
       rescue ConnectionError, ProtocolError => error
+        preferred_error = error if preferred_error.nil? || !error.is_a?(CircuitBreaker::OpenCircuitError)
         close
 
         if !@disable_reconnection && config.retry_connecting?(tries, error)
           tries += 1
           retry
         else
-          raise
+          raise preferred_error
         end
       end
     else
