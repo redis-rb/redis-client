@@ -18,7 +18,7 @@ GEM
     parser (3.1.2.1)
       ast (~> 2.4.1)
     rainbow (3.1.1)
-    rake (13.0.6)
+    rake (13.1.0)
     rake-compiler (1.2.5)
       rake
     redis (4.6.0)
@@ -53,7 +53,7 @@ DEPENDENCIES
   byebug
   hiredis
   minitest
-  rake (~> 13.0)
+  rake (~> 13.1)
   rake-compiler
   redis (~> 4.6)
   redis-client!
