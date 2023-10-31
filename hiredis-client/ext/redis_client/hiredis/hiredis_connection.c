@@ -592,7 +592,7 @@ static VALUE hiredis_connect(VALUE self, VALUE path, VALUE host, VALUE port, VAL
     return success;
 }
 
-static VALUE hiredis_reconnect(VALUE self, VALUE unix, VALUE ssl_param) {
+static VALUE hiredis_reconnect(VALUE self, VALUE is_unix, VALUE ssl_param) {
     CONNECTION(self, connection);
     if (!connection->context) {
         return Qfalse;
@@ -603,7 +603,7 @@ static VALUE hiredis_reconnect(VALUE self, VALUE unix, VALUE ssl_param) {
     VALUE success = hiredis_connect_finish(connection, connection->context);
 
     if (RTEST(success)) {
-        if (!RTEST(unix)) {
+        if (!RTEST(is_unix)) {
             redisEnableKeepAlive(connection->context);
         }
 
