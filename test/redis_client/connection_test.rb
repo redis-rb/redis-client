@@ -232,10 +232,10 @@ class RedisClient
       @redis = new_client(circuit_breaker: circuit_breaker, reconnect_attempts: 2)
 
       Toxiproxy[/redis/].down do
-        e = assert_raises CannotConnectError do
+        error = assert_raises CannotConnectError do
           @redis.call("PING")
         end
-        refute_instance_of CircuitBreaker::OpenCircuitError, e
+        refute_instance_of CircuitBreaker::OpenCircuitError, error
       end
     end
 
