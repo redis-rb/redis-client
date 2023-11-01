@@ -678,7 +678,8 @@ class RedisClient
           connection
         end
       rescue ConnectionError, ProtocolError => error
-        preferred_error = error if preferred_error.nil? || !error.is_a?(CircuitBreaker::OpenCircuitError)
+        preferred_error ||= error 
+        preferred_error = error unless error.is_a?(CircuitBreaker::OpenCircuitError)
         close
 
         if !@disable_reconnection && config.retry_connecting?(tries, error)
