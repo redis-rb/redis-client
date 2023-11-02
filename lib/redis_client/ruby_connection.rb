@@ -148,6 +148,7 @@ class RedisClient
       )
       true
     rescue SystemCallError, OpenSSL::SSL::SSLError, SocketError => error
+      socket&.close
       raise CannotConnectError, error.message, error.backtrace
     end
 
