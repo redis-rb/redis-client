@@ -97,6 +97,8 @@ class RedisClient
       end
     rescue RedisClient::RESP3::UnknownType => error
       raise RedisClient::ProtocolError, error.message
+    rescue IO::TimeoutError => error
+      raise RedisClient::ReadTimeoutError, error.message
     rescue SystemCallError, IOError, OpenSSL::SSL::SSLError => error
       raise ConnectionError, error.message
     end
@@ -141,7 +143,7 @@ class RedisClient
         end
       end
 
-      @io = BufferedIO.new(
+      @io = RubyConnection.buffered(
         socket,
         read_timeout: @read_timeout,
         write_timeout: @write_timeout,
