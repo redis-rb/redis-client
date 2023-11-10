@@ -227,6 +227,18 @@ class RedisClient
       end
     end
 
+    def test_circuit_breaker_initial_connection_exception
+      circuit_breaker = CircuitBreaker.new(error_threshold: 1, success_threshold: 1, error_timeout: 1)
+      @redis = new_client(circuit_breaker: circuit_breaker, reconnect_attempts: 2)
+
+      Toxiproxy[/redis/].down do
+        error = assert_raises CannotConnectError do
+          @redis.call("PING")
+        end
+        refute_instance_of CircuitBreaker::OpenCircuitError, error
+      end
+    end
+
     def test_killed_connection
       client = new_client(reconnect_attempts: 1, id: "background")
 
