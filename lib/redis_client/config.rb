@@ -41,7 +41,12 @@ class RedisClient
       )
         @username = username
         @password = password
-        @db = db || DEFAULT_DB
+        @db = begin
+          Integer(db || DEFAULT_DB)
+        rescue ArgumentError
+          raise ArgumentError, "db: must be an Integer, got: #{db.inspect}"
+        end
+
         @id = id
         @ssl = ssl || false
 

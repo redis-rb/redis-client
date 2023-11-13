@@ -1,5 +1,7 @@
 # Unreleased
 
+- Eagerly fail if `db:` isn't an Integer. #151.
+
 # 0.18.0
 
 - Expose more connection details such as `host`, `db`, etc on `RedisClient`.
