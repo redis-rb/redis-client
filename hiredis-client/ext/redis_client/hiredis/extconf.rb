@@ -47,7 +47,7 @@ class HiredisConnectionExtconf
 
     env_args = env.map { |k, v| "#{k}=#{v}" }
     Dir.chdir(hiredis_dir) do
-      unless system(make_program, "static", *env_args)
+      unless system(*Shellwords.split(make_program), "static", *env_args)
         raise "Building hiredis failed"
       end
     end
