@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.19.0
+
 - Revalidate connection in `RedisClient#connected?`
 - Eagerly fail if `db:` isn't an Integer. #151.
 
