@@ -222,17 +222,18 @@ class RedisClient
 
   def timeout=(timeout)
     super
-    raw_connection.read_timeout = raw_connection.write_timeout = timeout if connected?
+    @raw_connection&.read_timeout = timeout
+    @raw_connection&.write_timeout = timeout
   end
 
   def read_timeout=(timeout)
     super
-    raw_connection.read_timeout = timeout if connected?
+    @raw_connection&.read_timeout = timeout
   end
 
   def write_timeout=(timeout)
     super
-    raw_connection.write_timeout = timeout if connected?
+    @raw_connection&.write_timeout = timeout
   end
 
   def pubsub
@@ -386,7 +387,7 @@ class RedisClient
   end
 
   def connected?
-    @raw_connection&.connected?
+    @raw_connection&.revalidate
   end
 
   def close
