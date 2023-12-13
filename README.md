@@ -205,6 +205,12 @@ is equivalent to:
 redis.call("HMSET", "hash", "foo", "1", "bar", "2")
 ```
 
+`ttl` arguments are cast to integer in `expire`, `setex` and a few others.
+
+```ruby
+redis.call("SETEX", "mykey", 1.hour, "foo")
+```
+
 Any other type requires the caller to explicitly cast the argument as a string.
 
 Keywords arguments are treated as Redis command flags:
