@@ -629,6 +629,14 @@ static VALUE hiredis_connected_p(VALUE self) {
     return Qtrue;
 }
 
+static VALUE hiredis_feed(VALUE self, VALUE response) {
+    CONNECTION(self, connection);
+    ENSURE_CONNECTED(connection);
+
+    int error = redisReaderFeed(connection->context->reader, RSTRING_PTR(response), RSTRING_LEN(response));
+    return error == REDIS_OK ? Qtrue : Qfalse;
+}
+
 static VALUE hiredis_write(VALUE self, VALUE command) {
     Check_Type(command, T_ARRAY);
 
@@ -928,6 +936,8 @@ RUBY_FUNC_EXPORTED void Init_hiredis_connection(void) {
     rb_define_private_method(rb_cHiredisConnection, "_connect", hiredis_connect, 4);
     rb_define_private_method(rb_cHiredisConnection, "_reconnect", hiredis_reconnect, 2);
     rb_define_method(rb_cHiredisConnection, "connected?", hiredis_connected_p, 0);
+
+    rb_define_method(rb_cHiredisConnection, "feed", hiredis_feed, 1);
 
     rb_define_private_method(rb_cHiredisConnection, "_write", hiredis_write, 1);
     rb_define_private_method(rb_cHiredisConnection, "_read", hiredis_read, 0);
