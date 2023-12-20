@@ -413,6 +413,20 @@ class RedisClient
       server_thread&.kill
     end
 
+    def test_debug_crash
+      conn = new_client.send(:ensure_connected)
+      p conn
+      GC.auto_compact = true
+      10.times do
+        conn.feed("*1\r\n*3\r\n$4\r\n1842\r\n$1\r\n0\r\n$1\r\n1\r\n")
+        GC.stress = true
+        assert_equal [["1842", "0", "1"]], conn.read
+        GC.stress = false
+      end
+    ensure
+      GC.stress = false
+    end
+
     private
 
     def new_client(**overrides)
