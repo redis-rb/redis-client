@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fixed a GC bug that could cause crashes in `hiredis-client`.
+
 # 0.19.0
 
 - Revalidate connection in `RedisClient#connected?`

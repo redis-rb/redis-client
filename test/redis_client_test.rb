@@ -162,4 +162,27 @@ class RedisClientTest < Minitest::Test
     client = new_client(**{ password: password })
     assert_equal password, client.password
   end
+
+  if GC.respond_to?(:auto_compact)
+    def test_gc_safety
+      gc_stress_was = GC.stress
+      gc_auto_compact_was = GC.auto_compact
+
+      GC.stress = true
+      GC.auto_compact = true
+
+      client = new_client
+      client.call("PING")
+
+      list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(&:to_s)
+      client.call("LPUSH", "list", list)
+
+      3.times do
+        assert_equal list, client.call("LRANGE", "list", 0, -1).reverse
+      end
+    ensure
+      GC.stress = gc_stress_was
+      GC.auto_compact = gc_auto_compact_was
+    end
+  end
 end

@@ -155,6 +155,7 @@ static void *reply_append(const redisReadTask *task, VALUE value) {
                 if (task->idx % 2) {
                     VALUE key = rb_ary_pop(state->stack);
                     rb_hash_aset(parent, key, value);
+                    RB_GC_GUARD(key);
                 } else {
                     rb_ary_push(state->stack, value);
                 }
@@ -163,8 +164,10 @@ static void *reply_append(const redisReadTask *task, VALUE value) {
                 rb_bug("[hiredis] Unexpected task parent type %d", task->parent->type);
                 break;
         }
+        RB_GC_GUARD(parent);
     }
     rb_ary_store(state->stack, task_index, value);
+    RB_GC_GUARD(value);
     return (void*)value;
 }
 
@@ -693,8 +696,9 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
     // We use that to avoid having to have a `mark` function with write barriers.
     // Not that it would be too hard, but if we mark the response objects, we'll likely end up
     // promoting them to the old generation which isn't desirable.
+    VALUE stack = rb_ary_new();
     hiredis_reader_state_t reader_state = {
-        .stack = rb_ary_new(),
+        .stack = stack,
         .task_index = &connection->context->reader->ridx,
     };
     connection->context->reader->privdata = &reader_state;
@@ -759,10 +763,10 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
 
     /* Set reply object */
     if (reply != NULL) {
-        *reply = (VALUE)redis_reply;
+        *reply = rb_ary_entry(stack, 0);
     }
 
-    RB_GC_GUARD(reader_state.stack);
+    RB_GC_GUARD(stack);
 
     return 0;
 }
@@ -789,6 +793,7 @@ static VALUE hiredis_read(VALUE self) {
         // See reply_create_bool
         reply = Qfalse;
     }
+    RB_GC_GUARD(self);
     return reply;
 }
 
@@ -806,7 +811,7 @@ static inline double diff_timespec_ms(const struct timespec *time1, const struct
 }
 
 static inline int timeval_to_msec(struct timeval duration) {
-    return duration.tv_sec * 1000 + duration.tv_usec / 1000;
+    return (int)(duration.tv_sec * 1000 + duration.tv_usec / 1000);
 }
 
 typedef struct {
@@ -895,8 +900,8 @@ RUBY_FUNC_EXPORTED void Init_hiredis_connection(void) {
     redisInitOpenSSL();
 
     id_parse = rb_intern("parse");
-    Redis_Qfalse = rb_obj_alloc(rb_cObject);
     rb_global_variable(&Redis_Qfalse);
+    Redis_Qfalse = rb_obj_alloc(rb_cObject);
 
     VALUE rb_cRedisClient = rb_const_get(rb_cObject, rb_intern("RedisClient"));
 
