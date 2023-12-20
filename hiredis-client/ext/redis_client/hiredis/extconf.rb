@@ -23,7 +23,7 @@ class HiredisConnectionExtconf
 
     $CFLAGS = concat_flags($CFLAGS, "-I#{hiredis_dir}", "-std=c99", "-fvisibility=hidden")
     $CFLAGS = if @debug
-      concat_flags($CFLAGS, "-Werror", "-g", RbConfig::CONFIG["debugflags"])
+      concat_flags($CFLAGS, "-Werror", "-g", RbConfig::CONFIG["debugflags"], "-O0")
     else
       concat_flags($CFLAGS, "-O3")
     end

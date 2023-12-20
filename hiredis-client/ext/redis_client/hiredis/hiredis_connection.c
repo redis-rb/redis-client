@@ -155,6 +155,7 @@ static void *reply_append(const redisReadTask *task, VALUE value) {
                 if (task->idx % 2) {
                     VALUE key = rb_ary_pop(state->stack);
                     rb_hash_aset(parent, key, value);
+                    RB_GC_GUARD(key);
                 } else {
                     rb_ary_push(state->stack, value);
                 }
@@ -163,8 +164,10 @@ static void *reply_append(const redisReadTask *task, VALUE value) {
                 rb_bug("[hiredis] Unexpected task parent type %d", task->parent->type);
                 break;
         }
+        RB_GC_GUARD(parent);
     }
     rb_ary_store(state->stack, task_index, value);
+    RB_GC_GUARD(value);
     return (void*)value;
 }
 
@@ -694,6 +697,7 @@ static VALUE hiredis_flush(VALUE self) {
 #define HIREDIS_CLIENT_TIMEOUT -2
 
 static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply) {
+    fprintf(stderr, "hiredis_read_internal\n");
     void *redis_reply = NULL;
     int wdone = 0;
 
@@ -701,8 +705,9 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
     // We use that to avoid having to have a `mark` function with write barriers.
     // Not that it would be too hard, but if we mark the response objects, we'll likely end up
     // promoting them to the old generation which isn't desirable.
+    VALUE stack = rb_ary_new();
     hiredis_reader_state_t reader_state = {
-        .stack = rb_ary_new(),
+        .stack = stack,
         .task_index = &connection->context->reader->ridx,
     };
     connection->context->reader->privdata = &reader_state;
@@ -767,17 +772,24 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
 
     /* Set reply object */
     if (reply != NULL) {
+        fprintf(stderr, "hiredis_read_internal redis_reply: ");
+        rb_p((VALUE)redis_reply);
         *reply = (VALUE)redis_reply;
     }
 
-    RB_GC_GUARD(reader_state.stack);
+    RB_GC_GUARD(stack);
 
     return 0;
 }
 
+static hiredis_connection_t *currrent_connection = NULL;
+
 static VALUE hiredis_read(VALUE self) {
     CONNECTION(self, connection);
     ENSURE_CONNECTED(connection);
+
+    currrent_connection = connection;
+    rb_p(self);
 
     VALUE reply = Qnil;
     switch (hiredis_read_internal(connection, &reply)) {
@@ -791,12 +803,20 @@ static VALUE hiredis_read(VALUE self) {
             // we let the caller decide if the connection should be closed.
             rb_raise(rb_eRedisClientReadTimeoutError, "Unknown Error (hiredis_read)");
             break;
+        case 0: // OK
+            break;
+        default:
+            rb_bug("hiredis_read_internal unexpected return value");
+            break;
     }
 
     if (reply == Redis_Qfalse) {
         // See reply_create_bool
         reply = Qfalse;
     }
+    fprintf(stderr, "reply: ");
+    rb_p(reply);
+    RB_GC_GUARD(self);
     return reply;
 }
 
@@ -814,7 +834,7 @@ static inline double diff_timespec_ms(const struct timespec *time1, const struct
 }
 
 static inline int timeval_to_msec(struct timeval duration) {
-    return duration.tv_sec * 1000 + duration.tv_usec / 1000;
+    return (int)(duration.tv_sec * 1000 + duration.tv_usec / 1000);
 }
 
 typedef struct {
@@ -903,8 +923,8 @@ RUBY_FUNC_EXPORTED void Init_hiredis_connection(void) {
     redisInitOpenSSL();
 
     id_parse = rb_intern("parse");
-    Redis_Qfalse = rb_obj_alloc(rb_cObject);
     rb_global_variable(&Redis_Qfalse);
+    Redis_Qfalse = rb_obj_alloc(rb_cObject);
 
     VALUE rb_cRedisClient = rb_const_get(rb_cObject, rb_intern("RedisClient"));
 

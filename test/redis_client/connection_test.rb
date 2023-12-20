@@ -414,7 +414,9 @@ class RedisClient
     end
 
     def test_debug_crash
-      conn = new_client.send(:ensure_connected)
+      client = new_client(host: "127.0.0.1", port: 6379)
+      client.call("PING")
+      conn = client.send(:ensure_connected)
       p conn
       GC.auto_compact = true
       10.times do
@@ -425,6 +427,7 @@ class RedisClient
       end
     ensure
       GC.stress = false
+      Process.exit!(0)
     end
 
     private
