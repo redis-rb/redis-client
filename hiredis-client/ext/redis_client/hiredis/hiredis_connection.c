@@ -467,6 +467,19 @@ static int hiredis_wait_readable(int fd, const struct timeval *timeout, int *iss
     return 0;
 }
 
+struct fd_select {
+    rb_fdset_t *write_fds;
+    struct timeval *timeout;
+    int max;
+    int return_value;
+};
+
+static VALUE protected_writable_select(VALUE _args) {
+    struct fd_select *args = (struct fd_select *)_args;
+    args->return_value = rb_thread_fd_select(args->max, NULL, args->write_fds, NULL, args->timeout);
+    return Qnil;
+}
+
 static int hiredis_wait_writable(int fd, const struct timeval *timeout, int *isset) {
     struct timeval to;
     struct timeval *toptr = NULL;
@@ -483,7 +496,18 @@ static int hiredis_wait_writable(int fd, const struct timeval *timeout, int *iss
         toptr = &to;
     }
 
-    if (rb_thread_fd_select(fd + 1, NULL, &fds, NULL, toptr) < 0) {
+    struct fd_select args = {
+        .max = fd + 1,
+        .write_fds = &fds,
+        .timeout = toptr,
+    };
+    int status;
+
+    (void)rb_protect(protected_writable_select, (VALUE)&args, &status);
+
+    // Error in case an exception arrives in rb_thread_fd_select()
+    // (e.g. from Thread.raise)
+    if (status || args.return_value < 0) {
         rb_fd_term(&fds);
         return -1;
     }
@@ -501,7 +525,6 @@ static VALUE hiredis_connect_finish(hiredis_connection_t *connection, redisConte
         redisFree(context);
         rb_raise(rb_eRuntimeError, "HiredisConnection is already connected, must be a bug");
     }
-    connection->context = context;
 
     if (context->err) {
         redis_raise_error_and_disconnect(context, rb_eRedisClientCannotConnectError);
@@ -536,6 +559,7 @@ static VALUE hiredis_connect_finish(hiredis_connection_t *connection, redisConte
 
     context->reader->fn = &reply_functions;
     redisSetPushCallback(context, NULL);
+    connection->context = context;
     return Qtrue;
 }
 
@@ -601,9 +625,14 @@ static VALUE hiredis_reconnect(VALUE self, VALUE is_unix, VALUE ssl_param) {
         return Qfalse;
     }
 
-    hiredis_reconnect_nogvl(connection->context);
+    // Clear context on the connection, since the nogvl call can raise an
+    // exception after the redisReconnect() call succeeds and leave the
+    // connection in a half-initialized state.
+    redisContext *context = connection->context;
+    connection->context = NULL;
+    hiredis_reconnect_nogvl(context);
 
-    VALUE success = hiredis_connect_finish(connection, connection->context);
+    VALUE success = hiredis_connect_finish(connection, context);
 
     if (RTEST(success)) {
         if (!RTEST(is_unix)) {
