@@ -1,5 +1,8 @@
 # Unreleased
 
+# 0.19.1
+
+- Fixed a bug in `hiredis-client` that could cause a crash if interrupted by `Timeout.timeout` or other `Thread#raise` based mecanism.
 - Fixed a GC bug that could cause crashes in `hiredis-client`.
 
 # 0.19.0
