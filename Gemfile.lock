@@ -15,8 +15,11 @@ GEM
     hiredis (0.6.3-java)
     minitest (5.21.1)
     parallel (1.22.1)
-    parser (3.1.2.1)
+    parser (3.3.0.4)
       ast (~> 2.4.1)
+      racc
+    racc (1.7.3)
+    racc (1.7.3-java)
     rainbow (3.1.1)
     rake (13.1.0)
     rake-compiler (1.2.5)
