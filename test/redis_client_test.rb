@@ -153,13 +153,13 @@ class RedisClientTest < Minitest::Test
 
   def test_username
     username = "test"
-    client = new_client(**{ username: username })
+    client = new_client(username: username)
     assert_equal username, client.username
   end
 
   def test_password
     password = "test"
-    client = new_client(**{ password: password })
+    client = new_client(password: password)
     assert_equal password, client.password
   end
 
