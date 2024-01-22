@@ -13,7 +13,7 @@ GEM
     connection_pool (2.4.1)
     hiredis (0.6.3)
     hiredis (0.6.3-java)
-    minitest (5.21.1)
+    minitest (5.21.2)
     parallel (1.22.1)
     parser (3.3.0.4)
       ast (~> 2.4.1)
