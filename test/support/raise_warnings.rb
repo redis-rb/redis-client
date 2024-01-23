@@ -3,7 +3,10 @@
 $VERBOSE = true
 module RaiseWarnings
   def warn(message, *)
+    return if message.include?('Ractor is experimental')
+
     super
+
     raise message
   end
   ruby2_keywords :warn if respond_to?(:ruby2_keywords, true)

@@ -1,5 +1,7 @@
 # Unreleased
 
+- Make basic usage Ractor compatible.
+
 # 0.19.1
 
 - Fixed a bug in `hiredis-client` that could cause a crash if interrupted by `Timeout.timeout` or other `Thread#raise` based mecanism.

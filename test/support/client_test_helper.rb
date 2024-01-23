@@ -50,6 +50,28 @@ module ClientTestHelper
     Process.stub(:clock_gettime, now, &block)
   end
 
+  def simulate_network_errors(client, failures)
+    client.close
+    client.instance_variable_set(:@raw_connection, nil)
+
+    original_config = client.config
+    flaky_driver = Class.new(original_config.driver)
+    flaky_driver.include(FlakyDriver)
+    flaky_driver.failures = failures
+    flaky_config = original_config.dup
+    flaky_config.instance_variable_set(:@driver, flaky_driver)
+    begin
+      client.instance_variable_set(:@config, flaky_config)
+      yield
+    ensure
+      client.instance_variable_set(:@config, original_config)
+      client.close
+      client.instance_variable_set(:@raw_connection, nil)
+    end
+  end
+
+  module_function
+
   def tcp_config
     {
       host: Servers::HOST,
@@ -81,25 +103,5 @@ module ClientTestHelper
 
   def new_client(**overrides)
     RedisClient.new(**tcp_config.merge(overrides))
-  end
-
-  def simulate_network_errors(client, failures)
-    client.close
-    client.instance_variable_set(:@raw_connection, nil)
-
-    original_config = client.config
-    flaky_driver = Class.new(original_config.driver)
-    flaky_driver.include(FlakyDriver)
-    flaky_driver.failures = failures
-    flaky_config = original_config.dup
-    flaky_config.instance_variable_set(:@driver, flaky_driver)
-    begin
-      client.instance_variable_set(:@config, flaky_config)
-      yield
-    ensure
-      client.instance_variable_set(:@config, original_config)
-      client.close
-      client.instance_variable_set(:@raw_connection, nil)
-    end
   end
 end
