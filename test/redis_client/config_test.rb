@@ -14,6 +14,32 @@ class RedisClient
       refute_predicate config, :ssl?
     end
 
+    def test_unix_uri
+      config = Config.new(url: "/run/redis/test.sock?db=1")
+      assert_equal "/run/redis/test.sock", config.path
+      assert_nil config.host
+      assert_nil config.port
+      assert_equal 1, config.db
+
+      config = Config.new(url: "run/redis/test.sock?db=1")
+      assert_equal "run/redis/test.sock", config.path
+      assert_nil config.host
+      assert_nil config.port
+      assert_equal 1, config.db
+
+      config = Config.new(url: "unix:///run/redis/test.sock?db=1")
+      assert_equal "/run/redis/test.sock", config.path
+      assert_nil config.host
+      assert_nil config.port
+      assert_equal 1, config.db
+
+      config = Config.new(url: "unix://run/redis/test.sock?db=1")
+      assert_equal "run/redis/test.sock", config.path
+      assert_nil config.host
+      assert_nil config.port
+      assert_equal 1, config.db
+    end
+
     def test_uri_instance
       config = Config.new(url: URI.parse("redis://example.com"))
       assert_equal "example.com", config.host
@@ -21,9 +47,9 @@ class RedisClient
 
     def test_invalid_url
       error = assert_raises ArgumentError do
-        Config.new(url: "example.com")
+        Config.new(url: "http://example.com")
       end
-      assert_includes error.message, "Invalid URL"
+      assert_includes error.message, "Unknown URL scheme"
       assert_includes error.message, "example.com"
     end
 
