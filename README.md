@@ -62,7 +62,9 @@ redis.call("GET", "mykey")
 
 ### Configuration
 
-- `url`: A Redis connection URL, e.g. `redis://example.com:6379/5`, a `rediss://` scheme enable SSL, and the path is interpreted as a database number.
+- `url`: A Redis connection URL, e.g. `redis://example.com:6379/5` - a `rediss://` scheme enables SSL, and the path is interpreted as a database number.
+  To connect to UNIX domain sockets, the `url` can also just be a path, and the database specified as query parameter: `/run/redis/foo.sock?db=5`, or optionally
+  have a `unix://` scheme: `unix:///run/redis/foo.sock?db=5`
   Note that all other configurations take precedence, e.g. `RedisClient.config(url: "redis://localhost:3000", port: 6380)` will connect on port `6380`.
 - `host`: The server hostname or IP address. Defaults to `"localhost"`.
 - `port`: The server port. Defaults to `6379`.

@@ -176,15 +176,20 @@ class RedisClient
         }.compact.merge(kwargs)
         host ||= url_config.host
         port ||= url_config.port
+        path ||= url_config.path
         username ||= url_config.username
         password ||= url_config.password
       end
 
       super(username: username, password: password, **kwargs)
 
-      @host = host || DEFAULT_HOST
-      @port = Integer(port || DEFAULT_PORT)
-      @path = path
+      if @path = path
+        @host = nil
+        @port = nil
+      else
+        @host = host || DEFAULT_HOST
+        @port = Integer(port || DEFAULT_PORT)
+      end
     end
   end
 end
