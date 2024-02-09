@@ -74,6 +74,17 @@ class RedisClient
       refute_predicate config, :ssl?
     end
 
+    def test_frozen_prelude
+      config = Config.new(url: "redis://username:password@example.com")
+      prelude = config.connection_prelude
+      assert_equal true, prelude.frozen?
+      assert_equal true, (prelude.all? { |commands| commands.frozen? })
+
+      prelude.each do |commands|
+        assert_equal true, (commands.all? { |arg| arg.frozen? })
+      end
+    end
+
     def test_simple_password_uri
       config = Config.new(url: "redis://password@example.com")
       assert_equal "example.com", config.host

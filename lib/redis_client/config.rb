@@ -151,6 +151,12 @@ class RedisClient
         if @db && @db != 0
           prelude << ["SELECT", @db.to_s]
         end
+
+        # Deep freeze all the strings and commands
+        prelude.map! do |commands|
+          commands = commands.map { |str| str.frozen? ? str : str.dup.freeze }
+          commands.freeze
+        end
         prelude.freeze
       end
     end
