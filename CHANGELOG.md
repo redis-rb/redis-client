@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.20.0
+
 - Accept `unix://` schemes as well as simple paths in the `url:` config parameter. #170.
 - Make basic usage Ractor compatible.
 
