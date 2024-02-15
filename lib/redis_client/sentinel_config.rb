@@ -188,6 +188,10 @@ class RedisClient
           if success
             @sentinel_configs.unshift(@sentinel_configs.delete(sentinel_config))
           end
+          # Redis Sentinels may be configured to have a lower maxclients setting than
+          # the Redis nodes. Close the connection to the Sentinel node to avoid using
+          # a connection.
+          sentinel_client.close
         end
       end
 

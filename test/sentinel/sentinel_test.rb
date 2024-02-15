@@ -50,8 +50,11 @@ class RedisClient
     end
 
     class SentinelClientMock
+      attr_reader :close_count
+
       def initialize(responses)
         @responses = responses
+        @close_count = 0
       end
 
       def call(*args)
@@ -65,6 +68,10 @@ class RedisClient
         else
           raise "Expected #{command.inspect}, got: #{args.inspect}"
         end
+      end
+
+      def close
+        @close_count += 1
       end
     end
 
@@ -184,6 +191,7 @@ class RedisClient
       assert_equal Servers::SENTINELS.length + 1, @config.sentinels.length
       assert_equal new_sentinel_ip, @config.sentinels.last.host
       assert_equal new_sentinel_port, @config.sentinels.last.port
+      assert_equal 1, sentinel_client_mock.close_count
     end
 
     def test_sentinel_refresh_password
@@ -211,6 +219,8 @@ class RedisClient
       @config.sentinels.each do |sentinel|
         refute_nil sentinel.password
       end
+
+      assert_equal 1, sentinel_client_mock.close_count
     end
 
     def test_config_user_password_from_url_for_redis_master_replica_only
