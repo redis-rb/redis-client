@@ -43,9 +43,11 @@ class RedisClientTest < Minitest::Test
 
   def test_dns_resolution_failure
     client = RedisClient.new(host: "does-not-exist.example.com")
-    assert_raises RedisClient::ConnectionError do
+    error = assert_raises RedisClient::ConnectionError do
       client.call("PING")
     end
+
+    assert_match(%r{ \(redis://does-not-exist.example.com:.*\)$}, error.message)
   end
 
   def test_older_server
@@ -64,6 +66,7 @@ class RedisClientTest < Minitest::Test
       client.call("PING")
     end
     assert_includes error.message, "redis-client requires Redis 6+ with HELLO command available"
+    assert_includes error.message, "(redis://"
   end
 
   def test_redis_6_server_with_missing_hello_command
@@ -82,6 +85,7 @@ class RedisClientTest < Minitest::Test
       client.call("PING")
     end
     assert_includes error.message, "redis-client requires Redis 6+ with HELLO command available"
+    assert_includes error.message, "(redis://"
   end
 
   def test_handle_async_raise

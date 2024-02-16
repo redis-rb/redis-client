@@ -271,7 +271,7 @@ module RedisClientTests
       @redis.call("SISMEMBER", "str", "member")
     end
     assert_equal ["SISMEMBER", "str", "member"], error.command
-    assert_includes error.message, "WRONGTYPE Operation against a key holding the wrong kind of value"
+    assert_match(/WRONGTYPE Operation against a key holding the wrong kind of value (.*:.*)/, error.message)
 
     error = assert_raises RedisClient::CommandError do
       @redis.pipelined do |pipeline|
@@ -279,7 +279,7 @@ module RedisClientTests
       end
     end
     assert_equal ["SISMEMBER", "str", "member"], error.command
-    assert_includes error.message, "WRONGTYPE Operation against a key holding the wrong kind of value"
+    assert_match(/WRONGTYPE Operation against a key holding the wrong kind of value (.*:.*)/, error.message)
 
     error = assert_raises RedisClient::CommandError do
       @redis.multi do |transaction|
@@ -287,14 +287,14 @@ module RedisClientTests
       end
     end
     assert_equal ["SISMEMBER", "str", "member"], error.command
-    assert_includes error.message, "WRONGTYPE Operation against a key holding the wrong kind of value"
+    assert_match(/WRONGTYPE Operation against a key holding the wrong kind of value (.*:.*)/, error.message)
   end
 
   def test_command_missing
     error = assert_raises RedisClient::CommandError do
       @redis.call("DOESNOTEXIST", "foo")
     end
-    assert_match(/ERR unknown command .DOESNOTEXIST./, error.message)
+    assert_match(/ERR unknown command .DOESNOTEXIST.*\(.*:.*\)/, error.message)
   end
 
   def test_authentication

@@ -77,7 +77,29 @@ class RedisClient
     end
   end
 
-  Error = Class.new(StandardError)
+  module HasConfig
+    attr_reader :config
+
+    def _set_config(config)
+      @config = config
+    end
+
+    def message
+      return super unless config
+
+      "#{super} (#{config.server_url})"
+    end
+  end
+
+  class Error < StandardError
+    include HasConfig
+
+    def self.with_config(message, config = nil)
+      new(message).tap do |error|
+        error._set_config(config)
+      end
+    end
+  end
 
   ProtocolError = Class.new(Error)
   UnsupportedServer = Class.new(Error)
@@ -114,7 +136,7 @@ class RedisClient
         end
         code ||= error_message.split(' ', 2).first
         klass = ERRORS.fetch(code, self)
-        klass.new(error_message)
+        klass.new(error_message.strip)
       end
     end
   end
@@ -750,10 +772,13 @@ class RedisClient
         end
       end
     end
-  rescue FailoverError, CannotConnectError
-    raise
+  rescue FailoverError, CannotConnectError => error
+    error._set_config(config)
+    raise error
   rescue ConnectionError => error
-    raise CannotConnectError, error.message, error.backtrace
+    connect_error = CannotConnectError.with_config(error.message, config)
+    connect_error.set_backtrace(error.backtrace)
+    raise connect_error
   rescue CommandError => error
     if error.message.match?(/ERR unknown command ['`]HELLO['`]/)
       raise UnsupportedServer,
