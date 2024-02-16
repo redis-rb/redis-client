@@ -4,6 +4,98 @@ require "io/wait" unless IO.method_defined?(:wait_readable) && IO.method_defined
 
 class RedisClient
   class RubyConnection
+    class << self
+      if IO.method_defined?(:timeout)
+        def buffered(io, **kwargs)
+          if io.is_a?(OpenSSL::SSL::SSLSocket)
+            BufferedIO.new(io, **kwargs) # https://github.com/ruby/openssl/pull/693
+          else
+            SimpleIO.new(io, **kwargs)
+          end
+        end
+      else
+        def buffered(io, **kwargs)
+          BufferedIO.new(io, **kwargs)
+        end
+      end
+    end
+
+    class SimpleIO
+      EOL = "\r\n".b.freeze
+      EOL_SIZE = EOL.bytesize
+
+      attr_accessor :read_timeout, :write_timeout
+
+      def initialize(io, read_timeout:, write_timeout:)
+        @io = io
+        @io.to_io.timeout = read_timeout
+        @read_timeout = read_timeout
+        @write_timeout = write_timeout
+        @blocking_reads = false
+      end
+
+      def with_timeout(new_timeout)
+        new_timeout = false if new_timeout == 0
+
+        previous_read_timeout = @read_timeout
+        previous_blocking_reads = @blocking_reads
+
+        if new_timeout
+          @read_timeout = new_timeout
+        else
+          @io.timeout = nil
+          @blocking_reads = true
+        end
+
+        begin
+          yield
+        ensure
+          @io.timeout = @read_timeout = previous_read_timeout
+          @blocking_reads = previous_blocking_reads
+        end
+      end
+
+      def write(string)
+        @io.to_io.timeout = @write_timeout
+        @io.write(string)
+      ensure
+        @io.to_io.timeout = @read_timeout
+      end
+
+      def getbyte
+        @io.getbyte or raise EOFError
+      end
+
+      def gets_chomp
+        @io.gets(EOL, chomp: true)
+      rescue IO::TimeoutError
+        raise unless @blocking_reads
+      end
+
+      def read_chomp(bytes)
+        buffer = @io.read(bytes + EOL_SIZE)
+        buffer.chomp!(EOL)
+        buffer
+      rescue IO::TimeoutError
+        raise unless @blocking_reads
+      end
+
+      def skip(offset)
+        @io.read(offset)
+        nil
+      rescue IO::TimeoutError
+        raise unless @blocking_reads
+      end
+  
+      def closed?
+        @io.closed?
+      end
+
+      def close
+        @io.close
+      end
+    end
+
     class BufferedIO
       EOL = "\r\n".b.freeze
       EOL_SIZE = EOL.bytesize
