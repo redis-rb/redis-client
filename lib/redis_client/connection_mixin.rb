@@ -50,6 +50,9 @@ class RedisClient
         timeout = timeouts && timeouts[index]
         result = read(timeout)
         @pending_reads -= 1
+
+        # A multi/exec command can return an array of results.
+        # An error from a multi/exec command is handled in Multi#_coerce!.
         if result.is_a?(Error)
           result._set_command(commands[index])
           exception ||= result

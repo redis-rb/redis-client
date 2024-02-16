@@ -278,6 +278,7 @@ module RedisClientTests
         pipeline.call("SISMEMBER", "str", "member")
       end
     end
+    assert_equal ["SISMEMBER", "str", "member"], error.command
     assert_includes error.message, "WRONGTYPE Operation against a key holding the wrong kind of value"
 
     error = assert_raises RedisClient::CommandError do
@@ -285,6 +286,7 @@ module RedisClientTests
         transaction.call("SISMEMBER", "str", "member")
       end
     end
+    assert_equal ["SISMEMBER", "str", "member"], error.command
     assert_includes error.message, "WRONGTYPE Operation against a key holding the wrong kind of value"
   end
 
