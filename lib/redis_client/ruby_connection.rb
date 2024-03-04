@@ -40,6 +40,8 @@ class RedisClient
 
     SUPPORTS_RESOLV_TIMEOUT = Socket.method(:tcp).parameters.any? { |p| p.last == :resolv_timeout }
 
+    attr_reader :config
+
     def initialize(config, connect_timeout:, read_timeout:, write_timeout:)
       super()
       @config = config
@@ -73,7 +75,7 @@ class RedisClient
       begin
         @io.write(buffer)
       rescue SystemCallError, IOError => error
-        raise ConnectionError, error.message
+        raise ConnectionError.with_config(error.message, config)
       end
     end
 
@@ -85,7 +87,7 @@ class RedisClient
       begin
         @io.write(buffer)
       rescue SystemCallError, IOError => error
-        raise ConnectionError, error.message
+        raise ConnectionError.with_config(error.message, config)
       end
     end
 
@@ -96,9 +98,9 @@ class RedisClient
         @io.with_timeout(timeout) { RESP3.load(@io) }
       end
     rescue RedisClient::RESP3::UnknownType => error
-      raise RedisClient::ProtocolError, error.message
+      raise RedisClient::ProtocolError.with_config(error.message, config)
     rescue SystemCallError, IOError, OpenSSL::SSL::SSLError => error
-      raise ConnectionError, error.message
+      raise ConnectionError.with_config(error.message, config)
     end
 
     def measure_round_trip_delay
@@ -130,9 +132,9 @@ class RedisClient
         loop do
           case status = socket.connect_nonblock(exception: false)
           when :wait_readable
-            socket.to_io.wait_readable(@connect_timeout) or raise CannotConnectError
+            socket.to_io.wait_readable(@connect_timeout) or raise CannotConnectError.with_config("", config)
           when :wait_writable
-            socket.to_io.wait_writable(@connect_timeout) or raise CannotConnectError
+            socket.to_io.wait_writable(@connect_timeout) or raise CannotConnectError.with_config("", config)
           when socket
             break
           else

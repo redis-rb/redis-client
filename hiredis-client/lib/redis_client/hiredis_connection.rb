@@ -39,6 +39,8 @@ class RedisClient
       end
     end
 
+    attr_reader :config
+
     def initialize(config, connect_timeout:, read_timeout:, write_timeout:)
       super()
       @config = config
@@ -98,14 +100,20 @@ class RedisClient
         end
       end
     rescue SystemCallError, IOError => error
-      raise ConnectionError, error.message
+      raise ConnectionError.with_config(error.message, config)
+    rescue Error => error
+      error._set_config(config)
+      raise error
     end
 
     def write(command)
       _write(command)
       flush
     rescue SystemCallError, IOError => error
-      raise ConnectionError, error.message
+      raise ConnectionError.with_config(error.message, config)
+    rescue Error => error
+      error._set_config(config)
+      raise error
     end
 
     def write_multi(commands)
@@ -114,7 +122,10 @@ class RedisClient
       end
       flush
     rescue SystemCallError, IOError => error
-      raise ConnectionError, error.message
+      raise ConnectionError.with_config(error.message, config)
+    rescue Error => error
+      error._set_config(config)
+      raise error
     end
 
     private

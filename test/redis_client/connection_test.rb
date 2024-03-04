@@ -26,26 +26,32 @@ class RedisClient
 
     def test_connect_failure
       client = new_client(host: "example.com")
-      assert_raises RedisClient::ConnectionError do
+      error = assert_raises RedisClient::ConnectionError do
         client.call("PING")
       end
+
+      assert_match(%r{ \(rediss?://example.com:.*\)$}, error.message)
     end
 
     def test_redis_down_after_connect
       @redis.call("PING") # force connect
       Toxiproxy[/redis/].down do
-        assert_raises RedisClient::ConnectionError do
+        error = assert_raises RedisClient::ConnectionError do
           @redis.call("PING")
         end
+
+        assert_match(%r{ \(rediss?://127.0.0.1:.*\)$}, error.message)
       end
     end
 
     def test_redis_down_before_connect
       @redis.close
       Toxiproxy[/redis/].down do
-        assert_raises RedisClient::ConnectionError do
+        error = assert_raises RedisClient::ConnectionError do
           @redis.call("PING")
         end
+
+        assert_match(%r{ \(rediss?://127.0.0.1:.*\)$}, error.message)
       end
     end
 
@@ -291,9 +297,11 @@ class RedisClient
 
     def test_connecting_to_a_ssl_server
       client = new_client(**ssl_config, ssl: false)
-      assert_raises CannotConnectError do
+      error = assert_raises CannotConnectError do
         client.call("PING")
       end
+
+      assert_match(%r{ \(rediss?://.*:.*\)$}, error.message)
     end
 
     def test_protocol_error
@@ -307,9 +315,11 @@ class RedisClient
         session.close
       end
 
-      assert_raises RedisClient::ProtocolError do
+      error = assert_raises RedisClient::ProtocolError do
         new_client(host: "127.0.0.1", port: port).call("PING")
       end
+
+      assert_match(%r{ \(rediss?://127.0.0.1:#{port}\)$}, error.message)
     ensure
       server_thread&.kill
     end
@@ -372,10 +382,11 @@ class RedisClient
 
       client = new_client(host: "127.0.0.1", port: port)
       client.call("PING")
-      assert_raises RedisClient::ReadOnlyError do
+      error = assert_raises RedisClient::ReadOnlyError do
         client.call("SET", "foo", "bar")
       end
       refute_predicate client, :connected?
+      assert_match(%r{ \(rediss?://127.0.0.1:#{port}\)$}, error.message)
     ensure
       server_thread&.kill
     end

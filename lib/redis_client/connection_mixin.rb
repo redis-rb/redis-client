@@ -32,6 +32,7 @@ class RedisClient
       @pending_reads -= 1
       if result.is_a?(Error)
         result._set_command(command)
+        result._set_config(config)
         raise result
       else
         result
@@ -53,10 +54,16 @@ class RedisClient
 
         # A multi/exec command can return an array of results.
         # An error from a multi/exec command is handled in Multi#_coerce!.
-        if result.is_a?(Error)
+        if result.is_a?(Array)
+          result.each do |res|
+            res._set_config(config) if res.is_a?(Error)
+          end
+        elsif result.is_a?(Error)
           result._set_command(commands[index])
+          result._set_config(config)
           exception ||= result
         end
+
         results[index] = result
       end
 
