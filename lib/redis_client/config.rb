@@ -124,10 +124,17 @@ class RedisClient
 
       def server_url
         if path
-          "#{path}/#{db}"
+          url = "unix://#{path}"
+          if db != 0
+            url = "#{url}?db=#{db}"
+          end
         else
-          "redis#{'s' if ssl?}://#{host}:#{port}/#{db}"
+          url = "redis#{'s' if ssl?}://#{host}:#{port}"
+          if db != 0
+            url = "#{url}/#{db}"
+          end
         end
+        url
       end
 
       private

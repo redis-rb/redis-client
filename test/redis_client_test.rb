@@ -127,7 +127,7 @@ class RedisClientTest < Minitest::Test
   end
 
   def test_server_url
-    assert_equal "redis://#{Servers::HOST}:#{Servers::REDIS_TCP_PORT}/0", @redis.server_url
+    assert_equal "redis://#{Servers::HOST}:#{Servers::REDIS_TCP_PORT}", @redis.server_url
   end
 
   def test_timeout

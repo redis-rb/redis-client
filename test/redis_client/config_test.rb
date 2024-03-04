@@ -198,13 +198,13 @@ class RedisClient
     end
 
     def test_server_url
-      assert_equal "redis://localhost:6379/0", Config.new.server_url
-      assert_equal "redis://localhost:6379/0", Config.new(username: "george", password: "hunter2").server_url
+      assert_equal "redis://localhost:6379", Config.new.server_url
+      assert_equal "redis://localhost:6379", Config.new(username: "george", password: "hunter2").server_url
       assert_equal "redis://localhost:6379/5", Config.new(db: 5).server_url
-      assert_equal "redis://example.com:8080/0", Config.new(host: "example.com", port: 8080).server_url
-      assert_equal "rediss://localhost:6379/0", Config.new(ssl: true).server_url
+      assert_equal "redis://example.com:8080", Config.new(host: "example.com", port: 8080).server_url
+      assert_equal "rediss://localhost:6379", Config.new(ssl: true).server_url
 
-      assert_equal "/var/redis/redis.sock/5", Config.new(path: "/var/redis/redis.sock", db: 5).server_url
+      assert_equal "unix:///var/redis/redis.sock?db=5", Config.new(path: "/var/redis/redis.sock", db: 5).server_url
     end
 
     def test_custom_field

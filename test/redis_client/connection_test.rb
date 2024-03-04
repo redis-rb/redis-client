@@ -319,7 +319,7 @@ class RedisClient
         new_client(host: "127.0.0.1", port: port).call("PING")
       end
 
-      assert_match(%r{ \(rediss?://127.0.0.1:#{port}/0\)$}, error.message)
+      assert_match(%r{ \(rediss?://127.0.0.1:#{port}\)$}, error.message)
     ensure
       server_thread&.kill
     end
@@ -386,7 +386,7 @@ class RedisClient
         client.call("SET", "foo", "bar")
       end
       refute_predicate client, :connected?
-      assert_match(%r{ \(rediss?://127.0.0.1:#{port}/0\)$}, error.message)
+      assert_match(%r{ \(rediss?://127.0.0.1:#{port}\)$}, error.message)
     ensure
       server_thread&.kill
     end
