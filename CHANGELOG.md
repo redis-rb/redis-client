@@ -1,5 +1,10 @@
 # Unreleased
 
+# 0.21.0
+
+- Include redis server URL in most error messages. See #178.
+- Close Redis Sentinel connection after resolving role. See #176.
+
 # 0.20.0
 
 - Accept `unix://` schemes as well as simple paths in the `url:` config parameter. #170.
