@@ -41,10 +41,10 @@ end
 #   x.report("hiredis") { hiredis_client.call("LRANGE", "list", 0, -1) }
 # end
 #
-benchmark("large list") do |x|
-  x.report("ruby") { redis_client.call("LRANGE", "large-list", 0, -1) }
-  x.report("hiredis") { hiredis_client.call("LRANGE", "large-list", 0, -1) }
-end
+# benchmark("large list") do |x|
+#   x.report("ruby") { redis_client.call("LRANGE", "large-list", 0, -1) }
+#   x.report("hiredis") { hiredis_client.call("LRANGE", "large-list", 0, -1) }
+# end
 
 # benchmark("small hash") do |x|
 #   x.report("ruby") { redis_client.call("HGETALL", "hash") }

@@ -921,6 +921,11 @@ static VALUE hiredis_measure_round_trip_delay(VALUE self) {
     return DBL2NUM(diff_timespec_ms(&args.end, &args.start));
 }
 
+
+static VALUE new_hash_capa(VALUE klass, VALUE capa) {
+    return rb_hash_new_capa(NUM2LONG(capa));
+}
+
 RUBY_FUNC_EXPORTED void Init_hiredis_connection(void) {
     // Qfalse == NULL, so we can't return Qfalse in `reply_create_bool()`
     RUBY_ASSERT((void *)Qfalse == NULL);
@@ -972,4 +977,6 @@ RUBY_FUNC_EXPORTED void Init_hiredis_connection(void) {
     VALUE rb_cHiredisSSLContext = rb_define_class_under(rb_cHiredisConnection, "SSLContext", rb_cObject);
     rb_define_alloc_func(rb_cHiredisSSLContext, hiredis_ssl_context_alloc);
     rb_define_private_method(rb_cHiredisSSLContext, "init", hiredis_ssl_context_init, 5);
+    
+    rb_define_singleton_method(rb_cHiredisConnection, "rb_hash_new_capa", new_hash_capa, 1);
 }

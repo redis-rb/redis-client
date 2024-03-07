@@ -12,7 +12,8 @@ class RedisClient
 
       def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096)
         @io = io
-        @buffer = "".b
+        @buffer = +""
+        @buffer.force_encoding(Encoding.default_external)
         @offset = 0
         @chunk_size = chunk_size
         @read_timeout = read_timeout
