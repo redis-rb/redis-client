@@ -13,6 +13,19 @@ redis_client.call("LPUSH", "large-list", *1000.times.to_a)
 redis_client.call("HMSET", "hash", *8.times.to_a)
 redis_client.call("HMSET", "large-hash", *1000.times.to_a)
 
+
+require 'vernier'
+
+Vernier.trace(out: "/tmp/redis-client.dump") do
+  1000.times do
+    redis_client.call("LRANGE", "large-list", 0, -1)
+  end
+
+  1000.times do
+    redis_client.call("HGETALL", "large-hash")
+  end
+end
+
 # benchmark("small string") do |x|
 #   x.report("ruby") { redis_client.call("GET", "key") }
 #   x.report("hiredis") { hiredis_client.call("GET", "key") }

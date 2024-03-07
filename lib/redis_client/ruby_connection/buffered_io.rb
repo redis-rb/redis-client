@@ -99,6 +99,35 @@ class RedisClient
         line
       end
 
+      def gets_integer
+        fill_buffer(false) if @offset >= @buffer.bytesize
+
+        int = 0
+        offset = @offset
+        while true
+          chr = @buffer.getbyte(offset)
+          if chr.nil?
+            @offset = offset
+            fill_buffer(false)
+            offset = @offset
+            next
+          end
+
+          if chr == 13 # \r
+            offset += 1
+            next
+          elsif chr == 10 # \n
+            @offset = offset + 1
+            break
+          else
+            int = (int * 10) + chr - 48
+          end
+          offset += 1
+        end
+
+        int
+      end
+
       def read_chomp(bytes)
         ensure_remaining(bytes + EOL_SIZE)
         str = @buffer.byteslice(@offset, bytes)

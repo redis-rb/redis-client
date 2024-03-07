@@ -17,6 +17,8 @@ group :benchmark do
   gem "hiredis"
   gem "redis", "~> 4.6"
   gem "stackprof", platform: :mri
+  gem "vernier"
+  gem "profile-viewer"
 end
 
-gem "byebug", platform: :mri
+gem "debug", platform: :mri

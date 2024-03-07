@@ -217,7 +217,7 @@ class RedisClient
     end
 
     def parse_blob(io)
-      bytesize = parse_integer(io)
+      bytesize = io.gets_integer
       return if bytesize < 0 # RESP2 nil type
 
       str = io.read_chomp(bytesize)
