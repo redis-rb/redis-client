@@ -13,30 +13,30 @@ redis_client.call("LPUSH", "large-list", *1000.times.to_a)
 redis_client.call("HMSET", "hash", *8.times.to_a)
 redis_client.call("HMSET", "large-hash", *1000.times.to_a)
 
-benchmark("small string") do |x|
-  x.report("ruby") { redis_client.call("GET", "key") }
-  x.report("hiredis") { hiredis_client.call("GET", "key") }
-end
-
-benchmark("large string") do |x|
-  x.report("ruby") { redis_client.call("GET", "large").valid_encoding? }
-  x.report("hiredis") { hiredis_client.call("GET", "large").valid_encoding? }
-end
-
-benchmark("small list") do |x|
-  x.report("ruby") { redis_client.call("LRANGE", "list", 0, -1) }
-  x.report("hiredis") { hiredis_client.call("LRANGE", "list", 0, -1) }
-end
-
+# benchmark("small string") do |x|
+#   x.report("ruby") { redis_client.call("GET", "key") }
+#   x.report("hiredis") { hiredis_client.call("GET", "key") }
+# end
+#
+# benchmark("large string") do |x|
+#   x.report("ruby") { redis_client.call("GET", "large").valid_encoding? }
+#   x.report("hiredis") { hiredis_client.call("GET", "large").valid_encoding? }
+# end
+#
+# benchmark("small list") do |x|
+#   x.report("ruby") { redis_client.call("LRANGE", "list", 0, -1) }
+#   x.report("hiredis") { hiredis_client.call("LRANGE", "list", 0, -1) }
+# end
+#
 benchmark("large list") do |x|
   x.report("ruby") { redis_client.call("LRANGE", "large-list", 0, -1) }
   x.report("hiredis") { hiredis_client.call("LRANGE", "large-list", 0, -1) }
 end
 
-benchmark("small hash") do |x|
-  x.report("ruby") { redis_client.call("HGETALL", "hash") }
-  x.report("hiredis") { hiredis_client.call("HGETALL", "hash") }
-end
+# benchmark("small hash") do |x|
+#   x.report("ruby") { redis_client.call("HGETALL", "hash") }
+#   x.report("hiredis") { hiredis_client.call("HGETALL", "hash") }
+# end
 
 benchmark("large hash") do |x|
   x.report("ruby") { redis_client.call("HGETALL", "large-hash") }
