@@ -10,7 +10,7 @@ class RedisClient
 
       attr_accessor :read_timeout, :write_timeout
 
-      def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096)
+      def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096 * 4)
         @io = io
         @buffer = +""
         @buffer.force_encoding(Encoding.default_external)
@@ -100,30 +100,31 @@ class RedisClient
         line
       end
 
-      def gets_integer
+      def ensure_line
         fill_buffer(false) if @offset >= @buffer.bytesize
+        until eol_index = @buffer.index(EOL, @offset)
+          fill_buffer(false)
+        end
+      end
 
+      def gets_integer
         int = 0
         offset = @offset
         while true
           chr = @buffer.getbyte(offset)
-          if chr.nil?
-            @offset = offset
-            fill_buffer(false)
-            offset = @offset
-            next
-          end
 
-          if chr == 13 # \r
+          if chr
+            if chr == 13 # \r
+              @offset = offset + 2
+              break
+            else
+              int = (int * 10) + chr - 48
+            end
             offset += 1
-            next
-          elsif chr == 10 # \n
-            @offset = offset + 1
-            break
           else
-            int = (int * 10) + chr - 48
+            ensure_line
+            return gets_integer
           end
-          offset += 1
         end
 
         int
@@ -147,7 +148,8 @@ class RedisClient
 
       def fill_buffer(strict, size = @chunk_size)
         remaining = size
-        empty_buffer = @offset >= @buffer.bytesize
+        start = @offset - @buffer.bytesize
+        empty_buffer = start >= 0
 
         loop do
           bytes = if empty_buffer
@@ -156,15 +158,6 @@ class RedisClient
             @io.read_nonblock([remaining, @chunk_size].max, exception: false)
           end
           case bytes
-          when String
-            if empty_buffer
-              @offset = 0
-              empty_buffer = false
-            else
-              @buffer << bytes
-            end
-            remaining -= bytes.bytesize
-            return if !strict || remaining <= 0
           when :wait_readable
             unless @io.to_io.wait_readable(@read_timeout)
               raise ReadTimeoutError, "Waited #{@read_timeout} seconds" unless @blocking_reads
@@ -174,7 +167,14 @@ class RedisClient
           when nil
             raise EOFError
           else
-            raise "Unexpected `read_nonblock` return: #{bytes.inspect}"
+            if empty_buffer
+              @offset = start
+              empty_buffer = false
+            else
+              @buffer << bytes
+            end
+            remaining -= bytes.bytesize
+            return if !strict || remaining <= 0
           end
         end
       end
