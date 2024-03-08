@@ -1,9 +1,5 @@
 # frozen_string_literal: true
 
-class String
-  define_method(:raw_freeze, Object.instance_method(:freeze))
-end
-
 class RedisClient
   module RESP3
     module_function
@@ -168,11 +164,11 @@ class RedisClient
     end
 
     def parse_array(io)
-      parse_sequence(io, parse_integer(io))
+      parse_sequence(io, io.gets_integer)
     end
 
     def parse_set(io)
-      parse_sequence(io, parse_integer(io))
+      parse_sequence(io, io.gets_integer)
     end
 
     def parse_map(io)
@@ -182,7 +178,7 @@ class RedisClient
       size = io.gets_integer
       hash = HiredisConnection.rb_hash_new_capa(size)
       while size > 0
-        hash[parse(io).raw_freeze] = parse(io)
+        hash[parse(io).freeze] = parse(io)
         size -= 1
       end
       hash
