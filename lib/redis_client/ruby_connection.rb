@@ -74,7 +74,7 @@ class RedisClient
       buffer = RESP3.dump(command)
       begin
         @io.write(buffer)
-      rescue SystemCallError, IOError => error
+      rescue SystemCallError, IOError, OpenSSL::SSL::SSLError => error
         raise ConnectionError.with_config(error.message, config)
       end
     end
@@ -86,7 +86,7 @@ class RedisClient
       end
       begin
         @io.write(buffer)
-      rescue SystemCallError, IOError => error
+      rescue SystemCallError, IOError, OpenSSL::SSL::SSLError => error
         raise ConnectionError.with_config(error.message, config)
       end
     end
