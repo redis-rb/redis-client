@@ -112,6 +112,12 @@ class RedisClient
       end
     end
 
+    def resolved?
+      @mutex.synchronize do
+        !!@config
+      end
+    end
+
     private
 
     def sentinels_to_configs(sentinels)

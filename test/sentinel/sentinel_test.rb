@@ -83,6 +83,22 @@ class RedisClient
       end
     end
 
+    def test_unresolved_config
+      client = @config.new_client
+
+      @config.stub(:server_url, -> { raise ConnectionError.with_config('this should not be called', @config) }) do
+        @config.stub(:resolved?, false) do
+          client.stub(:call, ->(_) { raise ConnectionError.with_config('call error', @config) }) do
+            error = assert_raises ConnectionError do
+              client.call('PING')
+            end
+
+            assert_equal 'call error', error.message
+          end
+        end
+      end
+    end
+
     def test_master_failover_not_ready
       sentinel_client_mock = SentinelClientMock.new([
         [["SENTINEL", "get-master-addr-by-name", "cache"], [Servers::REDIS_REPLICA.host, Servers::REDIS_REPLICA.port.to_s]],

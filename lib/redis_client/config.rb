@@ -91,6 +91,10 @@ class RedisClient
         @username || DEFAULT_USERNAME
       end
 
+      def resolved?
+        true
+      end
+
       def sentinel?
         false
       end
