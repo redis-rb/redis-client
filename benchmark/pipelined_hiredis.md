@@ -1,53 +1,59 @@
-ruby: `ruby 3.2.0dev (2022-10-07T07:03:33Z master e76217a7f3) [arm64-darwin21]`
+ruby: `ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]`
 
-redis-server: `Redis server v=7.0.4 sha=00000000:0 malloc=libc bits=64 build=ef6295796237ef48`
+redis-server: `Redis server v=7.0.12 sha=00000000:0 malloc=libc bits=64 build=a11d0151eabf466c`
 
 
 ### small string
 
 ```
-            redis-rb:     4841.5 i/s
-        redis-client:     6160.7 i/s - 1.27x  (± 0.00) faster
+ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
+            redis-rb:     5438.6 i/s
+        redis-client:     5552.9 i/s - same-ish: difference falls within error
 
 ```
 
 ### large string
 
 ```
-            redis-rb:      368.4 i/s
-        redis-client:      411.2 i/s - 1.12x  (± 0.00) faster
+ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
+            redis-rb:      354.4 i/s
+        redis-client:      310.9 i/s - 1.14x  slower
 
 ```
 
 ### small list
 
 ```
-            redis-rb:     2733.6 i/s
-        redis-client:     3493.2 i/s - 1.28x  (± 0.00) faster
+ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
+            redis-rb:     3081.4 i/s
+        redis-client:     2733.0 i/s - 1.13x  slower
 
 ```
 
 ### large list
 
 ```
-            redis-rb:       73.2 i/s
-        redis-client:      103.0 i/s - 1.41x  (± 0.00) faster
+ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
+            redis-rb:       82.3 i/s
+        redis-client:       65.0 i/s - 1.26x  slower
 
 ```
 
 ### small hash
 
 ```
-            redis-rb:     2222.9 i/s
-        redis-client:     4014.3 i/s - 1.81x  (± 0.00) faster
+ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
+            redis-rb:     2249.0 i/s
+        redis-client:     3117.0 i/s - 1.39x  faster
 
 ```
 
 ### large hash
 
 ```
-            redis-rb:       44.4 i/s
-        redis-client:       79.0 i/s - 1.78x  (± 0.00) faster
+ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
+            redis-rb:       46.9 i/s
+        redis-client:       67.5 i/s - 1.44x  faster
 
 ```
 
