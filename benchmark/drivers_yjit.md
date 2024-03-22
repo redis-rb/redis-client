@@ -1,4 +1,4 @@
-ruby: `ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]`
+ruby: `ruby 3.4.0dev (2024-03-19T14:18:56Z master 5c2937733c) [arm64-darwin23]`
 
 redis-server: `Redis server v=7.0.12 sha=00000000:0 malloc=libc bits=64 build=a11d0151eabf466c`
 
@@ -6,54 +6,54 @@ redis-server: `Redis server v=7.0.12 sha=00000000:0 malloc=libc bits=64 build=a1
 ### small string x 100
 
 ```
-ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
-             hiredis:     6810.9 i/s
-                ruby:     5613.1 i/s - 1.21x  slower
+ruby 3.4.0dev (2024-03-19T14:18:56Z master 5c2937733c) +YJIT [arm64-darwin23]
+             hiredis:     6407.8 i/s
+                ruby:     5852.0 i/s - same-ish: difference falls within error
 
 ```
 
 ### large string x 100
 
 ```
-ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
-             hiredis:      312.1 i/s
-                ruby:      316.3 i/s - same-ish: difference falls within error
+ruby 3.4.0dev (2024-03-19T14:18:56Z master 5c2937733c) +YJIT [arm64-darwin23]
+             hiredis:      302.8 i/s
+                ruby:      337.3 i/s - same-ish: difference falls within error
 
 ```
 
 ### small list x 100
 
 ```
-ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
-             hiredis:     3644.1 i/s
-                ruby:     2474.0 i/s - 1.47x  slower
+ruby 3.4.0dev (2024-03-19T14:18:56Z master 5c2937733c) +YJIT [arm64-darwin23]
+             hiredis:     4067.7 i/s
+                ruby:     2721.5 i/s - 1.49x  slower
 
 ```
 
 ### large list
 
 ```
-ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
-             hiredis:     6884.4 i/s
-                ruby:     5473.2 i/s - 1.26x  slower
+ruby 3.4.0dev (2024-03-19T14:18:56Z master 5c2937733c) +YJIT [arm64-darwin23]
+             hiredis:     7138.7 i/s
+                ruby:     6605.4 i/s - same-ish: difference falls within error
 
 ```
 
 ### small hash x 100
 
 ```
-ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
-             hiredis:     4033.9 i/s
-                ruby:     3236.3 i/s - 1.25x  slower
+ruby 3.4.0dev (2024-03-19T14:18:56Z master 5c2937733c) +YJIT [arm64-darwin23]
+             hiredis:     4219.8 i/s
+                ruby:     3586.4 i/s - 1.18x  slower
 
 ```
 
 ### large hash
 
 ```
-ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
-             hiredis:     4753.7 i/s
-                ruby:     4637.7 i/s - same-ish: difference falls within error
+ruby 3.4.0dev (2024-03-19T14:18:56Z master 5c2937733c) +YJIT [arm64-darwin23]
+             hiredis:     5240.9 i/s
+                ruby:     5312.5 i/s - same-ish: difference falls within error
 
 ```
 
