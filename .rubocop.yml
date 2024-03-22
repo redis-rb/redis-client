@@ -66,6 +66,12 @@ Metrics/ParameterLists:
 Metrics/PerceivedComplexity:
   Enabled: false
 
+Style/InfiniteLoop:
+  Enabled: false
+
+Style/WhileUntilModifier:
+  Enabled: false
+
 Style/Alias:
   EnforcedStyle: prefer_alias_method
 

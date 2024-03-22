@@ -99,6 +99,29 @@ class RedisClient
         line
       end
 
+      def gets_integer
+        int = 0
+        offset = @offset
+        while true
+          chr = @buffer.getbyte(offset)
+
+          if chr
+            if chr == 13 # "\r".ord
+              @offset = offset + 2
+              break
+            else
+              int = (int * 10) + chr - 48
+            end
+            offset += 1
+          else
+            ensure_line
+            return gets_integer
+          end
+        end
+
+        int
+      end
+
       def read_chomp(bytes)
         ensure_remaining(bytes + EOL_SIZE)
         str = @buffer.byteslice(@offset, bytes)
@@ -107,6 +130,13 @@ class RedisClient
       end
 
       private
+
+      def ensure_line
+        fill_buffer(false) if @offset >= @buffer.bytesize
+        until @buffer.index(EOL, @offset)
+          fill_buffer(false)
+        end
+      end
 
       def ensure_remaining(bytes)
         needed = bytes - (@buffer.bytesize - @offset)
@@ -117,7 +147,8 @@ class RedisClient
 
       def fill_buffer(strict, size = @chunk_size)
         remaining = size
-        empty_buffer = @offset >= @buffer.bytesize
+        start = @offset - @buffer.bytesize
+        empty_buffer = start >= 0
 
         loop do
           bytes = if empty_buffer
@@ -126,15 +157,6 @@ class RedisClient
             @io.read_nonblock([remaining, @chunk_size].max, exception: false)
           end
           case bytes
-          when String
-            if empty_buffer
-              @offset = 0
-              empty_buffer = false
-            else
-              @buffer << bytes
-            end
-            remaining -= bytes.bytesize
-            return if !strict || remaining <= 0
           when :wait_readable
             unless @io.to_io.wait_readable(@read_timeout)
               raise ReadTimeoutError, "Waited #{@read_timeout} seconds" unless @blocking_reads
@@ -144,7 +166,14 @@ class RedisClient
           when nil
             raise EOFError
           else
-            raise "Unexpected `read_nonblock` return: #{bytes.inspect}"
+            if empty_buffer
+              @offset = start
+              empty_buffer = false
+            else
+              @buffer << bytes
+            end
+            remaining -= bytes.bytesize
+            return if !strict || remaining <= 0
           end
         end
       end

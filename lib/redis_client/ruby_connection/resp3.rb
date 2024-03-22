@@ -165,16 +165,16 @@ class RedisClient
     end
 
     def parse_array(io)
-      parse_sequence(io, parse_integer(io))
+      parse_sequence(io, io.gets_integer)
     end
 
     def parse_set(io)
-      parse_sequence(io, parse_integer(io))
+      parse_sequence(io, io.gets_integer)
     end
 
     def parse_map(io)
       hash = {}
-      parse_integer(io).times do
+      io.gets_integer.times do
         hash[parse(io)] = parse(io)
       end
       hash
@@ -217,7 +217,7 @@ class RedisClient
     end
 
     def parse_blob(io)
-      bytesize = parse_integer(io)
+      bytesize = io.gets_integer
       return if bytesize < 0 # RESP2 nil type
 
       str = io.read_chomp(bytesize)

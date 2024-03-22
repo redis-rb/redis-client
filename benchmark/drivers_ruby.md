@@ -7,8 +7,8 @@ redis-server: `Redis server v=7.0.12 sha=00000000:0 malloc=libc bits=64 build=a1
 
 ```
 ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
-             hiredis:     5416.0 i/s
-                ruby:     2923.7 i/s - 1.85x  slower
+             hiredis:     5346.6 i/s
+                ruby:     2984.3 i/s - 1.79x  slower
 
 ```
 
@@ -16,8 +16,8 @@ ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
 
 ```
 ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
-             hiredis:      286.7 i/s
-                ruby:      302.3 i/s - same-ish: difference falls within error
+             hiredis:      304.2 i/s
+                ruby:      204.1 i/s - 1.49x  slower
 
 ```
 
@@ -25,8 +25,8 @@ ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
 
 ```
 ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
-             hiredis:     2596.0 i/s
-                ruby:     1155.6 i/s - 2.25x  slower
+             hiredis:     2612.0 i/s
+                ruby:     1240.8 i/s - 2.11x  slower
 
 ```
 
@@ -34,8 +34,8 @@ ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
 
 ```
 ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
-             hiredis:     6797.0 i/s
-                ruby:     1388.9 i/s - 4.89x  slower
+             hiredis:     6772.7 i/s
+                ruby:     1540.7 i/s - 4.40x  slower
 
 ```
 
@@ -43,8 +43,8 @@ ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
 
 ```
 ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
-             hiredis:     3459.8 i/s
-                ruby:     1170.4 i/s - 2.96x  slower
+             hiredis:     3293.2 i/s
+                ruby:     1234.0 i/s - 2.67x  slower
 
 ```
 
@@ -52,8 +52,8 @@ ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
 
 ```
 ruby 3.3.0 (2023-12-25 revision 5124f9ac75) [arm64-darwin23]
-             hiredis:     1345.9 i/s
-                ruby:     1329.5 i/s - same-ish: difference falls within error
+             hiredis:     1421.7 i/s
+                ruby:     1481.0 i/s - same-ish: difference falls within error
 
 ```
 
