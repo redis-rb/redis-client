@@ -1,5 +1,9 @@
 # Unreleased
 
+# 0.21.1
+
+- Handle unresolved Sentinel master/replica error when displaying server URL in exceptions. See #182.
+
 # 0.21.0
 
 - Include redis server URL in most error messages. See #178.

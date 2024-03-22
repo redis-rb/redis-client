@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    redis-client (0.21.0)
+    redis-client (0.21.1)
       connection_pool
 
 GEM
