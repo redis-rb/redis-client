@@ -85,7 +85,7 @@ class RedisClient
     end
 
     def message
-      return super unless config
+      return super unless config&.resolved?
 
       "#{super} (#{config.server_url})"
     end
