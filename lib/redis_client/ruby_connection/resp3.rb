@@ -111,10 +111,35 @@ class RedisClient
 
     def parse(io)
       type = io.getbyte
-      method = PARSER_TYPES.fetch(type) do
+      if type == 35 # '#'.ord
+        parse_boolean(io)
+      elsif type == 36 # '$'.ord
+        parse_blob(io)
+      elsif type == 43 # '+'.ord
+        parse_string(io)
+      elsif type == 61 # '='.ord
+        parse_verbatim_string(io)
+      elsif type == 45 # '-'.ord
+        parse_error(io)
+      elsif type == 58 # ':'.ord
+        parse_integer(io)
+      elsif type == 40 # '('.ord
+        parse_integer(io)
+      elsif type == 44 # ','.ord
+        parse_double(io)
+      elsif type == 95 # '_'.ord
+        parse_null(io)
+      elsif type == 42 # '*'.ord
+        parse_array(io)
+      elsif type == 37 # '%'.ord
+        parse_map(io)
+      elsif type == 126 # '~'.ord
+        parse_set(io)
+      elsif type == 62 # '>'.ord
+        parse_array(io)
+      else
         raise UnknownType, "Unknown sigil type: #{type.chr.inspect}"
       end
-      send(method, io)
     end
 
     def parse_string(io)
