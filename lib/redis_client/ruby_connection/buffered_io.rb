@@ -82,8 +82,10 @@ class RedisClient
       end
 
       def getbyte
-        ensure_remaining(1)
-        byte = @buffer.getbyte(@offset)
+        unless byte = @buffer.getbyte(@offset)
+          ensure_remaining(1)
+          byte = @buffer.getbyte(@offset)
+        end
         @offset += 1
         byte
       end
