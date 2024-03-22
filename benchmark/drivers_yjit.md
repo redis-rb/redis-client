@@ -7,8 +7,8 @@ redis-server: `Redis server v=7.0.12 sha=00000000:0 malloc=libc bits=64 build=a1
 
 ```
 ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
-             hiredis:     6723.1 i/s
-                ruby:     5507.5 i/s - 1.22x  slower
+             hiredis:     6795.5 i/s
+                ruby:     5696.7 i/s - 1.19x  slower
 
 ```
 
@@ -16,8 +16,8 @@ ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
 
 ```
 ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
-             hiredis:      290.8 i/s
-                ruby:      335.2 i/s - same-ish: difference falls within error
+             hiredis:      291.0 i/s
+                ruby:      339.3 i/s - same-ish: difference falls within error
 
 ```
 
@@ -25,8 +25,8 @@ ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
 
 ```
 ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
-             hiredis:     3686.7 i/s
-                ruby:     2437.1 i/s - 1.51x  slower
+             hiredis:     3661.1 i/s
+                ruby:     2351.8 i/s - 1.56x  slower
 
 ```
 
@@ -34,8 +34,8 @@ ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
 
 ```
 ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
-             hiredis:     6725.9 i/s
-                ruby:     4990.0 i/s - 1.35x  slower
+             hiredis:     6839.3 i/s
+                ruby:     5330.8 i/s - 1.28x  slower
 
 ```
 
@@ -43,8 +43,8 @@ ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
 
 ```
 ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
-             hiredis:     3893.0 i/s
-                ruby:     2994.7 i/s - 1.30x  slower
+             hiredis:     3966.9 i/s
+                ruby:     3243.4 i/s - 1.22x  slower
 
 ```
 
@@ -52,8 +52,8 @@ ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
 
 ```
 ruby 3.3.0 (2023-12-25 revision 5124f9ac75) +YJIT [arm64-darwin23]
-             hiredis:     4303.3 i/s
-                ruby:     4244.6 i/s - same-ish: difference falls within error
+             hiredis:     4609.7 i/s
+                ruby:     4612.8 i/s - same-ish: difference falls within error
 
 ```
 

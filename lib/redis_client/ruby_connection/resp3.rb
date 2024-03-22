@@ -144,7 +144,6 @@ class RedisClient
 
     def parse_string(io)
       str = io.gets_chomp
-      str.force_encoding(Encoding.default_external)
       str.force_encoding(Encoding::BINARY) unless str.valid_encoding?
       str.freeze
     end
@@ -221,7 +220,6 @@ class RedisClient
       return if bytesize < 0 # RESP2 nil type
 
       str = io.read_chomp(bytesize)
-      str.force_encoding(Encoding.default_external)
       str.force_encoding(Encoding::BINARY) unless str.valid_encoding?
       str
     end
