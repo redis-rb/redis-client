@@ -111,15 +111,39 @@ class RedisClient
 
     def parse(io)
       type = io.getbyte
-      method = PARSER_TYPES.fetch(type) do
+      if type == 35 # '#'.ord
+        parse_boolean(io)
+      elsif type == 36 # '$'.ord
+        parse_blob(io)
+      elsif type == 43 # '+'.ord
+        parse_string(io)
+      elsif type == 61 # '='.ord
+        parse_verbatim_string(io)
+      elsif type == 45 # '-'.ord
+        parse_error(io)
+      elsif type == 58 # ':'.ord
+        parse_integer(io)
+      elsif type == 40 # '('.ord
+        parse_integer(io)
+      elsif type == 44 # ','.ord
+        parse_double(io)
+      elsif type == 95 # '_'.ord
+        parse_null(io)
+      elsif type == 42 # '*'.ord
+        parse_array(io)
+      elsif type == 37 # '%'.ord
+        parse_map(io)
+      elsif type == 126 # '~'.ord
+        parse_set(io)
+      elsif type == 62 # '>'.ord
+        parse_array(io)
+      else
         raise UnknownType, "Unknown sigil type: #{type.chr.inspect}"
       end
-      send(method, io)
     end
 
     def parse_string(io)
       str = io.gets_chomp
-      str.force_encoding(Encoding.default_external)
       str.force_encoding(Encoding::BINARY) unless str.valid_encoding?
       str.freeze
     end
@@ -140,16 +164,16 @@ class RedisClient
     end
 
     def parse_array(io)
-      parse_sequence(io, parse_integer(io))
+      parse_sequence(io, io.gets_integer)
     end
 
     def parse_set(io)
-      parse_sequence(io, parse_integer(io))
+      parse_sequence(io, io.gets_integer)
     end
 
     def parse_map(io)
       hash = {}
-      parse_integer(io).times do
+      io.gets_integer.times do
         hash[parse(io)] = parse(io)
       end
       hash
@@ -192,11 +216,10 @@ class RedisClient
     end
 
     def parse_blob(io)
-      bytesize = parse_integer(io)
+      bytesize = io.gets_integer
       return if bytesize < 0 # RESP2 nil type
 
       str = io.read_chomp(bytesize)
-      str.force_encoding(Encoding.default_external)
       str.force_encoding(Encoding::BINARY) unless str.valid_encoding?
       str
     end

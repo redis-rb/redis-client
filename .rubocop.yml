@@ -36,6 +36,9 @@ Lint/UnderscorePrefixedVariableName:
 Lint/EmptyBlock:
   Enabled: false
 
+Lint/DuplicateBranch:
+  Enabled: false
+
 Lint/MissingSuper:
   Enabled: false
 
@@ -61,6 +64,12 @@ Metrics/ParameterLists:
   Enabled: false
 
 Metrics/PerceivedComplexity:
+  Enabled: false
+
+Style/InfiniteLoop:
+  Enabled: false
+
+Style/WhileUntilModifier:
   Enabled: false
 
 Style/Alias:

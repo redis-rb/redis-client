@@ -10,9 +10,10 @@ class RedisClient
 
       attr_accessor :read_timeout, :write_timeout
 
-      def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096)
+      def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096, encoding: Encoding.default_external)
         @io = io
-        @buffer = "".b
+        @encoding = encoding
+        @buffer = "".dup.force_encoding(@encoding)
         @offset = 0
         @chunk_size = chunk_size
         @read_timeout = read_timeout
@@ -82,8 +83,10 @@ class RedisClient
       end
 
       def getbyte
-        ensure_remaining(1)
-        byte = @buffer.getbyte(@offset)
+        unless byte = @buffer.getbyte(@offset)
+          ensure_remaining(1)
+          byte = @buffer.getbyte(@offset)
+        end
         @offset += 1
         byte
       end
@@ -99,6 +102,29 @@ class RedisClient
         line
       end
 
+      def gets_integer
+        int = 0
+        offset = @offset
+        while true
+          chr = @buffer.getbyte(offset)
+
+          if chr
+            if chr == 13 # "\r".ord
+              @offset = offset + 2
+              break
+            else
+              int = (int * 10) + chr - 48
+            end
+            offset += 1
+          else
+            ensure_line
+            return gets_integer
+          end
+        end
+
+        int
+      end
+
       def read_chomp(bytes)
         ensure_remaining(bytes + EOL_SIZE)
         str = @buffer.byteslice(@offset, bytes)
@@ -108,6 +134,13 @@ class RedisClient
 
       private
 
+      def ensure_line
+        fill_buffer(false) if @offset >= @buffer.bytesize
+        until @buffer.index(EOL, @offset)
+          fill_buffer(false)
+        end
+      end
+
       def ensure_remaining(bytes)
         needed = bytes - (@buffer.bytesize - @offset)
         if needed > 0
@@ -115,9 +148,13 @@ class RedisClient
         end
       end
 
+      RESET_BUFFER_ENCODING = RUBY_ENGINE == "truffleruby"
+      private_constant :RESET_BUFFER_ENCODING
+
       def fill_buffer(strict, size = @chunk_size)
         remaining = size
-        empty_buffer = @offset >= @buffer.bytesize
+        start = @offset - @buffer.bytesize
+        empty_buffer = start >= 0
 
         loop do
           bytes = if empty_buffer
@@ -126,15 +163,6 @@ class RedisClient
             @io.read_nonblock([remaining, @chunk_size].max, exception: false)
           end
           case bytes
-          when String
-            if empty_buffer
-              @offset = 0
-              empty_buffer = false
-            else
-              @buffer << bytes
-            end
-            remaining -= bytes.bytesize
-            return if !strict || remaining <= 0
           when :wait_readable
             unless @io.to_io.wait_readable(@read_timeout)
               raise ReadTimeoutError, "Waited #{@read_timeout} seconds" unless @blocking_reads
@@ -144,7 +172,15 @@ class RedisClient
           when nil
             raise EOFError
           else
-            raise "Unexpected `read_nonblock` return: #{bytes.inspect}"
+            if empty_buffer
+              @offset = start
+              empty_buffer = false
+              @buffer.force_encoding(@encoding) if RESET_BUFFER_ENCODING
+            else
+              @buffer << bytes.force_encoding(@encoding)
+            end
+            remaining -= bytes.bytesize
+            return if !strict || remaining <= 0
           end
         end
       end

@@ -71,12 +71,15 @@ namespace :hiredis do
   end
 end
 
-benchmark_suites = %w(single pipelined)
+benchmark_suites = %w(single pipelined drivers)
 benchmark_modes = %i[ruby yjit hiredis]
 namespace :benchmark do
   benchmark_suites.each do |suite|
     benchmark_modes.each do |mode|
+      next if suite == "drivers" && mode == :hiredis
+
       name = "#{suite}_#{mode}"
+      desc name
       task name do
         output_path = "benchmark/#{name}.md"
         sh "rm", "-f", output_path
