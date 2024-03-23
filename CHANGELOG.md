@@ -1,5 +1,6 @@
 # Unreleased
 
+- Made various performance optimizations to the Ruby driver. See #184.
 - Always assume UTF-8 encoding instead of relying on `Encoding.default_external`.
 
 # 0.21.1
