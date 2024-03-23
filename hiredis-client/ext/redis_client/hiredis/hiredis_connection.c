@@ -178,7 +178,7 @@ static void *reply_create_string(const redisReadTask *task, char *cstr, size_t l
         len -= 4;
     }
 
-    VALUE string = rb_external_str_new(cstr, len);
+    VALUE string = rb_utf8_str_new(cstr, len);
     if (rb_enc_str_coderange(string) == ENC_CODERANGE_BROKEN) {
         rb_enc_associate(string, rb_ascii8bit_encoding());
     }

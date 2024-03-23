@@ -10,10 +10,9 @@ class RedisClient
 
       attr_accessor :read_timeout, :write_timeout
 
-      def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096, encoding: Encoding.default_external)
+      def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096)
         @io = io
-        @encoding = encoding
-        @buffer = "".dup.force_encoding(@encoding)
+        @buffer = +""
         @offset = 0
         @chunk_size = chunk_size
         @read_timeout = read_timeout
@@ -175,9 +174,9 @@ class RedisClient
             if empty_buffer
               @offset = start
               empty_buffer = false
-              @buffer.force_encoding(@encoding) if RESET_BUFFER_ENCODING
+              @buffer.force_encoding(Encoding::UTF_8) if RESET_BUFFER_ENCODING
             else
-              @buffer << bytes.force_encoding(@encoding)
+              @buffer << bytes.force_encoding(Encoding::UTF_8)
             end
             remaining -= bytes.bytesize
             return if !strict || remaining <= 0

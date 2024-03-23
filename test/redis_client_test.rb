@@ -28,7 +28,7 @@ class RedisClientTest < Minitest::Test
     @redis.call("SET", "str", "fée")
     str = @redis.call("GET", "str")
 
-    assert_equal Encoding.default_external, str.encoding
+    assert_equal Encoding::UTF_8, str.encoding
     assert_predicate str, :valid_encoding?
 
     bytes = "\xFF\00"

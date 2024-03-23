@@ -1,5 +1,7 @@
 # Unreleased
 
+- Always assume UTF-8 encoding instead of relying on `Encoding.default_external`.
+
 # 0.21.1
 
 - Handle unresolved Sentinel master/replica error when displaying server URL in exceptions. See #182.
