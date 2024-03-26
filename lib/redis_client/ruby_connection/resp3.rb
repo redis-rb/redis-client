@@ -174,7 +174,7 @@ class RedisClient
     def parse_map(io)
       hash = {}
       io.gets_integer.times do
-        hash[parse(io)] = parse(io)
+        hash[parse(io).freeze] = parse(io)
       end
       hash
     end

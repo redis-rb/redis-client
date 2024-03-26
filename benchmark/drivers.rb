@@ -17,9 +17,9 @@ benchmark("small string x 100") do |x|
   x.report("ruby") { ruby.pipelined { |p| 100.times { p.call("GET", "key") } } }
 end
 
-benchmark("large string x 100") do |x|
-  x.report("hiredis") { hiredis.pipelined { |p| 100.times { p.call("GET", "large") } } }
-  x.report("ruby") { ruby.pipelined { |p| 100.times { p.call("GET", "large") } } }
+benchmark("large string") do |x|
+  x.report("hiredis") { hiredis.call("GET", "large") }
+  x.report("ruby") { ruby.call("GET", "large") }
 end
 
 benchmark("small list x 100") do |x|
