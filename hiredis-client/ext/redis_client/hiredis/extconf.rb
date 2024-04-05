@@ -8,7 +8,7 @@ class HiredisConnectionExtconf
   end
 
   def configure
-    if RUBY_ENGINE == "ruby" && !RUBY_PLATFORM.match?(/mswin/)
+    if RUBY_ENGINE == "ruby" && !Gem.win_platform?
       configure_extension
       create_makefile("redis_client/hiredis_connection")
     else
