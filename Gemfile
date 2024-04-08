@@ -6,7 +6,7 @@ source "https://rubygems.org"
 gemspec name: "redis-client"
 
 gem "minitest"
-gem "rake", "~> 13.1"
+gem "rake", "~> 13.2"
 gem "rake-compiler"
 gem "rubocop"
 gem "rubocop-minitest"

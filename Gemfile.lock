@@ -23,7 +23,7 @@ GEM
     racc (1.7.3)
     racc (1.7.3-java)
     rainbow (3.1.1)
-    rake (13.1.0)
+    rake (13.2.1)
     rake-compiler (1.2.7)
       rake
     redis (4.6.0)
@@ -59,7 +59,7 @@ DEPENDENCIES
   byebug
   hiredis
   minitest
-  rake (~> 13.1)
+  rake (~> 13.2)
   rake-compiler
   redis (~> 4.6)
   redis-client!
