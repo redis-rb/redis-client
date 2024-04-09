@@ -47,8 +47,8 @@ class RedisClient
       end
       ruby2_keywords :with if respond_to?(:ruby2_keywords, true)
 
-      def pipelined
-        @client.pipelined { |p| yield @_pipeline_class.new(p) }
+      def pipelined(exception: true)
+        @client.pipelined(exception: exception) { |p| yield @_pipeline_class.new(p) }
       end
 
       def multi(**kwargs)

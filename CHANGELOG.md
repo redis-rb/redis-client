@@ -2,6 +2,7 @@
 
 - Made various performance optimizations to the Ruby driver. See #184.
 - Always assume UTF-8 encoding instead of relying on `Encoding.default_external`.
+- Add `exception` flag in `pipelined` allowing failed commands to be returned in the result array when set to `false`. See #187.
 
 # 0.21.1
 

@@ -332,6 +332,27 @@ end
 # => ["OK", 1]
 ```
 
+#### Exception management
+
+The `exception` flag in the `#pipelined` method of `RedisClient` is a feature that modifies the pipeline execution
+behavior. When set to `false`, it doesn't raise an exception when a command error occurs. Instead, it allows the
+pipeline to execute all commands, and any failed command will be available in the returned array. (Defaults to `true`)
+
+```ruby
+results = redis.pipelined(exception: false) do |pipeline|
+  pipeline.call("SET", "foo", "bar") # => nil
+  pipeline.call("DOESNOTEXIST", 12) # => nil
+  pipeline.call("INCR", "baz") # => nil
+end
+# results => ["OK", #<RedisClient::CommandError: ERR unknown command 'DOESNOTEXIST', with args beginning with: '12'>, 2]
+
+results.each do |result|
+  if result.is_a?(RedisClient::CommandError)
+    # Do something with the failed result
+  end
+end
+```
+
 ### Transactions
 
 You can use [`MULTI/EXEC` to run a number of commands in an atomic fashion](https://redis.io/topics/transactions).
