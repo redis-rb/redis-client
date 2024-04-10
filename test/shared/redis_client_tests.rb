@@ -251,6 +251,33 @@ module RedisClientTests
     assert_equal "42", @redis.call("GET", "foo")
   end
 
+  def test_pipelining_error_with_explicit_raising_exception
+    error = assert_raises RedisClient::CommandError do
+      @redis.pipelined(exception: true) do |pipeline|
+        pipeline.call("DOESNOTEXIST", 12)
+        pipeline.call("SET", "foo", "42")
+      end
+    end
+
+    assert_equal ["DOESNOTEXIST", "12"], error.command
+
+    assert_equal "42", @redis.call("GET", "foo")
+  end
+
+  def test_pipelining_error_without_raising_exception
+    result = @redis.pipelined(exception: false) do |pipeline|
+      pipeline.call("DOESNOTEXIST", 12)
+      pipeline.call("SET", "foo", "42")
+    end
+
+    assert result[0].is_a?(RedisClient::CommandError)
+    assert_equal ["DOESNOTEXIST", "12"], result[0].command
+
+    assert_equal "OK", result[1]
+
+    assert_equal "42", @redis.call("GET", "foo")
+  end
+
   def test_multi_error
     error = assert_raises RedisClient::CommandError do
       @redis.multi do |pipeline|

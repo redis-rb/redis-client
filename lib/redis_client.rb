@@ -421,7 +421,7 @@ class RedisClient
     ensure_connected(retryable: false, &block)
   end
 
-  def pipelined
+  def pipelined(exception: true)
     pipeline = Pipeline.new(@command_builder)
     yield pipeline
 
@@ -431,7 +431,7 @@ class RedisClient
       results = ensure_connected(retryable: pipeline._retryable?) do |connection|
         commands = pipeline._commands
         @middlewares.call_pipelined(commands, config) do
-          connection.call_pipelined(commands, pipeline._timeouts)
+          connection.call_pipelined(commands, pipeline._timeouts, exception: exception)
         end
       end
 
