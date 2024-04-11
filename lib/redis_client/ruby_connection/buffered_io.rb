@@ -147,9 +147,6 @@ class RedisClient
         end
       end
 
-      RESET_BUFFER_ENCODING = RUBY_ENGINE == "truffleruby"
-      private_constant :RESET_BUFFER_ENCODING
-
       def fill_buffer(strict, size = @chunk_size)
         remaining = size
         start = @offset - @buffer.bytesize
@@ -174,7 +171,7 @@ class RedisClient
             if empty_buffer
               @offset = start
               empty_buffer = false
-              @buffer.force_encoding(Encoding::UTF_8) if RESET_BUFFER_ENCODING
+              @buffer.force_encoding(Encoding::UTF_8) unless @buffer.encoding == Encoding::UTF_8
             else
               @buffer << bytes.force_encoding(Encoding::UTF_8)
             end
