@@ -108,6 +108,11 @@ class RedisClient
       assert_parses [1, 2, 3], "*3\r\n:1\r\n:2\r\n:3\r\n"
     end
 
+    def test_load_multibyte_chars
+      # Check that the buffer is properly operating over bytes and not characters
+      assert_parses ["€™€™", 2], "*2\r\n$12\r\n€™€™\r\n:2\r\n"
+    end
+
     def test_load_set
       assert_parses ['orange', 'apple', true, 100, 999], "~5\r\n+orange\r\n+apple\r\n#t\r\n:100\r\n:999\r\n"
     end
