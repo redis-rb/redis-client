@@ -208,3 +208,6 @@ Style/CaseLikeIf:
 
 Style/EmptyMethod:
   Enabled: false
+
+Style/AccessModifierDeclarations:
+  Enabled: false

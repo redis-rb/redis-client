@@ -10,14 +10,80 @@ class RedisClient
 
       attr_accessor :read_timeout, :write_timeout
 
-      def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096)
-        @io = io
-        @buffer = +""
-        @offset = 0
-        @chunk_size = chunk_size
-        @read_timeout = read_timeout
-        @write_timeout = write_timeout
-        @blocking_reads = false
+      if String.method_defined?(:byteindex) # Ruby 3.2+
+        ENCODING = Encoding::UTF_8
+
+        def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096)
+          @io = io
+          @buffer = +""
+          @offset = 0
+          @chunk_size = chunk_size
+          @read_timeout = read_timeout
+          @write_timeout = write_timeout
+          @blocking_reads = false
+        end
+
+        def gets_chomp
+          fill_buffer(false) if @offset >= @buffer.bytesize
+          until eol_index = @buffer.byteindex(EOL, @offset)
+            fill_buffer(false)
+          end
+
+          line = @buffer.byteslice(@offset, eol_index - @offset)
+          @offset = eol_index + EOL_SIZE
+          line
+        end
+
+        def read_chomp(bytes)
+          ensure_remaining(bytes + EOL_SIZE)
+          str = @buffer.byteslice(@offset, bytes)
+          @offset += bytes + EOL_SIZE
+          str
+        end
+
+        private def ensure_line
+          fill_buffer(false) if @offset >= @buffer.bytesize
+          until @buffer.byteindex(EOL, @offset)
+            fill_buffer(false)
+          end
+        end
+      else
+        ENCODING = Encoding::BINARY
+
+        def initialize(io, read_timeout:, write_timeout:, chunk_size: 4096)
+          @io = io
+          @buffer = "".b
+          @offset = 0
+          @chunk_size = chunk_size
+          @read_timeout = read_timeout
+          @write_timeout = write_timeout
+          @blocking_reads = false
+        end
+
+        def gets_chomp
+          fill_buffer(false) if @offset >= @buffer.bytesize
+          until eol_index = @buffer.index(EOL, @offset)
+            fill_buffer(false)
+          end
+
+          line = @buffer.byteslice(@offset, eol_index - @offset)
+          @offset = eol_index + EOL_SIZE
+          line
+        end
+
+        def read_chomp(bytes)
+          ensure_remaining(bytes + EOL_SIZE)
+          str = @buffer.byteslice(@offset, bytes)
+          @offset += bytes + EOL_SIZE
+          str.force_encoding(Encoding::UTF_8)
+        end
+
+        private def ensure_line
+          fill_buffer(false) if @offset >= @buffer.bytesize
+          until @buffer.index(EOL, @offset)
+            fill_buffer(false)
+          end
+        end
       end
 
       def close
@@ -90,17 +156,6 @@ class RedisClient
         byte
       end
 
-      def gets_chomp
-        fill_buffer(false) if @offset >= @buffer.bytesize
-        until eol_index = @buffer.index(EOL, @offset)
-          fill_buffer(false)
-        end
-
-        line = @buffer.byteslice(@offset, eol_index - @offset)
-        @offset = eol_index + EOL_SIZE
-        line
-      end
-
       def gets_integer
         int = 0
         offset = @offset
@@ -124,21 +179,7 @@ class RedisClient
         int
       end
 
-      def read_chomp(bytes)
-        ensure_remaining(bytes + EOL_SIZE)
-        str = @buffer.byteslice(@offset, bytes)
-        @offset += bytes + EOL_SIZE
-        str
-      end
-
       private
-
-      def ensure_line
-        fill_buffer(false) if @offset >= @buffer.bytesize
-        until @buffer.index(EOL, @offset)
-          fill_buffer(false)
-        end
-      end
 
       def ensure_remaining(bytes)
         needed = bytes - (@buffer.bytesize - @offset)
@@ -171,9 +212,9 @@ class RedisClient
             if empty_buffer
               @offset = start
               empty_buffer = false
-              @buffer.force_encoding(Encoding::UTF_8) unless @buffer.encoding == Encoding::UTF_8
+              @buffer.force_encoding(ENCODING) unless @buffer.encoding == ENCODING
             else
-              @buffer << bytes.force_encoding(Encoding::UTF_8)
+              @buffer << bytes.force_encoding(ENCODING)
             end
             remaining -= bytes.bytesize
             return if !strict || remaining <= 0
