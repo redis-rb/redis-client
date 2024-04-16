@@ -162,18 +162,17 @@ class RedisClient
         while true
           chr = @buffer.getbyte(offset)
 
-          if chr
-            if chr == 13 # "\r".ord
-              @offset = offset + 2
-              break
-            else
-              int = (int * 10) + chr - 48
-            end
-            offset += 1
-          else
+          if chr.nil? # end of buffer
             ensure_line
             return gets_integer
+          elsif chr == 13 # "\r".ord
+            @offset = offset
+            skip(2)
+            break
+          else
+            int = (int * 10) + chr - 48
           end
+          offset += 1
         end
 
         int
