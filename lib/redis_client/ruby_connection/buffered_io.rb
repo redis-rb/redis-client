@@ -190,7 +190,8 @@ class RedisClient
 
       def fill_buffer(strict, size = @chunk_size)
         remaining = size
-        start = @offset - @buffer.bytesize
+        buffer_size = @buffer.bytesize
+        start = @offset - buffer_size
         empty_buffer = start >= 0
 
         loop do
@@ -199,12 +200,27 @@ class RedisClient
           else
             @io.read_nonblock([remaining, @chunk_size].max, exception: false)
           end
+
           case bytes
           when :wait_readable
+            # Ref: https://github.com/redis-rb/redis-client/issues/190
+            # SSLSocket always clear the provided buffer, even when it didn't
+            # read anything. So we need to reset the offset accordingly.
+            if empty_buffer && @buffer.empty?
+              @offset -= buffer_size
+            end
+
             unless @io.to_io.wait_readable(@read_timeout)
               raise ReadTimeoutError, "Waited #{@read_timeout} seconds" unless @blocking_reads
             end
           when :wait_writable
+            # Ref: https://github.com/redis-rb/redis-client/issues/190
+            # SSLSocket always clear the provided buffer, even when it didn't
+            # read anything. So we need to reset the offset accordingly.
+            if empty_buffer && @buffer.empty?
+              @offset -= buffer_size
+            end
+
             @io.to_io.wait_writable(@write_timeout) or raise(WriteTimeoutError, "Waited #{@write_timeout} seconds")
           when nil
             raise EOFError
