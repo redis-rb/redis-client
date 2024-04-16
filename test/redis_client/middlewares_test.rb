@@ -70,11 +70,11 @@ class RedisClient
     end
 
     module DummyMiddleware
-      def call(command, _config)
+      def call(command, _config, &_)
         command
       end
 
-      def call_pipelined(commands, _config)
+      def call_pipelined(commands, _config, &_)
         commands
       end
     end

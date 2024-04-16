@@ -52,7 +52,7 @@ class RedisClientTest < Minitest::Test
 
   def test_older_server
     fake_redis5_driver = Class.new(RedisClient::RubyConnection) do
-      def call_pipelined(commands, *)
+      def call_pipelined(commands, *, &_)
         if commands.any? { |c| c == ["HELLO", "3"] }
           raise RedisClient::CommandError, "ERR unknown command `HELLO`, with args beginning with: `3`"
         else
@@ -71,7 +71,7 @@ class RedisClientTest < Minitest::Test
 
   def test_redis_6_server_with_missing_hello_command
     fake_redis6_driver = Class.new(RedisClient::RubyConnection) do
-      def call_pipelined(commands, *)
+      def call_pipelined(commands, *, &_)
         if commands.any? { |c| c == ["HELLO", "3"] }
           raise RedisClient::CommandError, "ERR unknown command 'HELLO'"
         else
