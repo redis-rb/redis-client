@@ -1,5 +1,9 @@
 # Unreleased
 
+# 0.22.1
+
+- Fix `ProtocolError: Unknown sigil type` errors when using SSL connection. See #190.
+
 # 0.22.0
 
 - Made various performance optimizations to the Ruby driver. See #184.
