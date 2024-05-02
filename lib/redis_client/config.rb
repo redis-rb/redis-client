@@ -133,7 +133,13 @@ class RedisClient
             url = "#{url}?db=#{db}"
           end
         else
-          url = "redis#{'s' if ssl?}://#{host}:#{port}"
+          # add brackets to IPv6 address
+          redis_host = if host.count(":") >= 2
+            "[#{host}]"
+          else
+            host
+          end
+          url = "redis#{'s' if ssl?}://#{redis_host}:#{port}"
           if db != 0
             url = "#{url}/#{db}"
           end
