@@ -201,8 +201,15 @@ class RedisClient
       assert_equal "redis://localhost:6379", Config.new.server_url
       assert_equal "redis://localhost:6379", Config.new(username: "george", password: "hunter2").server_url
       assert_equal "redis://localhost:6379/5", Config.new(db: 5).server_url
+      assert_equal "redis://192.168.0.1:6379", Config.new(host: "192.168.0.1", port: 6379).server_url
+      assert_equal "redis://192.168.0.1:6379/5", Config.new(host: "192.168.0.1", port: 6379, db: 5).server_url
       assert_equal "redis://example.com:8080", Config.new(host: "example.com", port: 8080).server_url
       assert_equal "rediss://localhost:6379", Config.new(ssl: true).server_url
+      assert_equal "redis://[::1]:6379", Config.new(host: "::1", port: 6379).server_url
+      assert_equal "redis://[::1]:6379/2", Config.new(host: "::1", port: 6379, db: 2).server_url
+      assert_equal "redis://[::1]:6379/2", Config.new(url: "redis://[::1]:6379/2").server_url
+      assert_equal "redis://[ffff:aaaa:1111::fcf]:6379", Config.new(host: "ffff:aaaa:1111::fcf", port: 6379).server_url
+      assert_equal "redis://[ffff:aaaa:1111::fcf]:6379/2", Config.new(host: "ffff:aaaa:1111::fcf", port: 6379, db: 2).server_url
 
       assert_equal "unix:///var/redis/redis.sock?db=5", Config.new(path: "/var/redis/redis.sock", db: 5).server_url
     end
