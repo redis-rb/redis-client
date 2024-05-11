@@ -149,7 +149,7 @@ SENTINELS = [{ host: '127.0.0.1', port: 26380 },
 redis_config = RedisClient.sentinel(name: 'mymaster', sentinels: SENTINELS, role: :master, password: 'mysecret')
 ```
 
-So you have to provide Sentinel credential and Redis explictly even they are the same
+So you have to provide Sentinel credential and Redis explicitly even they are the same
 
 ```ruby
 # Use 'mysecret' to authenticate against the mymaster instance and sentinel
