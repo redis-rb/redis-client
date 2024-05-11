@@ -149,7 +149,7 @@ SENTINELS = [{ host: '127.0.0.1', port: 26380 },
 redis_config = RedisClient.sentinel(name: 'mymaster', sentinels: SENTINELS, role: :master, password: 'mysecret')
 ```
 
-So you have to provide Sentinel credential and Redis explictly even they are the same
+So you have to provide Sentinel credential and Redis explicitly even they are the same
 
 ```ruby
 # Use 'mysecret' to authenticate against the mymaster instance and sentinel
@@ -524,7 +524,7 @@ recover for a while.
 
 [Circuit breakers are a pattern that does exactly that](https://en.wikipedia.org/wiki/Circuit_breaker_design_pattern).
 
-Configuation options:
+Configuration options:
 
   - `error_threshold`. The amount of errors to encounter within `error_threshold_timeout` amount of time before opening the circuit, that is to start rejecting requests instantly.
   - `error_threshold_timeout`. The amount of time in seconds that `error_threshold` errors must occur to open the circuit. Defaults to `error_timeout` seconds if not set.
