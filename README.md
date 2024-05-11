@@ -524,7 +524,7 @@ recover for a while.
 
 [Circuit breakers are a pattern that does exactly that](https://en.wikipedia.org/wiki/Circuit_breaker_design_pattern).
 
-Configuation options:
+Configuration options:
 
   - `error_threshold`. The amount of errors to encounter within `error_threshold_timeout` amount of time before opening the circuit, that is to start rejecting requests instantly.
   - `error_threshold_timeout`. The amount of time in seconds that `error_threshold` errors must occur to open the circuit. Defaults to `error_timeout` seconds if not set.
