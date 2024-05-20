@@ -448,12 +448,30 @@ module RedisClientTests
     assert_equal "OK", @redis.call("SET", "foo", "bar")
   end
 
-  def test_blocking_call_timeout_retries
-    redis = new_client(reconnect_attempts: [3.0])
-    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    assert_raises RedisClient::ReadTimeoutError do
-      redis.blocking_call(0.1, "BRPOP", "list", "0.1")
+  def test_blocking_call_long_timeout
+    client = new_client(timeout: 0.5)
+    assert_nil client.blocking_call(0.5, "BRPOP", "list", "0.5")
+    assert_nil client.blocking_call_v(0.5, ["BRPOP", "list", "0.5"])
+
+    result = client.pipelined do |pipeline|
+      pipeline.blocking_call(0.5, "BRPOP", "list", "0.5")
+      pipeline.blocking_call_v(0.5, ["BRPOP", "list", "0.5"])
     end
+
+    assert_equal([nil, nil], result)
+
+    result = client.multi do |pipeline|
+      pipeline.call("BRPOP", "list", "0.5")
+      pipeline.call_v(["BRPOP", "list", "0.5"])
+    end
+
+    assert_equal([nil, nil], result)
+  end
+
+  def test_blocking_call_timeout_retries
+    redis = new_client(timeout: 0.5, reconnect_attempts: [3.0])
+    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    assert_nil redis.blocking_call(0.1, "BRPOP", "list", "0.1")
     duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
     assert duration < 0.5 # if we retried we'd have waited much long
   end

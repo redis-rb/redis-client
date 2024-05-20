@@ -28,7 +28,7 @@ class RedisClient
     def call(command, timeout)
       @pending_reads += 1
       write(command)
-      result = read(timeout)
+      result = read(connection_timeout(timeout))
       @pending_reads -= 1
       if result.is_a?(Error)
         result._set_command(command)
@@ -49,7 +49,7 @@ class RedisClient
 
       size.times do |index|
         timeout = timeouts && timeouts[index]
-        result = read(timeout)
+        result = read(connection_timeout(timeout))
         @pending_reads -= 1
 
         # A multi/exec command can return an array of results.
@@ -72,6 +72,15 @@ class RedisClient
       else
         results
       end
+    end
+
+    def connection_timeout(timeout)
+      return timeout unless timeout && timeout > 0
+
+      # Can't use the command timeout argument as the connection timeout
+      # otherwise it would be very racy. So we add the regular read_timeout on top
+      # to account for the network delay.
+      timeout + config.read_timeout
     end
   end
 end
