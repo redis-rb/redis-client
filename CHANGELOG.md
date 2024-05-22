@@ -1,5 +1,10 @@
 # Unreleased
 
+# 0.22.2
+
+- Fix the sentinel client to properly extend timeout for blocking commands.
+- Fix IPv6 support in `RedisClient::Config#server_url`.
+
 # 0.22.1
 
 - Fix `ProtocolError: Unknown sigil type` errors when using SSL connection. See #190.
