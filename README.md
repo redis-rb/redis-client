@@ -89,7 +89,7 @@ redis.call("GET", "mykey")
 
 ### Sentinel support
 
-The client is able to perform automatic failover by using [Redis Sentinel](https://redis.io/docs/manual/sentinel/).
+The client is able to perform automatic failover by using [Redis Sentinel](https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/).
 
 To connect using Sentinel, use:
 
