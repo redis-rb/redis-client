@@ -719,7 +719,6 @@ static VALUE hiredis_flush(VALUE self) {
 
 static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply) {
     void *redis_reply = NULL;
-    int wdone = 0;
 
     // This struct being on the stack, the GC won't move nor collect that `stack` RArray.
     // We use that to avoid having to have a `mark` function with write barriers.
@@ -737,56 +736,32 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
         return HIREDIS_FATAL_CONNECTION_ERROR; // Protocol error
     }
 
-    if (redis_reply == NULL) {
-        /* Write until the write buffer is drained */
-        while (!wdone) {
-            errno = 0;
+    /* Read until there is a full reply */
+    while (redis_reply == NULL) {
+        errno = 0;
 
-            if (hiredis_buffer_write_nogvl(connection->context, &wdone) == REDIS_ERR) {
-                return HIREDIS_FATAL_CONNECTION_ERROR; // Socket error
-            }
-
-            if (errno == EAGAIN) {
-                int writable = 0;
-
-                if (hiredis_wait_writable(connection->context->fd, &connection->write_timeout, &writable) < 0) {
-                    return HIREDIS_CLIENT_TIMEOUT;
-                }
-
-                if (!writable) {
-                    errno = EAGAIN;
-                    return HIREDIS_CLIENT_TIMEOUT;
-                }
-            }
+        if (hiredis_buffer_read_nogvl(connection->context) == REDIS_ERR) {
+            return HIREDIS_FATAL_CONNECTION_ERROR; // Socket error
         }
 
-        /* Read until there is a full reply */
-        while (redis_reply == NULL) {
-            errno = 0;
+        if (errno == EAGAIN) {
+            int readable = 0;
 
-            if (hiredis_buffer_read_nogvl(connection->context) == REDIS_ERR) {
-                return HIREDIS_FATAL_CONNECTION_ERROR; // Socket error
+            if (hiredis_wait_readable(connection->context->fd, &connection->read_timeout, &readable) < 0) {
+                return HIREDIS_CLIENT_TIMEOUT;
             }
 
-            if (errno == EAGAIN) {
-                int readable = 0;
-
-                if (hiredis_wait_readable(connection->context->fd, &connection->read_timeout, &readable) < 0) {
-                    return HIREDIS_CLIENT_TIMEOUT;
-                }
-
-                if (!readable) {
-                    errno = EAGAIN;
-                    return HIREDIS_CLIENT_TIMEOUT;
-                }
-
-                /* Retry */
-                continue;
+            if (!readable) {
+                errno = EAGAIN;
+                return HIREDIS_CLIENT_TIMEOUT;
             }
 
-            if (redisGetReplyFromReader(connection->context, &redis_reply) == REDIS_ERR) {
-                return HIREDIS_FATAL_CONNECTION_ERROR; // Protocol error
-            }
+            /* Retry */
+            continue;
+        }
+
+        if (redisGetReplyFromReader(connection->context, &redis_reply) == REDIS_ERR) {
+            return HIREDIS_FATAL_CONNECTION_ERROR; // Protocol error
         }
     }
 
