@@ -21,9 +21,10 @@ Gem::Specification.new do |spec|
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
+  gemspec = File.basename(__FILE__)
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
     `git ls-files -z`.split("\x0").reject do |f|
-      (f == __FILE__) || f.match(%r{\A(?:(?:bin|hiredis-client|test|spec|features|benchmark)/|\.(?:git|rubocop))})
+      (f == gemspec) || f.start_with?(*%w[bin/ hiredis-client/ test/ benchmark/ .git .rubocop Gemfile Rakefile])
     end
   end
   spec.require_paths = ["lib"]
