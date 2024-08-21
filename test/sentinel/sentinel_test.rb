@@ -7,12 +7,30 @@ class RedisClient
     include ClientTestHelper
 
     def setup
+      @config = new_config
       super
       @config = new_config
     end
 
+    def check_server
+      retried = false
+      begin
+        @redis = @config.new_client
+        @redis.call("FLUSHDB")
+      rescue
+        if retried
+          raise
+        else
+          retried = true
+          Servers::SENTINEL_TESTS.reset
+          retry
+        end
+      end
+    end
+
     def teardown
       Servers::SENTINEL_TESTS.reset
+      super
     end
 
     def test_new_client
@@ -86,9 +104,9 @@ class RedisClient
     def test_unresolved_config
       client = @config.new_client
 
-      @config.stub(:server_url, -> { raise ConnectionError.with_config('this should not be called', @config) }) do
-        @config.stub(:resolved?, false) do
-          client.stub(:call, ->(_) { raise ConnectionError.with_config('call error', @config) }) do
+      stub(@config, :server_url, -> { raise ConnectionError.with_config('this should not be called', @config) }) do
+        stub(@config, :resolved?, false) do
+          stub(client, :call, ->(_) { raise ConnectionError.with_config('call error', @config) }) do
             error = assert_raises ConnectionError do
               client.call('PING')
             end
@@ -108,7 +126,7 @@ class RedisClient
         [["SENTINEL", "get-master-addr-by-name", "cache"], [Servers::REDIS_REPLICA.host, Servers::REDIS_REPLICA.port.to_s]],
         sentinel_refresh_command_mock,
       ])
-      @config.stub(:sentinel_client, ->(_config) { sentinel_client_mock }) do
+      stub(@config, :sentinel_client, ->(_config) { sentinel_client_mock }) do
         client = @config.new_client
         assert_raises FailoverError do
           client.call("PING")
@@ -126,7 +144,7 @@ class RedisClient
       replica = RedisClient.new(host: Servers::REDIS_REPLICA.host, port: Servers::REDIS_REPLICA.port)
       assert_equal "OK", replica.call("REPLICAOF", "NO", "ONE")
 
-      @config.stub(:sentinel_client, ->(_config) { sentinel_client_mock }) do
+      stub(@config, :sentinel_client, ->(_config) { sentinel_client_mock }) do
         client = @config.new_client
         assert_equal "PONG", client.call("PING")
 
@@ -145,7 +163,7 @@ class RedisClient
       sentinel_client_mock = SentinelClientMock.new([
         [["SENTINEL", "replicas", "cache"], []],
       ] * tries)
-      @config.stub(:sentinel_client, ->(_config) { sentinel_client_mock }) do
+      stub(@config, :sentinel_client, ->(_config) { sentinel_client_mock }) do
         assert_raises ConnectionError do
           @config.new_client.call("PING")
         end
@@ -159,7 +177,7 @@ class RedisClient
         [["SENTINEL", "replicas", "cache"], [response_hash("ip" => Servers::REDIS.host, "port" => Servers::REDIS.port.to_s, "flags" => "slave")]],
         [["SENTINEL", "replicas", "cache"], [response_hash("ip" => Servers::REDIS.host, "port" => Servers::REDIS.port.to_s, "flags" => "slave")]],
       ])
-      @config.stub(:sentinel_client, ->(_config) { sentinel_client_mock }) do
+      stub(@config, :sentinel_client, ->(_config) { sentinel_client_mock }) do
         client = @config.new_client
         assert_equal "PONG", client.call("PING")
 
@@ -180,7 +198,7 @@ class RedisClient
         [["SENTINEL", "replicas", "cache"], [response_hash("ip" => Servers::REDIS_REPLICA.host, "port" => Servers::REDIS_REPLICA.port.to_s, "flags" => "slave")]],
       ])
 
-      @config.stub(:sentinel_client, ->(_config) { sentinel_client_mock }) do
+      stub(@config, :sentinel_client, ->(_config) { sentinel_client_mock }) do
         client = @config.new_client
         assert_equal "PONG", client.call("PING")
       end
@@ -199,7 +217,7 @@ class RedisClient
           additional_sentinels: [response_hash("ip" => new_sentinel_ip, "port" => new_sentinel_port.to_s)],
         ),
       ])
-      @config.stub(:sentinel_client, ->(_config) { sentinel_client_mock }) do
+      stub(@config, :sentinel_client, ->(_config) { sentinel_client_mock }) do
         client = @config.new_client
         assert_equal "PONG", client.call("PING")
       end
@@ -226,7 +244,7 @@ class RedisClient
         ),
       ])
 
-      @config.stub(:sentinel_client, ->(_config) { sentinel_client_mock }) do
+      stub(@config, :sentinel_client, ->(_config) { sentinel_client_mock }) do
         client = @config.new_client
         assert_equal "PONG", client.call("PING")
       end

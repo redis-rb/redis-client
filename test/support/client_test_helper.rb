@@ -48,7 +48,18 @@ module ClientTestHelper
   private
 
   def check_server
-    @redis.call("flushdb", "async")
+    retried = false
+    begin
+      @redis.call("flushdb", "async")
+    rescue
+      if retried
+        raise
+      else
+        retried = true
+        Servers.reset
+        retry
+      end
+    end
   end
 
   def travel(seconds)

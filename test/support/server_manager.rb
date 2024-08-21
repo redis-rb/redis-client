@@ -3,6 +3,33 @@
 require "pathname"
 
 class ServerManager
+  ROOT = Pathname.new(File.expand_path("../../", __dir__))
+
+  class << self
+    def kill_all
+      Dir[ROOT.join("tmp/**/*.pid").to_s].each do |pid_file|
+        pid = begin
+          Integer(File.read(pid_file))
+        rescue ArgumentError
+          nil
+        end
+
+        if pid
+          begin
+            Process.kill(:KILL, pid)
+          rescue Errno::ESRCH, Errno::ECHILD
+            nil # It's fine
+          end
+        end
+
+        File.unlink(pid_file)
+      end
+    end
+  end
+
+  @worker_index = nil
+  singleton_class.attr_accessor :worker_index
+
   module NullIO
     extend self
 
@@ -15,9 +42,7 @@ class ServerManager
     end
   end
 
-  ROOT = Pathname.new(File.expand_path("../../", __dir__))
-
-  attr_reader :name, :host, :port, :real_port, :command
+  attr_reader :name, :host, :command
   attr_accessor :out
 
   def initialize(name, port:, command: nil, real_port: port, host: "127.0.0.1")
@@ -29,24 +54,42 @@ class ServerManager
     @out = $stderr
   end
 
+  def worker_index
+    ServerManager.worker_index
+  end
+
+  def port_offset
+    worker_index.to_i * 200
+  end
+
+  def port
+    @port + port_offset
+  end
+
+  def real_port
+    @real_port + port_offset
+  end
+
   def spawn
-    if alive?
-      @out.puts "#{name} already running with pid=#{pid}"
-    else
-      pid_file.parent.mkpath
-      @out.print "starting #{name}... "
-      pid = Process.spawn(*command.map(&:to_s), out: log_file.to_s, err: log_file.to_s)
-      pid_file.write(pid.to_s)
-      @out.puts "started with pid=#{pid}"
-    end
+    shutdown
+
+    pid_file.parent.mkpath
+    pid = Process.spawn(*command.map(&:to_s), out: log_file.to_s, err: log_file.to_s)
+    pid_file.write(pid.to_s)
+    @out.puts "started #{name}-#{worker_index.to_i} with pid=#{pid}"
   end
 
   def wait(timeout: 5)
-    @out.print "Waiting for #{name} (port #{real_port})..."
-    if wait_until_ready(timeout: timeout)
-      @out.puts " ready."
+    unless wait_until_ready(timeout: 1)
+      @out.puts "Waiting for #{name}-#{worker_index.to_i} (port #{real_port})..."
+    end
+
+    if wait_until_ready(timeout: timeout - 1)
+      @out.puts "#{name}-#{worker_index.to_i} ready."
+      true
     else
-      @out.puts " timedout."
+      @out.puts "#{name}-#{worker_index.to_i} timedout."
+      false
     end
   end
 
@@ -102,12 +145,16 @@ class ServerManager
 
   private
 
+  def dir
+    ROOT.join("tmp/#{name}-#{worker_index.to_i}").tap(&:mkpath)
+  end
+
   def pid_file
-    @pid_file ||= ROOT.join("tmp/#{name}.pid")
+    dir.join("#{name}.pid")
   end
 
   def log_file
-    @log_file ||= ROOT.join("tmp/#{name}.log")
+    dir.join("#{name}.log")
   end
 end
 
@@ -126,7 +173,7 @@ class ServerList
   def prepare
     shutdown
     @servers.each(&:spawn)
-    @servers.each(&:wait)
+    @servers.all?(&:wait)
   end
 
   def reset

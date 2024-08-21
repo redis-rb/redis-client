@@ -7,6 +7,8 @@
 /hiredis-client/pkg/
 /spec/reports/
 /tmp/
+/log/
+
 /hiredis-client/tmp/
 /bin/toxiproxy-server
 *.so

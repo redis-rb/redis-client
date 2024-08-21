@@ -36,6 +36,9 @@ Lint/UnderscorePrefixedVariableName:
 Lint/EmptyBlock:
   Enabled: false
 
+Lint/ShadowedException:
+  Enabled: false
+
 Lint/DuplicateBranch:
   Enabled: false
 
