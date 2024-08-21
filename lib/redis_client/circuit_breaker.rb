@@ -63,7 +63,7 @@ class RedisClient
     private
 
     def refresh_state
-      now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      now = RedisClient.now
       @lock.synchronize do
         if @errors.last < (now - @error_timeout)
           if @success_threshold > 0
@@ -78,7 +78,7 @@ class RedisClient
     end
 
     def record_error
-      now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      now = RedisClient.now
       expiry = now - @error_timeout
       @lock.synchronize do
         if @state == :closed

@@ -45,6 +45,14 @@ class RedisClient
     def default_driver=(name)
       @default_driver = driver(name)
     end
+
+    def now
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    end
+
+    def now_ms
+      Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
+    end
   end
 
   register_driver :ruby do

@@ -104,9 +104,9 @@ class RedisClient
     end
 
     def measure_round_trip_delay
-      start = Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond)
+      start = RedisClient.now_ms
       call(["PING"], @read_timeout)
-      Process.clock_gettime(Process::CLOCK_MONOTONIC, :float_millisecond) - start
+      RedisClient.now_ms - start
     end
 
     private

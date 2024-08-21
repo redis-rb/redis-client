@@ -45,9 +45,27 @@ module ClientTestHelper
 
   private
 
-  def travel(seconds, &block)
-    now = Process.clock_gettime(Process::CLOCK_MONOTONIC) + seconds
-    Process.stub(:clock_gettime, now, &block)
+  def travel(seconds)
+    original_now = RedisClient.singleton_class.instance_method(:now)
+    original_now_ms = RedisClient.singleton_class.instance_method(:now_ms)
+    begin
+      RedisClient.singleton_class.alias_method(:now, :now)
+      RedisClient.define_singleton_method(:now) do
+        original_now.bind(RedisClient).call + seconds
+      end
+
+      RedisClient.singleton_class.alias_method(:now_ms, :now_ms)
+      RedisClient.define_singleton_method(:now_ms) do
+        original_now_ms.bind(RedisClient).call + (seconds * 1000.0)
+      end
+
+      yield
+    ensure
+      RedisClient.singleton_class.alias_method(:now, :now)
+      RedisClient.define_singleton_method(:now, original_now)
+      RedisClient.singleton_class.alias_method(:now_ms, :now_ms)
+      RedisClient.define_singleton_method(:now_ms, original_now_ms)
+    end
   end
 
   def simulate_network_errors(client, failures)

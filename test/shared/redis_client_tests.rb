@@ -470,9 +470,9 @@ module RedisClientTests
 
   def test_blocking_call_timeout_retries
     redis = new_client(timeout: 0.5, reconnect_attempts: [3.0])
-    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    start = RedisClient.now
     assert_nil redis.blocking_call(0.1, "BRPOP", "list", "0.1")
-    duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+    duration = RedisClient.now - start
     assert duration < 0.5 # if we retried we'd have waited much long
   end
 
