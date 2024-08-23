@@ -188,20 +188,22 @@ module RedisClientTests
   end
 
   def test_large_read_pipelines
-    @redis.call("LPUSH", "list", *1000.times.to_a)
-    @redis.pipelined do |pipeline|
+    assert_equal 1000, @redis.call("LPUSH", "list", *1000.times.to_a)
+    results = @redis.pipelined do |pipeline|
       100.times do
         pipeline.call("LRANGE", "list", 0, -1)
       end
     end
+    assert_equal 100, results.size
   end
 
   def test_large_write_pipelines
-    @redis.pipelined do |pipeline|
+    results = @redis.pipelined do |pipeline|
       10.times do |i|
         pipeline.call("SET", i, i.to_s * 10485760)
       end
     end
+    assert_equal ["OK"] * 10, results
   end
 
   def test_get_set
@@ -570,7 +572,7 @@ module RedisClientTests
     @redis.read_timeout = 1
     @redis.write_timeout = 1
 
-    @redis.call("PING")
+    assert_equal "PONG", @redis.call("PING")
     @redis.connect_timeout = 2
     @redis.read_timeout = 2
     @redis.write_timeout = 2

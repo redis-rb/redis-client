@@ -3,7 +3,7 @@
 require "test_helper"
 
 class RedisClient
-  class ConfigTest < Minitest::Test
+  class ConfigTest < RedisClientTestCase
     def test_simple_uri
       config = Config.new(url: "redis://example.com")
       assert_equal "example.com", config.host

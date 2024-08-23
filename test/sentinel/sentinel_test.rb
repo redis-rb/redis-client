@@ -3,7 +3,7 @@
 require "test_helper"
 
 class RedisClient
-  class SentinelTest < Minitest::Test
+  class SentinelTest < RedisClientTestCase
     include ClientTestHelper
 
     def setup

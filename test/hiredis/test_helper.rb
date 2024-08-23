@@ -8,7 +8,7 @@ require_relative "../test_helper"
 unless RUBY_PLATFORM == "java"
   require "redis"
   require "hiredis"
-  Redis.new(host: Servers::HOST, port: Servers::REDIS_TCP_PORT, driver: :hiredis).ping
+  Redis.new(host: Servers::HOST, port: Servers::REDIS.port, driver: :hiredis).ping
 end
 
 require "hiredis-client"

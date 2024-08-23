@@ -35,7 +35,7 @@ class ServerManager
     else
       pid_file.parent.mkpath
       @out.print "starting #{name}... "
-      pid = Process.spawn(*command, out: log_file.to_s, err: log_file.to_s)
+      pid = Process.spawn(*command.map(&:to_s), out: log_file.to_s, err: log_file.to_s)
       pid_file.write(pid.to_s)
       @out.puts "started with pid=#{pid}"
     end

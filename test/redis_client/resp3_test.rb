@@ -6,7 +6,7 @@ require "redis_client/ruby_connection/buffered_io"
 require "redis_client/ruby_connection/resp3"
 
 class RedisClient
-  class RESP3Test < Minitest::Test
+  class RESP3Test < RedisClientTestCase
     class StringIO < ::StringIO
       def skip(offset)
         seek(offset, IO::SEEK_CUR)
