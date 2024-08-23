@@ -3,6 +3,8 @@
 require "test_helper"
 
 class RactorTest < RedisClientTestCase
+  tag isolated: true
+
   def setup
     skip("Ractors are not supported on this Ruby version") unless defined?(::Ractor)
     skip("Hiredis is not Ractor safe") if RedisClient.default_driver.name == "RedisClient::HiredisConnection"

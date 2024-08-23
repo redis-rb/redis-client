@@ -28,22 +28,29 @@ module Servers
     def redis_builder
       @redis_builder ||= RedisBuilder.new(ENV.fetch("REDIS", DEFAULT_REDIS_VERSION), ROOT.join("tmp").to_s)
     end
+
+    attr_accessor :all
+
+    def reset
+      all.reset
+    end
   end
 
   class RedisManager < ServerManager
     def spawn
       begin
-        ROOT.join("tmp/dump.rdb").rmtree
+        dir.join("dump.rdb").to_s
       rescue Errno::ENOENT
       end
       super
     end
 
     def socket_file
-      ServerManager::ROOT.join("tmp/redis.sock")
+      dir.join("redis.sock").to_s
     end
 
     def command
+      ROOT.join("tmp/redis-#{worker_index.to_i}").mkpath
       [
         Servers.redis_server_bin,
         "--unixsocket", socket_file,
@@ -55,8 +62,12 @@ module Servers
         "--tls-ca-cert-file", CERTS_PATH.join("ca.crt").to_s,
         "--save", "",
         "--appendonly", "no",
-        "--dir", "tmp/",
+        "--dir", dir,
       ]
+    end
+
+    def dir
+      ROOT.join("tmp/redis-#{worker_index.to_i}")
     end
 
     def tls_port
@@ -111,7 +122,7 @@ module Servers
     end
 
     def conf_file
-      ROOT.join("tmp/#{name}.conf")
+      ROOT.join("tmp/#{name}-#{worker_index.to_i}.conf")
     end
 
     def command
@@ -132,20 +143,20 @@ module Servers
   SENTINELS = [
     SentinelManager.new(
       "redis_sentinel_1",
-      port: 26480,
-      real_port: 26481,
+      port: 26_300,
+      real_port: 26_301,
       command: [],
     ),
     SentinelManager.new(
       "redis_sentinel_2",
-      port: 26580,
-      real_port: 26481,
+      port: 26_302,
+      real_port: 26_303,
       command: [],
     ),
     SentinelManager.new(
       "redis_sentinel_3",
-      port: 26680,
-      real_port: 26681,
+      port: 26_304,
+      real_port: 26_305,
       command: [],
     ),
   ].freeze
@@ -158,14 +169,34 @@ module Servers
       super
     end
 
+    def command
+      [
+        ToxiproxyManager::BIN.to_s,
+        "-port",
+        port.to_s,
+      ]
+    end
+
     def on_ready
       Toxiproxy.host = "http://#{host}:#{port}"
 
-      Toxiproxy.populate(proxies)
+      retries = 3
+
+      begin
+        Toxiproxy.populate(proxies)
+      rescue SystemCallError, Net::HTTPError, Net::ProtocolError
+        retries -= 1
+        if retries > 0
+          sleep 0.5
+          retry
+        else
+          raise
+        end
+      end
     end
 
     def proxies
-      proxies = [
+      [
         {
           name: "redis",
           upstream: "localhost:#{REDIS.real_port}",
@@ -187,23 +218,32 @@ module Servers
           listen: ":#{REDIS_REPLICA_2.port}",
         },
       ]
+    end
+  end
 
-      proxies += SENTINELS.map do |sentinel|
+  class ToxiproxySentinelManager < ToxiproxyManager
+    def proxies
+      sentinels = SENTINELS.map do |sentinel|
         {
           name: sentinel.name,
           upstream: "localhost:#{sentinel.real_port}",
           listen: ":#{sentinel.port}",
         }
       end
-
-      proxies
+      super + sentinels
     end
   end
 
   TOXIPROXY = ToxiproxyManager.new(
     "toxiproxy",
-    port: 8474,
-    command: [ToxiproxyManager::BIN.to_s, "-port", 8474.to_s],
+    port: 8475,
+    command: [],
+  )
+
+  TOXIPROXY_SENTINELS = ToxiproxySentinelManager.new(
+    "toxiproxy",
+    port: 8475,
+    command: [],
   )
 
   TESTS = ServerList.new(
@@ -212,7 +252,7 @@ module Servers
   )
 
   SENTINEL_TESTS = ServerList.new(
-    TOXIPROXY,
+    TOXIPROXY_SENTINELS,
     REDIS,
     REDIS_REPLICA,
     REDIS_REPLICA_2,

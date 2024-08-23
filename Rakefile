@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "rake/extensiontask"
-require "rake/testtask"
 require 'rubocop/rake_task'
 
 RuboCop::RakeTask.new
@@ -21,29 +20,30 @@ Rake::ExtensionTask.new do |ext|
   CLEAN.add("#{ext.ext_dir}/vendor/*.{a,o}")
 end
 
+require "megatest/test_task"
+
 namespace :test do
-  Rake::TestTask.new(:ruby) do |t|
-    t.libs << "test"
-    t.libs << "lib"
-    t.test_files = FileList["test/**/*_test.rb"].exclude("test/sentinel/*_test.rb")
-    t.options = '-v' if ENV['CI'] || ENV['VERBOSE']
+  jobs = ENV["JOBS"] || "4"
+  jobs = jobs && Process.respond_to?(:fork) ? ["-j", jobs] : []
+  extra_args = ["--max-retries", "1"] + jobs
+
+  Megatest::TestTask.create(:ruby) do |t|
+    t.tests = FileList["test/**/*_test.rb"].exclude("test/sentinel/*_test.rb")
+    t.extra_args = extra_args
   end
 
-  Rake::TestTask.new(:sentinel) do |t|
-    t.libs << "test/sentinel"
-    t.libs << "test"
-    t.libs << "lib"
-    t.test_files = FileList["test/sentinel/*_test.rb"]
-    t.options = '-v' if ENV['CI'] || ENV['VERBOSE']
-  end
-
-  Rake::TestTask.new(:hiredis) do |t|
+  Megatest::TestTask.create(:hiredis) do |t|
     t.libs << "test/hiredis"
-    t.libs << "test"
     t.libs << "hiredis-client/lib"
-    t.libs << "lib"
-    t.test_files = FileList["test/**/*_test.rb"].exclude("test/sentinel/*_test.rb")
-    t.options = '-v' if ENV['CI'] || ENV['VERBOSE']
+    t.tests = FileList["test/hiredis/test_helper.rb"] + FileList["test/**/*_test.rb"].exclude("test/sentinel/*_test.rb")
+    t.extra_args = extra_args
+    t.deps << :compile
+  end
+
+  Megatest::TestTask.create(:sentinel) do |t|
+    t.libs << "test/sentinel"
+    t.tests = ["test/sentinel"]
+    t.extra_args = extra_args
   end
 end
 
