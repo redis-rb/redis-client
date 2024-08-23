@@ -19,4 +19,4 @@ group :benchmark do
   gem "stackprof", platform: :mri
 end
 
-gem "byebug", platform: :mri
+gem "debug", platform: :mri
