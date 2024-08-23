@@ -116,7 +116,12 @@ class RedisClient
         UNIXSocket.new(@config.path)
       else
         sock = if SUPPORTS_RESOLV_TIMEOUT
-          Socket.tcp(@config.host, @config.port, connect_timeout: @connect_timeout, resolv_timeout: @connect_timeout)
+          begin
+            Socket.tcp(@config.host, @config.port, connect_timeout: @connect_timeout, resolv_timeout: @connect_timeout)
+          rescue Errno::ETIMEDOUT => timeout_error
+            timeout_error.message << ": #{@connect_timeout}s"
+            raise
+          end
         else
           Socket.tcp(@config.host, @config.port, connect_timeout: @connect_timeout)
         end
