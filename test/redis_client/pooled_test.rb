@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-class RedisPooledClientTest < Minitest::Test
+class RedisPooledClientTest < RedisClientTestCase
   include ClientTestHelper
   include RedisClientTests
 

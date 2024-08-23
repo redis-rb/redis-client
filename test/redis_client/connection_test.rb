@@ -282,7 +282,7 @@ class RedisClient
 
     private
 
-    def assert_timeout(error, faster_than = 0.5, &block)
+    def assert_timeout(error, faster_than = ClientTestHelper::DEFAULT_TIMEOUT + 0.2, &block)
       realtime = Benchmark.realtime do
         assert_raises(error, &block)
       end
@@ -291,7 +291,7 @@ class RedisClient
     end
   end
 
-  class TCPConnectionTest < Minitest::Test
+  class TCPConnectionTest < RedisClientTestCase
     include ClientTestHelper
     include ConnectionTests
 
@@ -431,7 +431,7 @@ class RedisClient
     end
   end
 
-  class SSLConnectionTest < Minitest::Test
+  class SSLConnectionTest < RedisClientTestCase
     include ClientTestHelper
     include ConnectionTests
 
@@ -449,7 +449,7 @@ class RedisClient
     end
   end
 
-  class UnixConnectionTest < Minitest::Test
+  class UnixConnectionTest < RedisClientTestCase
     include ClientTestHelper
 
     def test_connection_working

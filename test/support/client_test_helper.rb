@@ -39,11 +39,17 @@ module ClientTestHelper
   end
 
   def setup
+    super
+
     @redis = new_client
-    @redis.call("FLUSHDB")
+    check_server
   end
 
   private
+
+  def check_server
+    @redis.call("flushdb", "async")
+  end
 
   def travel(seconds)
     original_now = RedisClient.singleton_class.instance_method(:now)
@@ -90,19 +96,21 @@ module ClientTestHelper
 
   module_function
 
+  DEFAULT_TIMEOUT = 0.1
+
   def tcp_config
     {
       host: Servers::HOST,
-      port: Servers::REDIS_TCP_PORT,
-      timeout: 0.1,
+      port: Servers::REDIS.port,
+      timeout: DEFAULT_TIMEOUT,
     }
   end
 
   def ssl_config
     {
       host: Servers::HOST,
-      port: Servers::REDIS_TLS_PORT,
-      timeout: 0.1,
+      port: Servers::REDIS.tls_port,
+      timeout: DEFAULT_TIMEOUT,
       ssl: true,
       ssl_params: {
         cert: Servers::CERTS_PATH.join("client.crt").to_s,
@@ -114,8 +122,8 @@ module ClientTestHelper
 
   def unix_config
     {
-      path: Servers::REDIS_SOCKET_FILE.to_s,
-      timeout: 0.1,
+      path: Servers::REDIS.socket_file.to_s,
+      timeout: DEFAULT_TIMEOUT,
     }
   end
 

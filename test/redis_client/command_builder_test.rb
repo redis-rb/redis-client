@@ -3,7 +3,7 @@
 require "test_helper"
 
 class RedisClient
-  class CommandBuilderTest < Minitest::Test
+  class CommandBuilderTest < RedisClientTestCase
     def test_positional
       assert_equal ["a", "b", "c"], call("a", "b", "c")
     end

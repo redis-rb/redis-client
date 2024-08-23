@@ -13,3 +13,6 @@ at_exit { $stderr.puts "Running test suite with driver: #{RedisClient.default_dr
 unless ENV["REDIS_CLIENT_RESTART_SERVER"] == "0"
   Minitest.after_run { Servers::TESTS.shutdown }
 end
+
+class RedisClientTestCase < Minitest::Test
+end

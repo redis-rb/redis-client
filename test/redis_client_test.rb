@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-class RedisClientTest < Minitest::Test
+class RedisClientTest < RedisClientTestCase
   include ClientTestHelper
   include RedisClientTests
 
@@ -127,11 +127,11 @@ class RedisClientTest < Minitest::Test
   end
 
   def test_server_url
-    assert_equal "redis://#{Servers::HOST}:#{Servers::REDIS_TCP_PORT}", @redis.server_url
+    assert_equal "redis://#{Servers::HOST}:#{Servers::REDIS.port}", @redis.server_url
   end
 
   def test_timeout
-    assert_equal 0.1, @redis.timeout
+    assert_equal ClientTestHelper::DEFAULT_TIMEOUT, @redis.timeout
   end
 
   def test_db
@@ -147,12 +147,12 @@ class RedisClientTest < Minitest::Test
   end
 
   def test_port
-    assert_equal Servers::REDIS_TCP_PORT, @redis.port
+    assert_equal Servers::REDIS.port, @redis.port
   end
 
   def test_path
     client = new_client(**unix_config)
-    assert_equal Servers::REDIS_SOCKET_FILE.to_s, client.path
+    assert_equal Servers::REDIS.socket_file.to_s, client.path
   end
 
   def test_username

@@ -3,10 +3,11 @@
 require "test_helper"
 
 class RedisClient
-  class CircuitBreakerTest < Minitest::Test
+  class CircuitBreakerTest < RedisClientTestCase
     include ClientTestHelper
 
     def setup
+      super
       @circuit_breaker = CircuitBreaker.new(
         error_threshold: 3,
         error_threshold_timeout: 2,

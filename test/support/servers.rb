@@ -11,12 +11,6 @@ module Servers
   HOST = "127.0.0.1"
   CERTS_PATH = ServerManager::ROOT.join("test/fixtures/certs")
 
-  REDIS_TCP_PORT = 16379
-  REDIS_TLS_PORT = 26379
-  REDIS_REAL_TCP_PORT = 16380
-  REDIS_REAL_TLS_PORT = 26380
-  REDIS_SOCKET_FILE = ServerManager::ROOT.join("tmp/redis.sock")
-
   SENTINEL_CONF_PATH = ServerManager::ROOT.join("tmp/sentinel.conf")
   SENTINEL_NAME = "cache"
 
@@ -45,10 +39,14 @@ module Servers
       super
     end
 
+    def socket_file
+      ServerManager::ROOT.join("tmp/redis.sock")
+    end
+
     def command
       [
         Servers.redis_server_bin,
-        "--unixsocket", REDIS_SOCKET_FILE.to_s,
+        "--unixsocket", socket_file,
         "--unixsocketperm", "700",
         "--port", real_port.to_s,
         "--tls-port", real_tls_port.to_s,

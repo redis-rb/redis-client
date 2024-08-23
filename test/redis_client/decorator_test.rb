@@ -41,7 +41,7 @@ class RedisClient
     end
   end
 
-  class DecoratorTest < Minitest::Test
+  class DecoratorTest < RedisClientTestCase
     include DecoratorTests
 
     private
@@ -51,7 +51,7 @@ class RedisClient
     end
   end
 
-  class PooledDecoratorTest < Minitest::Test
+  class PooledDecoratorTest < RedisClientTestCase
     include DecoratorTests
 
     private
