@@ -5,7 +5,7 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in redis-client.gemspec
 gemspec name: "redis-client"
 
-gem "megatest", github: "byroot/megatest"
+gem "megatest"
 gem "rake", "~> 13.2"
 gem "rake-compiler"
 gem "rubocop"
