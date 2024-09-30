@@ -1,9 +1,10 @@
 # RedisClient
 
-`redis-client` is a simple, low-level, client for Redis 6+.
+`redis-client` is a simple, low-level, client for [Redis](https://redis.io/) 6+, [Valkey](https://valkey.io/) 7+, [KeyDB](https://docs.keydb.dev/),
+and several other databases that implement the same `RESP3` protocol.
 
 Contrary to the `redis` gem, `redis-client` doesn't try to map all Redis commands to Ruby constructs,
-it merely is a thin wrapper on top of the RESP3 protocol.
+it merely is a thin wrapper on top of the `RESP3` protocol.
 
 ## Installation
 
