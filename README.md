@@ -1,6 +1,6 @@
 # RedisClient
 
-`redis-client` is a simple, low-level, client for Redis 6+.
+`redis-client` is a simple, low-level, client for [Valkey](#valkey) 7+ or Redis 6+.
 
 Contrary to the `redis` gem, `redis-client` doesn't try to map all Redis commands to Ruby constructs,
 it merely is a thin wrapper on top of the RESP3 protocol.
@@ -568,6 +568,11 @@ The default driver can be set through `RedisClient.default_driver=`:
 Contrary to the `redis` gem, `redis-client` doesn't protect against concurrent access.
 To use `redis-client` in concurrent environments, you MUST use a connection pool, or
 have one client per Thread or Fiber.
+
+## Valkey
+
+This client library was originally designed for Redis (hence the name).
+Redis is no longer open source but this client works with [Valkey](https://valkey.io/), the continuation of the work that was being done on Redis 7.2.4.
 
 ## Development
 
