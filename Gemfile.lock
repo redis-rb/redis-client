@@ -24,7 +24,7 @@ GEM
     racc (1.7.3-java)
     rainbow (3.1.1)
     rake (13.2.1)
-    rake-compiler (1.2.7)
+    rake-compiler (1.2.8)
       rake
     redis (4.6.0)
     regexp_parser (2.9.0)
