@@ -13,11 +13,11 @@ GEM
     connection_pool (2.4.1)
     hiredis (0.6.3)
     hiredis (0.6.3-java)
-    json (2.7.2)
-    json (2.7.2-java)
+    json (2.7.6)
+    json (2.7.6-java)
     megatest (0.2.0)
     parallel (1.24.0)
-    parser (3.3.5.0)
+    parser (3.3.5.1)
       ast (~> 2.4.1)
       racc
     racc (1.8.1)
@@ -28,7 +28,7 @@ GEM
       rake
     redis (4.6.0)
     regexp_parser (2.9.2)
-    rexml (3.3.8)
+    rexml (3.3.9)
     rubocop (1.50.2)
       json (~> 2.3)
       parallel (~> 1.10)
