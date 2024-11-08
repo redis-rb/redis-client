@@ -28,7 +28,7 @@ GEM
       rake
     redis (4.6.0)
     regexp_parser (2.9.0)
-    rexml (3.2.6)
+    rexml (3.3.9)
     rubocop (1.50.2)
       json (~> 2.3)
       parallel (~> 1.10)
@@ -69,4 +69,4 @@ DEPENDENCIES
   toxiproxy
 
 BUNDLED WITH
-   2.3.13
+   2.5.23
