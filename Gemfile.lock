@@ -14,8 +14,8 @@ GEM
     connection_pool (2.4.1)
     hiredis (0.6.3)
     hiredis (0.6.3-java)
-    json (2.9.0)
-    json (2.9.0-java)
+    json (2.7.6)
+    json (2.7.6-java)
     megatest (0.2.0)
     parallel (1.24.0)
     parser (3.3.0.5)
@@ -71,4 +71,4 @@ DEPENDENCIES
   toxiproxy
 
 BUNDLED WITH
-   2.3.13
+   2.4.22
