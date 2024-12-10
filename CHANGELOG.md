@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.23.0
+
 - Allow `password` to be a callable. Makes it easy to implement short lived password authentication strategies.
 - Fix a thread safety issue in `hiredis-client` when using the `pubsub` client concurrently.
 
