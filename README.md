@@ -78,7 +78,7 @@ redis.call("GET", "mykey")
 - `db`: The database to select after connecting, defaults to `0`.
 - `id` ID for the client connection, assigns name to current connection by sending `CLIENT SETNAME`.
 - `username` Username to authenticate against server, defaults to `"default"`.
-- `password` Password to authenticate against server.
+- `password` Password to authenticate against server. Can either be a String or a callable that recieve `username` as argument and return a passowrd as a String.
 - `timeout`: The general timeout in seconds, default to `1.0`.
 - `connect_timeout`: The connection timeout, takes precedence over the general timeout when connecting to the server.
 - `read_timeout`: The read timeout, takes precedence over the general timeout when reading responses from the server.
