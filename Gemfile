@@ -11,6 +11,7 @@ gem "rake-compiler"
 gem "rubocop"
 gem "rubocop-minitest"
 gem "toxiproxy"
+gem "benchmark"
 
 group :benchmark do
   gem "benchmark-ips"
