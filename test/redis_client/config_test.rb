@@ -218,5 +218,23 @@ class RedisClient
       config = Config.new(custom: { foo: "bar" })
       assert_equal({ foo: "bar" }, config.custom)
     end
+
+    def test_callable_password
+      called = 0
+      argument = nil
+      password_callable = lambda do |username|
+        called += 1
+        argument = username
+        username.upcase.reverse
+      end
+      config = Config.new(
+        username: "george",
+        password: password_callable,
+      )
+
+      assert_equal [%w(HELLO 3 AUTH george EGROEG)], config.connection_prelude
+      assert_equal 1, called
+      assert_equal "george", argument
+    end
   end
 end

@@ -12,8 +12,8 @@ class RedisClient
     DEFAULT_DB = 0
 
     module Common
-      attr_reader :db, :password, :id, :ssl, :ssl_params, :command_builder, :inherit_socket,
-        :connect_timeout, :read_timeout, :write_timeout, :driver, :connection_prelude, :protocol,
+      attr_reader :db, :id, :ssl, :ssl_params, :command_builder, :inherit_socket,
+        :connect_timeout, :read_timeout, :write_timeout, :driver, :protocol,
         :middlewares_stack, :custom, :circuit_breaker
 
       alias_method :ssl?, :ssl
@@ -70,7 +70,7 @@ class RedisClient
 
         reconnect_attempts = Array.new(reconnect_attempts, 0).freeze if reconnect_attempts.is_a?(Integer)
         @reconnect_attempts = reconnect_attempts
-        @connection_prelude = build_connection_prelude
+        @connection_prelude = (build_connection_prelude unless @password.respond_to?(:call))
 
         circuit_breaker = CircuitBreaker.new(**circuit_breaker) if circuit_breaker.is_a?(Hash)
         if @circuit_breaker = circuit_breaker
@@ -85,6 +85,22 @@ class RedisClient
           end
         end
         @middlewares_stack = middlewares_stack
+      end
+
+      def connection_prelude
+        if @password.respond_to?(:call)
+          build_connection_prelude
+        else
+          @connection_prelude
+        end
+      end
+
+      def password
+        if @password.respond_to?(:call)
+          @password.call(username)
+        else
+          @password
+        end
       end
 
       def username
@@ -151,17 +167,18 @@ class RedisClient
 
       def build_connection_prelude
         prelude = []
+        pass = password
         if protocol == 3
-          prelude << if @password
-            ["HELLO", "3", "AUTH", @username || DEFAULT_USERNAME, @password]
+          prelude << if pass
+            ["HELLO", "3", "AUTH", username, pass]
           else
             ["HELLO", "3"]
           end
-        elsif @password
+        elsif pass
           prelude << if @username && !@username.empty?
-            ["AUTH", @username, @password]
+            ["AUTH", @username, pass]
           else
-            ["AUTH", @password]
+            ["AUTH", pass]
           end
         end
 
