@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fix a thread safety issue in `hiredis-client` when using the `pubsub` client concurrently.
+
 # 0.22.2
 
 - Fix the sentinel client to properly extend timeout for blocking commands.
