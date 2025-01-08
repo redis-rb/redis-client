@@ -321,6 +321,7 @@ typedef struct {
     struct timeval connect_timeout;
     struct timeval read_timeout;
     struct timeval write_timeout;
+    hiredis_reader_state_t reader_state;
 } hiredis_connection_t;
 
 static void hiredis_connection_free(void *ptr) {
@@ -720,16 +721,14 @@ static VALUE hiredis_flush(VALUE self) {
 static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply) {
     void *redis_reply = NULL;
 
-    // This struct being on the stack, the GC won't move nor collect that `stack` RArray.
+    // This array being on the stack, the GC won't move nor collect it.
     // We use that to avoid having to have a `mark` function with write barriers.
     // Not that it would be too hard, but if we mark the response objects, we'll likely end up
     // promoting them to the old generation which isn't desirable.
     VALUE stack = rb_ary_new();
-    hiredis_reader_state_t reader_state = {
-        .stack = stack,
-        .task_index = &connection->context->reader->ridx,
-    };
-    connection->context->reader->privdata = &reader_state;
+    connection->reader_state.stack = stack;
+    connection->reader_state.task_index = &connection->context->reader->ridx;
+    connection->context->reader->privdata = &connection->reader_state;
 
     /* Try to read pending replies */
     if (redisGetReplyFromReader(connection->context, &redis_reply) == REDIS_ERR) {
