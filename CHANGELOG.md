@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.23.1
+
 - Fix a potential crash in `hiredis-client` when using subcriptions (`next_event`). See #221.
 
 # 0.23.0
