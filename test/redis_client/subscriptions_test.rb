@@ -89,5 +89,18 @@ class RedisClient
         refute_nil @redis.pubsub
       end
     end
+
+    def test_pubsub_timeout_retry
+      assert_nil @subscription.call("SUBSCRIBE", "mychannel")
+      refute_nil @subscription.next_event # subscribed event
+
+      assert_nil @subscription.next_event(0.01)
+      @redis.call("PUBLISH", "mychannel", "test")
+      1.times.each do # rubocop:disable Lint/UselessTimes
+        # We use 1.times.each to change the stack depth.
+        # See https://github.com/redis-rb/redis-client/issues/221
+        refute_nil @subscription.next_event
+      end
+    end
   end
 end

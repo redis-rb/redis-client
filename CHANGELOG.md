@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fix a potential crash in `hiredis-client` when using subcriptions (`next_event`). See #221.
+
 # 0.23.0
 
 - Allow `password` to be a callable. Makes it easy to implement short lived password authentication strategies.
