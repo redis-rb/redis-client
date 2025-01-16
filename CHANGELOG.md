@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fix retry logic not to attempt to retry on an open circuit breaker. Fix #227.
+
 # 0.23.1
 
 - Fix a potential crash in `hiredis-client` when using subcriptions (`next_event`). See #221.
