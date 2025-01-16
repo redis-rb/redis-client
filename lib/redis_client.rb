@@ -710,8 +710,13 @@ class RedisClient
         end
       rescue ConnectionError, ProtocolError => error
         preferred_error ||= error
-        preferred_error = error unless error.is_a?(CircuitBreaker::OpenCircuitError)
         close
+
+        if error.is_a?(CircuitBreaker::OpenCircuitError)
+          raise preferred_error
+        else
+          preferred_error = error
+        end
 
         if !@disable_reconnection && config.retry_connecting?(tries, error)
           tries += 1
