@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.23.2
+
 - Fix retry logic not to attempt to retry on an open circuit breaker. Fix #227.
 
 # 0.23.1
