@@ -86,6 +86,18 @@ class RedisClient
       assert_equal [%w[HELLO 3 AUTH username password]], config.connection_prelude
     end
 
+    def test_hide_password
+      config = Config.new(password: "PASSWORD")
+      refute_match "PASSWORD", config.inspect
+      refute_match "PASSWORD", config.to_s
+    end
+
+    def test_hide_password_in_uri
+      config = Config.new(url: "redis://username:PASSWORD@example.com")
+      refute_match "PASSWORD", config.inspect
+      refute_match "PASSWORD", config.to_s
+    end
+
     def test_resp2_frozen_prelude
       config = Config.new(protocol: 2, url: "redis://username:password@example.com")
       prelude = config.connection_prelude

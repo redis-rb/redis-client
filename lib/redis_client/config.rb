@@ -40,7 +40,7 @@ class RedisClient
         circuit_breaker: nil
       )
         @username = username
-        @password = password
+        @password = password && !password.respond_to?(:call) ? ->(_) { password } : password
         @db = begin
           Integer(db || DEFAULT_DB)
         rescue ArgumentError
@@ -70,7 +70,6 @@ class RedisClient
 
         reconnect_attempts = Array.new(reconnect_attempts, 0).freeze if reconnect_attempts.is_a?(Integer)
         @reconnect_attempts = reconnect_attempts
-        @connection_prelude = (build_connection_prelude unless @password.respond_to?(:call))
 
         circuit_breaker = CircuitBreaker.new(**circuit_breaker) if circuit_breaker.is_a?(Hash)
         if @circuit_breaker = circuit_breaker
@@ -88,19 +87,36 @@ class RedisClient
       end
 
       def connection_prelude
-        if @password.respond_to?(:call)
-          build_connection_prelude
-        else
-          @connection_prelude
+        prelude = []
+        pass = password
+        if protocol == 3
+          prelude << if pass
+            ["HELLO", "3", "AUTH", username, pass]
+          else
+            ["HELLO", "3"]
+          end
+        elsif pass
+          prelude << if @username && !@username.empty?
+            ["AUTH", @username, pass]
+          else
+            ["AUTH", pass]
+          end
         end
+
+        if @db && @db != 0
+          prelude << ["SELECT", @db.to_s]
+        end
+
+        # Deep freeze all the strings and commands
+        prelude.map! do |commands|
+          commands = commands.map { |str| str.frozen? ? str : str.dup.freeze }
+          commands.freeze
+        end
+        prelude.freeze
       end
 
       def password
-        if @password.respond_to?(:call)
-          @password.call(username)
-        else
-          @password
-        end
+        @password&.call(username)
       end
 
       def username
@@ -161,37 +177,6 @@ class RedisClient
           end
         end
         url
-      end
-
-      private
-
-      def build_connection_prelude
-        prelude = []
-        pass = password
-        if protocol == 3
-          prelude << if pass
-            ["HELLO", "3", "AUTH", username, pass]
-          else
-            ["HELLO", "3"]
-          end
-        elsif pass
-          prelude << if @username && !@username.empty?
-            ["AUTH", @username, pass]
-          else
-            ["AUTH", pass]
-          end
-        end
-
-        if @db && @db != 0
-          prelude << ["SELECT", @db.to_s]
-        end
-
-        # Deep freeze all the strings and commands
-        prelude.map! do |commands|
-          commands = commands.map { |str| str.frozen? ? str : str.dup.freeze }
-          commands.freeze
-        end
-        prelude.freeze
       end
     end
 

@@ -1,5 +1,8 @@
 # Unreleased
 
+- Allow `sentinel_password` to be provided as a `Proc`.
+- Ensure `Config#inspect` and `Config#to_s` do not display stored passwords.
+
 # 0.23.2
 
 - Fix retry logic not to attempt to retry on an open circuit breaker. Fix #227.

@@ -38,9 +38,14 @@ class RedisClient
       end
 
       @to_list_of_hash = @to_hash = nil
+      password = if sentinel_password && !sentinel_password.respond_to?(:call)
+        ->(_) { sentinel_password }
+      else
+        sentinel_password
+      end
       @extra_config = {
         username: sentinel_username,
-        password: sentinel_password,
+        password: password,
         db: nil,
       }
       if client_config[:protocol] == 2

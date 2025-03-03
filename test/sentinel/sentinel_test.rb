@@ -257,6 +257,12 @@ class RedisClient
       assert_equal 1, sentinel_client_mock.close_count
     end
 
+    def test_hide_sentinel_password
+      config = new_config(sentinel_password: "PASSWORD")
+      refute_match "PASSWORD", config.inspect
+      refute_match "PASSWORD", config.to_s
+    end
+
     def test_config_user_password_from_url_for_redis_master_replica_only
       config = new_config(url: "redis://george:hunter2@cache/10", name: nil)
       assert_equal "hunter2", config.password
