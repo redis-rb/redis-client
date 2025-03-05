@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.24.0
+
 - Allow `sentinel_password` to be provided as a `Proc`.
 - Ensure `Config#inspect` and `Config#to_s` do not display stored passwords.
 
