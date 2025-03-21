@@ -153,6 +153,7 @@ class RedisClient
   PermissionError = Class.new(CommandError)
   WrongTypeError = Class.new(CommandError)
   OutOfMemoryError = Class.new(CommandError)
+  NoScriptError = Class.new(CommandError)
 
   ReadOnlyError = Class.new(ConnectionError)
   ReadOnlyError.include(HasCommand)
@@ -167,6 +168,7 @@ class RedisClient
     "MASTERDOWN" => MasterDownError,
     "WRONGTYPE" => WrongTypeError,
     "OOM" => OutOfMemoryError,
+    "NOSCRIPT" => NoScriptError,
   }.freeze
 
   class << self

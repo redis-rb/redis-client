@@ -1,5 +1,7 @@
 # Unreleased
 
+- Add `RedisClient::NoScriptError` for `EVALSHA`.
+
 # 0.24.0
 
 - Allow `sentinel_password` to be provided as a `Proc`.

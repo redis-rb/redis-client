@@ -280,6 +280,12 @@ class RedisClient
       end
     end
 
+    def test_script_errors
+      assert_raises RedisClient::NoScriptError do
+        @redis.call("EVALSHA", "invalid", 0)
+      end
+    end
+
     private
 
     def assert_timeout(error, faster_than = ClientTestHelper::DEFAULT_TIMEOUT + 0.2, &block)
