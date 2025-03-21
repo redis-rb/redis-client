@@ -130,8 +130,18 @@ class RedisClient
     end
   end
 
+  module HasCode
+    attr_reader :code
+
+    def initialize(message = nil, code = nil)
+      super(message)
+      @code = code
+    end
+  end
+
   class CommandError < Error
     include HasCommand
+    include HasCode
 
     class << self
       def parse(error_message)
@@ -144,7 +154,7 @@ class RedisClient
         end
         code ||= error_message.split(' ', 2).first
         klass = ERRORS.fetch(code, self)
-        klass.new(error_message.strip)
+        klass.new(error_message.strip, code.freeze)
       end
     end
   end
@@ -157,9 +167,11 @@ class RedisClient
 
   ReadOnlyError = Class.new(ConnectionError)
   ReadOnlyError.include(HasCommand)
+  ReadOnlyError.include(HasCode)
 
   MasterDownError = Class.new(ConnectionError)
   MasterDownError.include(HasCommand)
+  MasterDownError.include(HasCode)
 
   CommandError::ERRORS = {
     "WRONGPASS" => AuthenticationError,

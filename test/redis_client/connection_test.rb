@@ -281,9 +281,10 @@ class RedisClient
     end
 
     def test_script_errors
-      assert_raises RedisClient::NoScriptError do
+      error = assert_raises RedisClient::NoScriptError do
         @redis.call("EVALSHA", "invalid", 0)
       end
+      assert_equal "NOSCRIPT", error.code
     end
 
     private

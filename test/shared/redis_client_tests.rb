@@ -249,6 +249,7 @@ module RedisClientTests
     end
 
     assert_equal ["DOESNOTEXIST", "12"], error.command
+    assert_equal "ERR", error.code
 
     assert_equal "42", @redis.call("GET", "foo")
   end
