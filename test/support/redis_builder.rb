@@ -53,7 +53,7 @@ class RedisBuilder
   end
 
   def tarball_url
-    "https://github.com/antirez/redis/archive/#{@redis_branch}.tar.gz"
+    "https://github.com/redis/redis/archive/#{@redis_branch}.tar.gz"
   end
 
   def build
