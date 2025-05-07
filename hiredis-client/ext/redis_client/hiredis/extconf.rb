@@ -21,7 +21,7 @@ class HiredisConnectionExtconf
 
     have_func("rb_hash_new_capa", "ruby.h")
 
-    $CFLAGS = concat_flags($CFLAGS, "-I#{hiredis_dir}", "-std=c99", "-fvisibility=hidden")
+    $CFLAGS = concat_flags($CFLAGS, "-I#{Shellwords.escape(hiredis_dir)}", "-std=c99", "-fvisibility=hidden")
     $CFLAGS = if @debug
       concat_flags($CFLAGS, "-Werror", "-g", RbConfig::CONFIG["debugflags"])
     else
@@ -53,7 +53,8 @@ class HiredisConnectionExtconf
     end
 
     $LDFLAGS = concat_flags($LDFLAGS, "-lssl", "-lcrypto")
-    $libs = concat_flags($libs, "#{hiredis_dir}/libhiredis.a", "#{hiredis_dir}/libhiredis_ssl.a")
+    $libs = concat_flags($libs, "#{Shellwords.escape(hiredis_dir)}/libhiredis.a",
+      "#{Shellwords.escape(hiredis_dir)}/libhiredis_ssl.a",)
   end
 
   def configure_openssl(original_env)
