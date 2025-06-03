@@ -9,7 +9,6 @@ gem "megatest"
 gem "rake", "~> 13.3"
 gem "rake-compiler"
 gem "rubocop"
-gem "base64"
 gem "rubocop-minitest"
 gem "toxiproxy"
 gem "benchmark"
@@ -18,7 +17,6 @@ group :benchmark do
   gem "benchmark-ips"
   gem "hiredis"
   gem "redis", "~> 4.6"
+  gem "cgi", ">= 0.5.0.beta2" # For Redis 4.x
   gem "stackprof", platform: :mri
 end
-
-gem "byebug", platform: :mri
