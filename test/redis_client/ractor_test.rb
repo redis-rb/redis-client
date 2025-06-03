@@ -9,7 +9,7 @@ class RactorTest < RedisClientTestCase
     skip("Ractors are not supported on this Ruby version") unless defined?(::Ractor)
     skip("Hiredis is not Ractor safe") if RedisClient.default_driver.name == "RedisClient::HiredisConnection"
     begin
-      Ractor.new { RedisClient.default_driver.name }.take
+      ractor_value(Ractor.new { RedisClient.default_driver.name })
     rescue Ractor::RemoteError
       skip("Ractor implementation is too limited (MRI 3.0?)")
     end
@@ -25,7 +25,7 @@ class RactorTest < RedisClientTestCase
     end
     ractor.send(ClientTestHelper.tcp_config.freeze)
 
-    assert_equal("bar", ractor.take)
+    assert_equal("bar", ractor_value(ractor))
   end
 
   def test_multiple_ractors
@@ -37,7 +37,7 @@ class RactorTest < RedisClientTestCase
     end
     ractor1.send(ClientTestHelper.tcp_config.freeze)
 
-    ractor1.take # We do this to ensure that the SET has been processed
+    ractor_value(ractor1) # We do this to ensure that the SET has been processed
 
     ractor2 = Ractor.new do
       config = Ractor.receive
@@ -48,6 +48,16 @@ class RactorTest < RedisClientTestCase
     ractor2.send(ClientTestHelper.tcp_config.freeze)
     ractor2.send("foo")
 
-    assert_equal("bar", ractor2.take)
+    assert_equal("bar", ractor_value(ractor2))
+  end
+
+  if defined?(Ractor) && Ractor.method_defined?(:value) # Ruby 3.5+
+    def ractor_value(ractor)
+      ractor.value
+    end
+  else
+    def ractor_value(ractor)
+      ractor.take
+    end
   end
 end
