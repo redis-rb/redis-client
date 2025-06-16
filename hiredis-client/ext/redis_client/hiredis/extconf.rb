@@ -21,7 +21,7 @@ class HiredisConnectionExtconf
 
     have_func("rb_hash_new_capa", "ruby.h")
 
-    $CFLAGS = concat_flags($CFLAGS, "-I#{Shellwords.escape(hiredis_dir)}", "-std=c99", "-fvisibility=hidden")
+    append_cflags(["-I #{Shellwords.escape(hiredis_dir)}", "-std=c99", "-fvisibility=hidden"])
     $CFLAGS = if @debug
       concat_flags($CFLAGS, "-Werror", "-g", RbConfig::CONFIG["debugflags"])
     else
