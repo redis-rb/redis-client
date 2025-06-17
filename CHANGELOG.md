@@ -1,5 +1,10 @@
 # Unreleased
 
+# 0.25.0
+
+- Fix `hiredis-client` compilation with GCC 15.
+- Fix `hiredis-client` from a work directory with spaces.
+- Add `CommandError#code`.
 - Add `RedisClient::NoScriptError` for `EVALSHA`.
 
 # 0.24.0
