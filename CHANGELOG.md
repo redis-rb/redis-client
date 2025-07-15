@@ -1,5 +1,9 @@
 # Unreleased
 
+# 0.25.1
+
+- Fix Ruby driver TCP keep alive TTL. It was intended to be 120 seconds but was mistakenly set to 15 seconds.
+
 # 0.25.0
 
 - Fix `hiredis-client` compilation with GCC 15.
