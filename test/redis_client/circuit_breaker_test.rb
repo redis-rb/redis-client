@@ -21,6 +21,18 @@ class RedisClient
       assert_open @circuit_breaker
     end
 
+    def test_track_errors_during_error_threshold_window
+      assert_closed @circuit_breaker
+      (@circuit_breaker.error_threshold - 1).times do
+        record_error @circuit_breaker
+      end
+
+      travel(@circuit_breaker.error_threshold_timeout - 0.01) do
+        record_error @circuit_breaker
+        assert_open @circuit_breaker
+      end
+    end
+
     def test_allow_use_after_the_errors_timedout
       open_circuit @circuit_breaker
       assert_open @circuit_breaker
