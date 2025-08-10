@@ -1,5 +1,10 @@
 # Unreleased
 
+# 0.25.2
+
+- Fix circuit breakers to respect the `error_threshold_timeout` config is provided.
+- Fix circuit breakers to clear errors when closing back.
+
 # 0.25.1
 
 - Fix Ruby driver TCP keep alive TTL. It was intended to be 120 seconds but was mistakenly set to 15 seconds.
