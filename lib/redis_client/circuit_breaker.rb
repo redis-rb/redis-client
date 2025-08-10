@@ -79,7 +79,7 @@ class RedisClient
 
     def record_error
       now = RedisClient.now
-      expiry = now - @error_timeout
+      expiry = now - @error_threshold_timeout
       @lock.synchronize do
         if @state == :closed
           @errors.reject! { |t| t < expiry }
@@ -100,6 +100,7 @@ class RedisClient
 
         @successes += 1
         if @successes >= @success_threshold
+          @errors.clear
           @state = :closed
         end
       end
