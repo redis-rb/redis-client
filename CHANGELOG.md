@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fix `hiredis-client` compilation with `clang 21`.
+
 # 0.25.2
 
 - Fix circuit breakers to respect the `error_threshold_timeout` config is provided.
