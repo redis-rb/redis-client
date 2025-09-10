@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.25.3
+
 - Fix `hiredis-client` compilation with `clang 21`.
 
 # 0.25.2
