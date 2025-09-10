@@ -36,9 +36,9 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <stdbool.h>
-#include "hiredis.h"
-#include "net.h"
-#include "hiredis_ssl.h"
+#include "vendor/hiredis.h"
+#include "vendor/net.h"
+#include "vendor/hiredis_ssl.h"
 #include <poll.h>
 
 #if !defined(RUBY_ASSERT)
