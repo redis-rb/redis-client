@@ -191,14 +191,15 @@ class RedisClient
       path: nil,
       username: nil,
       password: nil,
+      db: nil,
       **kwargs
     )
       if url
         url_config = URLConfig.new(url)
         kwargs = {
           ssl: url_config.ssl?,
-          db: url_config.db,
         }.compact.merge(kwargs)
+        db ||= url_config.db
         host ||= url_config.host
         port ||= url_config.port
         path ||= url_config.path
@@ -206,7 +207,7 @@ class RedisClient
         password ||= url_config.password
       end
 
-      super(username: username, password: password, **kwargs)
+      super(username: username, password: password, db: db, **kwargs)
 
       if @path = path
         @host = nil
