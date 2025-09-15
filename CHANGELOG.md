@@ -1,5 +1,14 @@
 # Unreleased
 
+- Fix precedence of `db: nil` initialization parameter.
+
+  ```ruby
+  Redis.new(url: "redis://localhost:6379/3", db: nil).db
+  ```
+
+  Before: `0`
+  After: `3`
+
 # 0.25.3
 
 - Fix `hiredis-client` compilation with `clang 21`.

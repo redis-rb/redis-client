@@ -209,6 +209,23 @@ class RedisClient
       assert_equal [%w[HELLO 3 AUTH george hunter2], %w[SELECT 5]], config.connection_prelude
     end
 
+    def test_overriding_nil
+      config = Config.new(
+        url: "redis://p%40ssw0rd@redis-16379.hosted.com:16379/12",
+        username: nil,
+        password: nil,
+        host: nil,
+        port: nil,
+        db: nil,
+      )
+
+      assert_equal "redis-16379.hosted.com", config.host
+      assert_equal 16379, config.port
+      assert_equal "default", config.username
+      assert_equal "p@ssw0rd", config.password
+      assert_equal 12, config.db
+    end
+
     def test_server_url
       assert_equal "redis://localhost:6379", Config.new.server_url
       assert_equal "redis://localhost:6379", Config.new(username: "george", password: "hunter2").server_url
