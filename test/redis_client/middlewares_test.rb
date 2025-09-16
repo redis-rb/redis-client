@@ -14,6 +14,7 @@ class RedisClient
       RedisClient.register(TestMiddleware)
       super
       TestMiddleware.calls.clear
+      InstrumentRetryAttemptsMiddleware.calls.clear
     end
 
     def teardown
@@ -22,6 +23,7 @@ class RedisClient
         RedisClient.const_set(:Middlewares, @original_module)
       end
       TestMiddleware.calls.clear
+      InstrumentRetryAttemptsMiddleware.calls.clear
       super
     end
 
@@ -70,11 +72,11 @@ class RedisClient
     end
 
     module DummyMiddleware
-      def call(command, _config, &_)
+      def call(command, _config, _retry_attempts = 0, &_)
         command
       end
 
-      def call_pipelined(commands, _config, &_)
+      def call_pipelined(commands, _config, _retry_attempts = 0, &_)
         commands
       end
     end
@@ -83,6 +85,25 @@ class RedisClient
       second_client = new_client(middlewares: [DummyMiddleware])
       assert_equal ["GET", "2"], second_client.call("GET", 2)
       assert_equal([["GET", "2"]], second_client.pipelined { |p| p.call("GET", 2) })
+    end
+
+    def test_retry_instruments_attempts
+      client = new_client(reconnect_attempts: 1, middlewares: [InstrumentRetryAttemptsMiddleware])
+
+      simulate_network_errors(client, ["PING"]) do
+        client.call("PING")
+      end
+
+      assert_includes InstrumentRetryAttemptsMiddleware.calls, [:call, :error, ["PING"], 0]
+      assert_includes InstrumentRetryAttemptsMiddleware.calls, [:call, :success, ["PING"], 1]
+    end
+
+    def test_connect_instruments_attempts
+      client = new_client(middlewares: [InstrumentRetryAttemptsMiddleware])
+
+      client.call("PING")
+
+      assert_includes InstrumentRetryAttemptsMiddleware.calls, [:connect, :success, 0]
     end
 
     private
@@ -102,7 +123,7 @@ class RedisClient
       end
       @calls = []
 
-      def connect(config)
+      def connect(config, _retry_attempts = 0)
         result = super
         TestMiddleware.calls << [:connect, :success, result, config]
         result
@@ -111,7 +132,7 @@ class RedisClient
         raise
       end
 
-      def call(command, config)
+      def call(command, config, _retry_attempts = 0)
         result = super
         TestMiddleware.calls << [:call, :success, command, result, config]
         result
@@ -120,12 +141,46 @@ class RedisClient
         raise
       end
 
-      def call_pipelined(commands, config)
+      def call_pipelined(commands, config, _retry_attempts = 0)
         result = super
         TestMiddleware.calls << [:pipeline, :success, commands, result, config]
         result
       rescue => error
         TestMiddleware.calls << [:pipeline, :error, commands, error, config]
+        raise
+      end
+    end
+
+    module InstrumentRetryAttemptsMiddleware
+      class << self
+        attr_accessor :calls
+      end
+      @calls = []
+
+      def connect(config, retry_attempts = 0)
+        result = super
+        InstrumentRetryAttemptsMiddleware.calls << [:connect, :success, retry_attempts]
+        result
+      rescue
+        InstrumentRetryAttemptsMiddleware.calls << [:connect, :error, retry_attempts]
+        raise
+      end
+
+      def call(command, config, retry_attempts = 0)
+        result = super
+        InstrumentRetryAttemptsMiddleware.calls << [:call, :success, command, retry_attempts]
+        result
+      rescue
+        InstrumentRetryAttemptsMiddleware.calls << [:call, :error, command, retry_attempts]
+        raise
+      end
+
+      def call_pipelined(commands, config, retry_attempts = 0)
+        result = super
+        InstrumentRetryAttemptsMiddleware.calls << [:pipeline, :success, commands, retry_attempts]
+        result
+      rescue
+        InstrumentRetryAttemptsMiddleware.calls << [:pipeline, :error, commands, retry_attempts]
         raise
       end
     end

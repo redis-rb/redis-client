@@ -415,15 +415,15 @@ either globally or on a given configuration instance.
 
 ```ruby
 module MyGlobalRedisInstrumentation
-  def connect(redis_config)
+  def connect(redis_config, retry_attempts)
     MyMonitoringService.instrument("redis.connect") { super }
   end
 
-  def call(command, redis_config)
+  def call(command, redis_config, retry_attempts)
     MyMonitoringService.instrument("redis.query") { super }
   end
 
-  def call_pipelined(commands, redis_config)
+  def call_pipelined(commands, redis_config, retry_attempts)
     MyMonitoringService.instrument("redis.pipeline") { super }
   end
 end
@@ -443,15 +443,15 @@ If middlewares need a client-specific configuration, `Config#custom` can be used
 
 ```ruby
 module MyGlobalRedisInstrumentation
-  def connect(redis_config)
+  def connect(redis_config, retry_attempts)
     MyMonitoringService.instrument("redis.connect", tags: redis_config.custom[:tags]) { super }
   end
 
-  def call(command, redis_config)
+  def call(command, redis_config, retry_attempts)
     MyMonitoringService.instrument("redis.query", tags: redis_config.custom[:tags]) { super }
   end
 
-  def call_pipelined(commands, redis_config)
+  def call_pipelined(commands, redis_config, retry_attempts)
     MyMonitoringService.instrument("redis.pipeline", tags: redis_config.custom[:tags]) { super }
   end
 end

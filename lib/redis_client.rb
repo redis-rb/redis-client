@@ -287,8 +287,8 @@ class RedisClient
   end
 
   def measure_round_trip_delay
-    ensure_connected do |connection|
-      @middlewares.call(["PING"], config) do
+    ensure_connected do |connection, retry_attempts|
+      @middlewares.call(["PING"], config, retry_attempts) do
         connection.measure_round_trip_delay
       end
     end
@@ -296,8 +296,8 @@ class RedisClient
 
   def call(*command, **kwargs)
     command = @command_builder.generate(command, kwargs)
-    result = ensure_connected do |connection|
-      @middlewares.call(command, config) do
+    result = ensure_connected do |connection, retry_attempts|
+      @middlewares.call(command, config, retry_attempts) do
         connection.call(command, nil)
       end
     end
@@ -311,8 +311,8 @@ class RedisClient
 
   def call_v(command)
     command = @command_builder.generate(command)
-    result = ensure_connected do |connection|
-      @middlewares.call(command, config) do
+    result = ensure_connected do |connection, retry_attempts|
+      @middlewares.call(command, config, retry_attempts) do
         connection.call(command, nil)
       end
     end
@@ -357,8 +357,8 @@ class RedisClient
   def blocking_call(timeout, *command, **kwargs)
     command = @command_builder.generate(command, kwargs)
     error = nil
-    result = ensure_connected do |connection|
-      @middlewares.call(command, config) do
+    result = ensure_connected do |connection, retry_attempts|
+      @middlewares.call(command, config, retry_attempts) do
         connection.call(command, timeout)
       end
     rescue ReadTimeoutError => error
@@ -377,8 +377,8 @@ class RedisClient
   def blocking_call_v(timeout, command)
     command = @command_builder.generate(command)
     error = nil
-    result = ensure_connected do |connection|
-      @middlewares.call(command, config) do
+    result = ensure_connected do |connection, retry_attempts|
+      @middlewares.call(command, config, retry_attempts) do
         connection.call(command, timeout)
       end
     rescue ReadTimeoutError => error
@@ -450,9 +450,9 @@ class RedisClient
     if pipeline._size == 0
       []
     else
-      results = ensure_connected(retryable: pipeline._retryable?) do |connection|
+      results = ensure_connected(retryable: pipeline._retryable?) do |connection, retry_attempts|
         commands = pipeline._commands
-        @middlewares.call_pipelined(commands, config) do
+        @middlewares.call_pipelined(commands, config, retry_attempts) do
           connection.call_pipelined(commands, pipeline._timeouts, exception: exception)
         end
       end
@@ -489,9 +489,9 @@ class RedisClient
       if transaction._empty?
         []
       else
-        ensure_connected(retryable: transaction._retryable?) do |connection|
+        ensure_connected(retryable: transaction._retryable?) do |connection, retry_attempts|
           commands = transaction._commands
-          @middlewares.call_pipelined(commands, config) do
+          @middlewares.call_pipelined(commands, config, retry_attempts) do
             connection.call_pipelined(commands, nil)
           end.last
         end
@@ -707,7 +707,7 @@ class RedisClient
 
     if @disable_reconnection
       if block_given?
-        yield @raw_connection
+        yield @raw_connection, 0
       else
         @raw_connection
       end
@@ -716,9 +716,9 @@ class RedisClient
       connection = nil
       preferred_error = nil
       begin
-        connection = raw_connection
+        connection = raw_connection(tries)
         if block_given?
-          yield connection
+          yield connection, tries
         else
           connection
         end
@@ -744,7 +744,7 @@ class RedisClient
       connection = ensure_connected
       begin
         @disable_reconnection = true
-        yield connection
+        yield connection, 0
       rescue ConnectionError, ProtocolError
         close
         raise
@@ -754,22 +754,22 @@ class RedisClient
     end
   end
 
-  def raw_connection
+  def raw_connection(retry_attempts = 0)
     if @raw_connection.nil? || !@raw_connection.revalidate
-      connect
+      connect(retry_attempts)
     end
     @raw_connection
   end
 
-  def connect
+  def connect(retry_attempts = 0)
     @pid = PIDCache.pid
 
     if @raw_connection
-      @middlewares.connect(config) do
+      @middlewares.connect(config, retry_attempts) do
         @raw_connection.reconnect
       end
     else
-      @raw_connection = @middlewares.connect(config) do
+      @raw_connection = @middlewares.connect(config, retry_attempts) do
         config.driver.new(
           config,
           connect_timeout: connect_timeout,
@@ -788,13 +788,13 @@ class RedisClient
     # The connection prelude is deliberately not sent to Middlewares
     if config.sentinel?
       prelude << ["ROLE"]
-      role, = @middlewares.call_pipelined(prelude, config) do
+      role, = @middlewares.call_pipelined(prelude, config, retry_attempts) do
         @raw_connection.call_pipelined(prelude, nil).last
       end
       config.check_role!(role)
     else
       unless prelude.empty?
-        @middlewares.call_pipelined(prelude, config) do
+        @middlewares.call_pipelined(prelude, config, retry_attempts) do
           @raw_connection.call_pipelined(prelude, nil)
         end
       end

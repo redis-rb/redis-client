@@ -3,15 +3,15 @@
 class RedisClient
   class CircuitBreaker
     module Middleware
-      def connect(config)
+      def connect(config, _retry_attempts = 0)
         config.circuit_breaker.protect { super }
       end
 
-      def call(_command, config)
+      def call(_command, config, _retry_attempts = 0)
         config.circuit_breaker.protect { super }
       end
 
-      def call_pipelined(_commands, config)
+      def call_pipelined(_commands, config, _retry_attempts = 0)
         config.circuit_breaker.protect { super }
       end
     end

@@ -8,11 +8,11 @@ class RedisClient
       @client = client
     end
 
-    def connect(_config)
+    def connect(_config, _retry_attempts = 0)
       yield
     end
 
-    def call(command, _config)
+    def call(command, _config, _retry_attempts = 0)
       yield command
     end
     alias_method :call_pipelined, :call
