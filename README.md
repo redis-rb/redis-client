@@ -459,6 +459,29 @@ RedisClient.register(MyGlobalRedisInstrumentation)
 
 redis_config = RedisClient.config(custom: { tags: { "environment": Rails.env }})
 ```
+
+### Instrumenting Errors
+
+It is important to note that when `reconnect_attempts` is enabled, all network errors are reported to the middlewares,
+even the ones that will be retried.
+
+In many cases you may want to ignore retriable errors, or report them differently:
+
+```ruby
+module MyGlobalRedisInstrumentation
+  def call(command, redis_config)
+    super
+  rescue RedisClient::Error => error
+    if error.final?
+      # Error won't be retried.
+    else
+      # Error will be retried.
+    end
+    raise
+  end
+end
+```
+
 ### Timeouts
 
 The client allows you to configure connect, read, and write timeouts.

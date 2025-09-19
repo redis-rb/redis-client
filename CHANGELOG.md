@@ -1,5 +1,6 @@
 # Unreleased
 
+- Add `RedisClient::Error#final?` and `#retriable?` to allow middleware to filter out non-final errors.
 - Fix precedence of `db: nil` initialization parameter.
 
   ```ruby
