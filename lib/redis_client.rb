@@ -103,9 +103,9 @@ class RedisClient
     include HasConfig
 
     def self.with_config(message, config = nil)
-      new(message).tap do |error|
-        error._set_config(config)
-      end
+      error = new(message)
+      error._set_config(config)
+      error
     end
   end
 
