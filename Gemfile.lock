@@ -8,6 +8,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.2)
+    base64 (0.3.0)
     benchmark (0.4.1)
     benchmark-ips (2.14.0)
     cgi (0.5.0)
@@ -57,6 +58,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
+  base64
   benchmark
   benchmark-ips
   cgi (>= 0.5.0)
