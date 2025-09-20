@@ -69,6 +69,66 @@ class RedisClient
       ]
     end
 
+    def test_final_errors
+      client = new_client(reconnect_attempts: 1)
+      simulate_network_errors(client, ["PING"]) do
+        assert_equal("PONG", client.call("PING"))
+      end
+
+      calls = TestMiddleware.calls.select { |type, _| type == :call }
+      assert_equal 2, calls.size
+
+      call = calls[0]
+      assert_equal :error, call[1]
+      assert_equal ["PING"], call[2]
+      refute_predicate call[3], :final?
+
+      call = calls[1]
+      assert_equal :success, call[1]
+      assert_equal ["PING"], call[2]
+
+      TestMiddleware.calls.clear
+
+      client = new_client(reconnect_attempts: 1)
+      simulate_network_errors(client, ["PING", "PING"]) do
+        assert_raises ConnectionError do
+          client.call("PING")
+        end
+      end
+
+      calls = TestMiddleware.calls.select { |type, _| type == :call }
+      assert_equal 2, calls.size
+
+      call = calls[0]
+      assert_equal :error, call[1]
+      assert_equal ["PING"], call[2]
+      refute_predicate call[3], :final?
+
+      call = calls[1]
+      assert_equal :error, call[1]
+      assert_equal ["PING"], call[2]
+      assert_predicate call[3], :final?
+
+      TestMiddleware.calls.clear
+
+      client = new_client(reconnect_attempts: 1)
+      simulate_network_errors(client, ["PING"]) do
+        assert_raises ConnectionError do
+          client.call_once("PING")
+        end
+      end
+
+      calls = TestMiddleware.calls.select { |type, _| type == :call }
+      assert_equal 1, calls.size
+
+      call = calls[0]
+      assert_equal :error, call[1]
+      assert_equal ["PING"], call[2]
+      assert_predicate call[3], :final?
+
+      TestMiddleware.calls.clear
+    end
+
     module DummyMiddleware
       def call(command, _config, &_)
         command

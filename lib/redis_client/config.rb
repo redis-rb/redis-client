@@ -140,6 +140,10 @@ class RedisClient
         @client_implementation.new(self, **kwargs)
       end
 
+      def retriable?(attempt)
+        @reconnect_attempts && @reconnect_attempts[attempt]
+      end
+
       def retry_connecting?(attempt, _error)
         if @reconnect_attempts
           if (pause = @reconnect_attempts[attempt])

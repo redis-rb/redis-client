@@ -100,9 +100,10 @@ class RedisClient
         end
       end
     rescue SystemCallError, IOError => error
-      raise ConnectionError.with_config(error.message, config)
+      raise connection_error(error.message)
     rescue Error => error
       error._set_config(config)
+      error._set_retry_attempt(@retry_attempt)
       raise error
     end
 
@@ -110,9 +111,10 @@ class RedisClient
       _write(command)
       flush
     rescue SystemCallError, IOError => error
-      raise ConnectionError.with_config(error.message, config)
+      raise connection_error(error.message)
     rescue Error => error
       error._set_config(config)
+      error._set_retry_attempt(@retry_attempt)
       raise error
     end
 
@@ -122,9 +124,10 @@ class RedisClient
       end
       flush
     rescue SystemCallError, IOError => error
-      raise ConnectionError.with_config(error.message, config)
+      raise connection_error(error.message)
     rescue Error => error
       error._set_config(config)
+      error._set_retry_attempt(@retry_attempt)
       raise error
     end
 
