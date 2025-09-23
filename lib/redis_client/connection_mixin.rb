@@ -2,8 +2,11 @@
 
 class RedisClient
   module ConnectionMixin
+    attr_accessor :retry_attempt
+
     def initialize
       @pending_reads = 0
+      @retry_attempt = nil
     end
 
     def reconnect
@@ -33,6 +36,7 @@ class RedisClient
       if result.is_a?(Error)
         result._set_command(command)
         result._set_config(config)
+        result._set_retry_attempt(@retry_attempt)
         raise result
       else
         result
@@ -61,6 +65,7 @@ class RedisClient
         elsif result.is_a?(Error)
           result._set_command(commands[index])
           result._set_config(config)
+          result._set_retry_attempt(@retry_attempt)
           first_exception ||= result
         end
 
@@ -81,6 +86,16 @@ class RedisClient
       # otherwise it would be very racy. So we add the regular read_timeout on top
       # to account for the network delay.
       timeout + config.read_timeout
+    end
+
+    def protocol_error(message)
+      ProtocolError.with_config(message, config)
+    end
+
+    def connection_error(message)
+      error = ConnectionError.with_config(message, config)
+      error._set_retry_attempt(@retry_attempt)
+      error
     end
   end
 end

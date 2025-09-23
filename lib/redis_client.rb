@@ -99,8 +99,27 @@ class RedisClient
     end
   end
 
+  module Retriable
+    def _set_retry_attempt(retry_attempt)
+      @retry_attempt = retry_attempt
+    end
+
+    def retry_attempt
+      @retry_attempt || 0
+    end
+
+    def retriable?
+      !!@retry_attempt
+    end
+
+    def final?
+      !@retry_attempt
+    end
+  end
+
   class Error < StandardError
     include HasConfig
+    include Retriable
 
     def self.with_config(message, config = nil)
       error = new(message)
@@ -706,6 +725,7 @@ class RedisClient
     close if !config.inherit_socket && @pid != PIDCache.pid
 
     if @disable_reconnection
+      @raw_connection.retry_attempt = nil
       if block_given?
         yield @raw_connection
       else
@@ -717,6 +737,7 @@ class RedisClient
       preferred_error = nil
       begin
         connection = raw_connection
+        connection.retry_attempt = config.retriable?(tries) ? tries : nil
         if block_given?
           yield connection
         else
@@ -744,6 +765,7 @@ class RedisClient
       connection = ensure_connected
       begin
         @disable_reconnection = true
+        @raw_connection.retry_attempt = nil
         yield connection
       rescue ConnectionError, ProtocolError
         close

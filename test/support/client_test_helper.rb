@@ -21,7 +21,7 @@ module ClientTestHelper
     def read(*)
       @fail_now ||= false
       if @fail_now
-        raise ::RedisClient::ConnectionError, "simulated failure"
+        raise connection_error("simulated failure")
       end
 
       super
