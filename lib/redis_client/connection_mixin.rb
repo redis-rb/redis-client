@@ -92,7 +92,9 @@ class RedisClient
     end
 
     def protocol_error(message)
-      ProtocolError.with_config(message, config)
+      error = ProtocolError.with_config(message, config)
+      error._set_retry_attempt(@retry_attempt)
+      error
     end
 
     def connection_error(message)

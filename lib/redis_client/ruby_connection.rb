@@ -73,6 +73,10 @@ class RedisClient
         @io.write(buffer)
       rescue SystemCallError, IOError, OpenSSL::SSL::SSLError => error
         raise connection_error(error.message)
+      rescue Error => error
+        error._set_config(config)
+        error._set_retry_attempt(@retry_attempt)
+        raise error
       end
     end
 
@@ -94,8 +98,8 @@ class RedisClient
       else
         @io.with_timeout(timeout) { RESP3.load(@io) }
       end
-    rescue RedisClient::RESP3::UnknownType => error
-      raise RedisClient::ProtocolError.with_config(error.message, config)
+    rescue RedisClient::RESP3::Error => error
+      raise protocol_error(error.message)
     rescue SystemCallError, IOError, OpenSSL::SSL::SSLError => error
       raise connection_error(error.message)
     end
