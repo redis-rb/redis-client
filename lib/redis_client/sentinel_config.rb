@@ -82,6 +82,10 @@ class RedisClient
       end
     end
 
+    def server_key
+      config.server_key
+    end
+
     def host
       config.host
     end

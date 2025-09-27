@@ -205,6 +205,15 @@ class RedisClient
       end
     end
 
+    def test_reconnect_config_change
+      assert_equal "PONG", @redis.call("PING")
+      @redis.close
+      @redis.instance_variable_set(:@config, RedisClient.config(**tcp_config, port: 1))
+      assert_raises RedisClient::CannotConnectError do
+        @redis.call("PING")
+      end
+    end
+
     def test_circuit_breaker
       circuit_breaker = CircuitBreaker.new(error_threshold: 3, success_threshold: 2, error_timeout: 1)
       @redis = new_client(circuit_breaker: circuit_breaker)

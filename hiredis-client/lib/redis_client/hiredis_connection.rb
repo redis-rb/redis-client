@@ -39,11 +39,8 @@ class RedisClient
       end
     end
 
-    attr_reader :config
-
     def initialize(config, connect_timeout:, read_timeout:, write_timeout:)
-      super()
-      @config = config
+      super(config)
       self.connect_timeout = connect_timeout
       self.read_timeout = read_timeout
       self.write_timeout = write_timeout
@@ -134,6 +131,7 @@ class RedisClient
     private
 
     def connect
+      @server_key = @config.server_key
       _connect(@config.path, @config.host, @config.port, @config.ssl_context)
     rescue SystemCallError => error
       host = @config.path || "#{@config.host}:#{@config.port}"

@@ -40,11 +40,8 @@ class RedisClient
 
     SUPPORTS_RESOLV_TIMEOUT = Socket.method(:tcp).parameters.any? { |p| p.last == :resolv_timeout }
 
-    attr_reader :config
-
     def initialize(config, connect_timeout:, read_timeout:, write_timeout:)
-      super()
-      @config = config
+      super(config)
       @connect_timeout = connect_timeout
       @read_timeout = read_timeout
       @write_timeout = write_timeout
@@ -112,6 +109,7 @@ class RedisClient
     private
 
     def connect
+      @server_key = @config.server_key
       socket = if @config.path
         UNIXSocket.new(@config.path)
       else

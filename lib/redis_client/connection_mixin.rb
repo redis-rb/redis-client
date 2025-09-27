@@ -3,10 +3,13 @@
 class RedisClient
   module ConnectionMixin
     attr_accessor :retry_attempt
+    attr_reader :config
 
-    def initialize
+    def initialize(config)
       @pending_reads = 0
       @retry_attempt = nil
+      @config = config
+      @server_key = nil
     end
 
     def reconnect
@@ -20,7 +23,7 @@ class RedisClient
     end
 
     def revalidate
-      if @pending_reads > 0
+      if @pending_reads > 0 || @server_key != @config.server_key
         close
         false
       else
