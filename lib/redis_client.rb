@@ -786,7 +786,7 @@ class RedisClient
   def connect
     @pid = PIDCache.pid
 
-    if @raw_connection
+    if @raw_connection&.revalidate
       @middlewares.connect(config) do
         @raw_connection.reconnect
       end

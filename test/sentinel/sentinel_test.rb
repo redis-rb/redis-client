@@ -147,9 +147,11 @@ class RedisClient
       stub(@config, :sentinel_client, ->(_config) { sentinel_client_mock }) do
         client = @config.new_client
         assert_equal "PONG", client.call("PING")
+        initial_server_key = @config.server_key
 
         Toxiproxy[Servers::REDIS.name].down do
           assert_equal "PONG", client.call("PING")
+          refute_equal initial_server_key, @config.server_key
         end
       end
     ensure

@@ -1,5 +1,7 @@
 # Unreleased
 
+- hiredis-client: Properly reconnect to the new leader after a sentinel failover.
+
 # 0.26.0
 
 - Add `RedisClient::Error#final?` and `#retriable?` to allow middleware to filter out non-final errors.

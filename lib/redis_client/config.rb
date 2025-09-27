@@ -186,7 +186,7 @@ class RedisClient
 
     include Common
 
-    attr_reader :host, :port, :path
+    attr_reader :host, :port, :path, :server_key
 
     def initialize(
       url: nil,
@@ -220,6 +220,8 @@ class RedisClient
         @host = host || DEFAULT_HOST
         @port = Integer(port || DEFAULT_PORT)
       end
+
+      @server_key = [@path, @host, @port].freeze
     end
   end
 end
