@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.26.1
+
 - Fix a few corner cases where `RedisClient::Error#final?` was innacurate.
 - hiredis-client: Properly reconnect to the new leader after a sentinel failover.
 
