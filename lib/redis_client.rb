@@ -117,6 +117,23 @@ class RedisClient
     end
   end
 
+  module Final
+    def _set_retry_attempt(_retry_attempt)
+    end
+
+    def retry_attempt
+      0
+    end
+
+    def retriable?
+      false
+    end
+
+    def final?
+      true
+    end
+  end
+
   class Error < StandardError
     include HasConfig
     include Retriable
@@ -161,6 +178,7 @@ class RedisClient
   class CommandError < Error
     include HasCommand
     include HasCode
+    include Final
 
     class << self
       def parse(error_message)
@@ -231,6 +249,7 @@ class RedisClient
     @middlewares = config.middlewares_stack.new(self)
     @raw_connection = nil
     @disable_reconnection = false
+    @retry_attempt = nil
   end
 
   def inspect
@@ -736,8 +755,8 @@ class RedisClient
       connection = nil
       preferred_error = nil
       begin
+        @retry_attempt = config.retriable?(tries) ? tries : nil
         connection = raw_connection
-        connection.retry_attempt = config.retriable?(tries) ? tries : nil
         if block_given?
           yield connection
         else
@@ -780,6 +799,7 @@ class RedisClient
     if @raw_connection.nil? || !@raw_connection.revalidate
       connect
     end
+    @raw_connection.retry_attempt = @retry_attempt
     @raw_connection
   end
 
@@ -800,6 +820,7 @@ class RedisClient
         )
       end
     end
+    @raw_connection.retry_attempt = @retry_attempt
 
     prelude = config.connection_prelude.dup
 

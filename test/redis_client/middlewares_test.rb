@@ -129,6 +129,90 @@ class RedisClient
       TestMiddleware.calls.clear
     end
 
+    def test_final_errors_during_reconnect
+      client = new_client(reconnect_attempts: 1)
+      simulate_network_errors(client, ["PING", "HELLO"]) do
+        assert_raises ConnectionError do
+          client.call("PING")
+        end
+      end
+
+      calls = TestMiddleware.calls.select { |type, _| type == :call }
+      assert_equal 1, calls.size
+
+      call = calls[0]
+      assert_equal :error, call[1]
+      assert_equal ["PING"], call[2]
+      refute_predicate call[3], :final?
+
+      pipeline_calls = TestMiddleware.calls.select { |type, _| type == :pipeline }
+      assert_equal 2, pipeline_calls.size
+
+      failing_pipeline = pipeline_calls[1]
+      assert_equal :error, failing_pipeline[1]
+      assert_equal [["HELLO", "3"]], failing_pipeline[2]
+      assert_predicate failing_pipeline[3], :final?
+    end
+
+    def test_command_error_final
+      tcp_server = TCPServer.new("127.0.0.1", 0)
+      tcp_server.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
+      port = tcp_server.addr[1]
+
+      server_thread = Thread.new do
+        session = tcp_server.accept
+        session.write("-Whoops\r\n")
+        session.close
+      end
+
+      assert_raises CommandError do
+        new_client(host: "127.0.0.1", port: port, reconnect_attempts: 1, protocol: 2).call("PING")
+      end
+
+      calls = TestMiddleware.calls.select { |type, _| type == :call }
+      assert_equal 1, calls.size
+      call = calls[0]
+      assert_equal :error, call[1]
+      assert_equal ["PING"], call[2]
+      assert_predicate call[3], :final?
+    ensure
+      server_thread&.kill
+    end
+
+    def test_protocol_error
+      tcp_server = TCPServer.new("127.0.0.1", 0)
+      tcp_server.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
+      port = tcp_server.addr[1]
+
+      server_thread = Thread.new do
+        2.times do
+          session = tcp_server.accept
+          session.write("garbage\r\n")
+          session.flush
+          session.close
+        end
+      end
+
+      assert_raises ProtocolError do
+        new_client(host: "127.0.0.1", port: port, reconnect_attempts: 1, protocol: 2).call("PING")
+      end
+
+      calls = TestMiddleware.calls.select { |type, _| type == :call }
+      assert_equal 2, calls.size
+
+      call = calls[0]
+      assert_equal :error, call[1]
+      assert_equal ["PING"], call[2]
+      refute_predicate call[3], :final?
+
+      call = calls[1]
+      assert_equal :error, call[1]
+      assert_equal ["PING"], call[2]
+      assert_predicate call[3], :final?
+    ensure
+      server_thread&.kill
+    end
+
     module DummyMiddleware
       def call(command, _config, &_)
         command
