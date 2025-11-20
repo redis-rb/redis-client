@@ -823,22 +823,37 @@ class RedisClient
     @raw_connection.retry_attempt = @retry_attempt
 
     prelude = config.connection_prelude.dup
+    timeouts = nil
+    if (auth_timeout = config.respond_to?(:auth_timeout) ? config.auth_timeout : nil)
+      unless auth_timeout.nil?
+        timeouts = Array.new(prelude.size)
+        prelude.each_with_index do |cmd, idx|
+          if cmd && !cmd.empty?
+            if cmd.first == "AUTH" || (cmd.first == "HELLO" && cmd.size >= 3 && cmd[2] == "AUTH")
+              timeouts[idx] = auth_timeout
+            end
+          end
+        end
+      end
+    end
 
     if id
       prelude << ["CLIENT", "SETNAME", id]
+      timeouts << nil if timeouts
     end
 
     # The connection prelude is deliberately not sent to Middlewares
     if config.sentinel?
       prelude << ["ROLE"]
+      timeouts << nil if timeouts
       role, = @middlewares.call_pipelined(prelude, config) do
-        @raw_connection.call_pipelined(prelude, nil).last
+        @raw_connection.call_pipelined(prelude, timeouts).last
       end
       config.check_role!(role)
     else
       unless prelude.empty?
         @middlewares.call_pipelined(prelude, config) do
-          @raw_connection.call_pipelined(prelude, nil)
+          @raw_connection.call_pipelined(prelude, timeouts)
         end
       end
     end

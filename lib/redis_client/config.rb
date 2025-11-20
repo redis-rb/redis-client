@@ -27,6 +27,7 @@ class RedisClient
         read_timeout: timeout,
         write_timeout: timeout,
         connect_timeout: timeout,
+        auth_timeout: nil,
         ssl: nil,
         custom: {},
         ssl_params: nil,
@@ -54,6 +55,7 @@ class RedisClient
         @connect_timeout = connect_timeout
         @read_timeout = read_timeout
         @write_timeout = write_timeout
+        @auth_timeout = auth_timeout
 
         @driver = driver ? RedisClient.driver(driver) : RedisClient.default_driver
 
@@ -121,6 +123,10 @@ class RedisClient
 
       def username
         @username || DEFAULT_USERNAME
+      end
+
+      def auth_timeout
+        @auth_timeout
       end
 
       def resolved?

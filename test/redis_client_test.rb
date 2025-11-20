@@ -15,6 +15,70 @@ class RedisClientTest < RedisClientTestCase
     assert_includes client.call("CLIENT", "INFO"), " db=5 "
   end
 
+  def test_auth_timeout_applied_resp3
+    capturing_driver = Class.new(RedisClient::RubyConnection) do
+      class << self
+        attr_accessor :last_timeouts
+      end
+      def call_pipelined(commands, timeouts, exception: true)
+        self.class.last_timeouts = timeouts
+        Array.new(commands.size, "OK")
+      end
+    end
+    client = new_client(
+      driver: capturing_driver,
+      username: "user",
+      password: "pass",
+      auth_timeout: 0.123,
+      protocol: 3
+    )
+    client.call("PING")
+    assert_equal [0.123], capturing_driver.last_timeouts
+  end
+
+  def test_auth_timeout_applied_resp2
+    capturing_driver = Class.new(RedisClient::RubyConnection) do
+      class << self
+        attr_accessor :last_timeouts
+      end
+      def call_pipelined(commands, timeouts, exception: true)
+        self.class.last_timeouts = timeouts
+        Array.new(commands.size, "OK")
+      end
+    end
+    client = new_client(
+      driver: capturing_driver,
+      username: "user",
+      password: "pass",
+      auth_timeout: 0.456,
+      protocol: 2
+    )
+    client.call("PING")
+    assert_equal [0.456], capturing_driver.last_timeouts
+  end
+
+  def test_auth_timeout_only_applies_to_auth_commands
+    capturing_driver = Class.new(RedisClient::RubyConnection) do
+      class << self
+        attr_accessor :last_timeouts
+      end
+      def call_pipelined(commands, timeouts, exception: true)
+        self.class.last_timeouts = timeouts
+        Array.new(commands.size, "OK")
+      end
+    end
+    client = new_client(
+      driver: capturing_driver,
+      username: "user",
+      password: "pass",
+      db: 5,
+      auth_timeout: 0.789,
+      protocol: 2
+    )
+    client.call("PING")
+    assert_equal [0.789, nil], capturing_driver.last_timeouts
+  end
+
   def test_set_client_id
     client = new_client(id: "peter")
     assert_includes client.call("CLIENT", "INFO"), " name=peter "

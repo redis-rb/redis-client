@@ -503,6 +503,16 @@ RedisClient.config(
 
 All timeout values are specified in seconds.
 
+You can also configure a specific timeout to apply only to authentication during the connection handshake:
+
+```ruby
+RedisClient.config(
+  username: "app",
+  password: "secret",
+  auth_timeout: 0.2, # applies to AUTH (or HELLO ... AUTH) during connect
+).new
+```
+
 ### Reconnection
 
 `redis-client` support automatic reconnection after network errors via the `reconnect_attempts:` configuration option.
