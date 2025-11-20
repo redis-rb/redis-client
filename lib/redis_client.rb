@@ -823,19 +823,7 @@ class RedisClient
     @raw_connection.retry_attempt = @retry_attempt
 
     prelude = config.connection_prelude.dup
-    timeouts = nil
-    if (auth_timeout = config.respond_to?(:auth_timeout) ? config.auth_timeout : nil)
-      unless auth_timeout.nil?
-        timeouts = Array.new(prelude.size)
-        prelude.each_with_index do |cmd, idx|
-          if cmd && !cmd.empty?
-            if cmd.first == "AUTH" || (cmd.first == "HELLO" && cmd.size >= 3 && cmd[2] == "AUTH")
-              timeouts[idx] = auth_timeout
-            end
-          end
-        end
-      end
-    end
+    timeouts = build_prelude_timeouts(prelude, config.auth_timeout)
 
     if id
       prelude << ["CLIENT", "SETNAME", id]
@@ -871,6 +859,23 @@ class RedisClient
     else
       raise
     end
+  end
+
+  # Build the per-command timeouts for the connection prelude.
+  # Only AUTH-related steps should be bounded by auth_timeout.
+  # Returns nil if no timeout applies so downstream can skip passing it.
+  def build_prelude_timeouts(prelude, auth_timeout)
+    return nil unless auth_timeout
+
+    timeouts = Array.new(prelude.size)
+    prelude.each_with_index do |command, index|
+      next if !command || command.empty?
+      name = command.first
+      if name == "AUTH" || (name == "HELLO" && command.include?("AUTH"))
+        timeouts[index] = auth_timeout
+      end
+    end
+    timeouts
   end
 end
 

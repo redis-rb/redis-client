@@ -56,6 +56,7 @@ class RedisClient
         @read_timeout = read_timeout
         @write_timeout = write_timeout
         @auth_timeout = auth_timeout
+        @auth_timeout = nil if @auth_timeout && @auth_timeout <= 0
 
         @driver = driver ? RedisClient.driver(driver) : RedisClient.default_driver
 
