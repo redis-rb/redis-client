@@ -867,15 +867,30 @@ class RedisClient
   def build_prelude_timeouts(prelude, auth_timeout)
     return nil unless auth_timeout
 
-    timeouts = Array.new(prelude.size)
-    prelude.each_with_index do |command, index|
-      next if !command || command.empty?
-      name = command.first
-      if name == "AUTH" || (name == "HELLO" && command.include?("AUTH"))
-        timeouts[index] = auth_timeout
+    auth_seen = false
+    timeouts = prelude.map do |command|
+      if auth_command?(command)
+        auth_seen = true
+        auth_timeout
+      else
+        nil
       end
     end
-    timeouts
+
+    auth_seen ? timeouts : nil
+  end
+
+  def auth_command?(command)
+    return false unless command&.any?
+
+    case command.first
+    when "AUTH"
+      true
+    when "HELLO"
+      command.size >= 3 && command[2] == "AUTH"
+    else
+      false
+    end
   end
 end
 
