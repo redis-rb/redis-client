@@ -20,7 +20,7 @@ class RedisClientTest < RedisClientTestCase
       class << self
         attr_accessor :last_timeouts
       end
-      def call_pipelined(commands, timeouts, exception: true)
+      def call_pipelined(commands, timeouts, exception: true) # rubocop:disable Lint/UnusedMethodArgument
         self.class.last_timeouts = timeouts
         Array.new(commands.size, "OK")
       end
@@ -30,7 +30,7 @@ class RedisClientTest < RedisClientTestCase
       username: "user",
       password: "pass",
       auth_timeout: 0.123,
-      protocol: 3
+      protocol: 3,
     )
     client.call("PING")
     assert_equal [0.123], capturing_driver.last_timeouts
@@ -41,7 +41,7 @@ class RedisClientTest < RedisClientTestCase
       class << self
         attr_accessor :last_timeouts
       end
-      def call_pipelined(commands, timeouts, exception: true)
+      def call_pipelined(commands, timeouts, exception: true) # rubocop:disable Lint/UnusedMethodArgument
         self.class.last_timeouts = timeouts
         Array.new(commands.size, "OK")
       end
@@ -51,7 +51,7 @@ class RedisClientTest < RedisClientTestCase
       username: "user",
       password: "pass",
       auth_timeout: 0.456,
-      protocol: 2
+      protocol: 2,
     )
     client.call("PING")
     assert_equal [0.456], capturing_driver.last_timeouts
@@ -62,7 +62,7 @@ class RedisClientTest < RedisClientTestCase
       class << self
         attr_accessor :last_timeouts
       end
-      def call_pipelined(commands, timeouts, exception: true)
+      def call_pipelined(commands, timeouts, exception: true) # rubocop:disable Lint/UnusedMethodArgument
         self.class.last_timeouts = timeouts
         Array.new(commands.size, "OK")
       end
@@ -73,7 +73,7 @@ class RedisClientTest < RedisClientTestCase
       password: "pass",
       db: 5,
       auth_timeout: 0.789,
-      protocol: 2
+      protocol: 2,
     )
     client.call("PING")
     assert_equal [0.789, nil], capturing_driver.last_timeouts

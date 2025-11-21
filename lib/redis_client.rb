@@ -326,7 +326,7 @@ class RedisClient
 
   def measure_round_trip_delay
     ensure_connected do |connection|
-      @middlewares.call(["PING"], config) do
+      @middlewares.call_with_context(["PING"], config) do
         connection.measure_round_trip_delay
       end
     end
@@ -335,7 +335,7 @@ class RedisClient
   def call(*command, **kwargs)
     command = @command_builder.generate(command, kwargs)
     result = ensure_connected do |connection|
-      @middlewares.call(command, config) do
+      @middlewares.call_with_context(command, config) do
         connection.call(command, nil)
       end
     end
@@ -350,7 +350,7 @@ class RedisClient
   def call_v(command)
     command = @command_builder.generate(command)
     result = ensure_connected do |connection|
-      @middlewares.call(command, config) do
+      @middlewares.call_with_context(command, config) do
         connection.call(command, nil)
       end
     end
@@ -365,7 +365,7 @@ class RedisClient
   def call_once(*command, **kwargs)
     command = @command_builder.generate(command, kwargs)
     result = ensure_connected(retryable: false) do |connection|
-      @middlewares.call(command, config) do
+      @middlewares.call_with_context(command, config) do
         connection.call(command, nil)
       end
     end
@@ -380,7 +380,7 @@ class RedisClient
   def call_once_v(command)
     command = @command_builder.generate(command)
     result = ensure_connected(retryable: false) do |connection|
-      @middlewares.call(command, config) do
+      @middlewares.call_with_context(command, config) do
         connection.call(command, nil)
       end
     end
@@ -396,7 +396,7 @@ class RedisClient
     command = @command_builder.generate(command, kwargs)
     error = nil
     result = ensure_connected do |connection|
-      @middlewares.call(command, config) do
+      @middlewares.call_with_context(command, config) do
         connection.call(command, timeout)
       end
     rescue ReadTimeoutError => error
@@ -416,7 +416,7 @@ class RedisClient
     command = @command_builder.generate(command)
     error = nil
     result = ensure_connected do |connection|
-      @middlewares.call(command, config) do
+      @middlewares.call_with_context(command, config) do
         connection.call(command, timeout)
       end
     rescue ReadTimeoutError => error
@@ -490,7 +490,7 @@ class RedisClient
     else
       results = ensure_connected(retryable: pipeline._retryable?) do |connection|
         commands = pipeline._commands
-        @middlewares.call_pipelined(commands, config) do
+        @middlewares.call_pipelined_with_context(commands, config) do
           connection.call_pipelined(commands, pipeline._timeouts, exception: exception)
         end
       end
@@ -510,7 +510,7 @@ class RedisClient
         begin
           if transaction = build_transaction(&block)
             commands = transaction._commands
-            results = @middlewares.call_pipelined(commands, config) do
+            results = @middlewares.call_pipelined_with_context(commands, config) do
               connection.call_pipelined(commands, nil)
             end.last
           else
@@ -529,7 +529,7 @@ class RedisClient
       else
         ensure_connected(retryable: transaction._retryable?) do |connection|
           commands = transaction._commands
-          @middlewares.call_pipelined(commands, config) do
+          @middlewares.call_pipelined_with_context(commands, config) do
             connection.call_pipelined(commands, nil)
           end.last
         end
@@ -805,13 +805,14 @@ class RedisClient
 
   def connect
     @pid = PIDCache.pid
+    connect_context = { stage: :connect }
 
     if @raw_connection&.revalidate
-      @middlewares.connect(config) do
+      @middlewares.connect_with_context(config, connect_context) do
         @raw_connection.reconnect
       end
     else
-      @raw_connection = @middlewares.connect(config) do
+      @raw_connection = @middlewares.connect_with_context(config, connect_context) do
         config.driver.new(
           config,
           connect_timeout: connect_timeout,
@@ -830,17 +831,19 @@ class RedisClient
       timeouts << nil if timeouts
     end
 
-    # The connection prelude is deliberately not sent to Middlewares
+    prelude_context = { stage: :connection_prelude, connection: @raw_connection }
+
+    # The connection prelude goes through middlewares with a dedicated context.
     if config.sentinel?
       prelude << ["ROLE"]
       timeouts << nil if timeouts
-      role, = @middlewares.call_pipelined(prelude, config) do
+      role, = @middlewares.call_pipelined_with_context(prelude, config, prelude_context) do
         @raw_connection.call_pipelined(prelude, timeouts).last
       end
       config.check_role!(role)
     else
       unless prelude.empty?
-        @middlewares.call_pipelined(prelude, config) do
+        @middlewares.call_pipelined_with_context(prelude, config, prelude_context) do
           @raw_connection.call_pipelined(prelude, timeouts)
         end
       end
@@ -869,12 +872,10 @@ class RedisClient
 
     auth_seen = false
     timeouts = prelude.map do |command|
-      if auth_command?(command)
-        auth_seen = true
-        auth_timeout
-      else
-        nil
-      end
+      next unless auth_command?(command)
+
+      auth_seen = true
+      auth_timeout
     end
 
     auth_seen ? timeouts : nil

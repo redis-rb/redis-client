@@ -419,16 +419,20 @@ module MyGlobalRedisInstrumentation
     MyMonitoringService.instrument("redis.connect") { super }
   end
 
-  def call(command, redis_config)
+  def call(command, redis_config, context = nil)
     MyMonitoringService.instrument("redis.query") { super }
   end
 
-  def call_pipelined(commands, redis_config)
+  def call_pipelined(commands, redis_config, context = nil)
     MyMonitoringService.instrument("redis.pipeline") { super }
   end
 end
 RedisClient.register(MyGlobalRedisInstrumentation)
 ```
+
+Middleware callbacks can optionally accept a third `context` Hash. When present it carries extra information about the current stage of the client.
+For instance, during the connection prelude the context includes `stage: :connection_prelude` and the underlying `connection`, which allows a middleware
+to temporarily tweak socket timeouts around the initial `AUTH/HELLO` handshake without affecting other commands.
 
 Note that `RedisClient.register` is global and apply to all `RedisClient` instances.
 
@@ -447,11 +451,11 @@ module MyGlobalRedisInstrumentation
     MyMonitoringService.instrument("redis.connect", tags: redis_config.custom[:tags]) { super }
   end
 
-  def call(command, redis_config)
+  def call(command, redis_config, context = nil)
     MyMonitoringService.instrument("redis.query", tags: redis_config.custom[:tags]) { super }
   end
 
-  def call_pipelined(commands, redis_config)
+  def call_pipelined(commands, redis_config, context = nil)
     MyMonitoringService.instrument("redis.pipeline", tags: redis_config.custom[:tags]) { super }
   end
 end
@@ -469,7 +473,7 @@ In many cases you may want to ignore retriable errors, or report them differentl
 
 ```ruby
 module MyGlobalRedisInstrumentation
-  def call(command, redis_config)
+  def call(command, redis_config, context = nil)
     super
   rescue RedisClient::Error => error
     if error.final?

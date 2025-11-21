@@ -223,10 +223,40 @@ class RedisClient
       end
     end
 
+    module PreludeContextMiddleware
+      class << self
+        attr_accessor :contexts, :client
+      end
+      @contexts = []
+
+      def initialize(client)
+        super
+        PreludeContextMiddleware.client = client
+      end
+
+      def call_pipelined(commands, config, context = nil, &block)
+        PreludeContextMiddleware.contexts << context if context
+        super
+      end
+    end
+
     def test_instance_middleware
       second_client = new_client(middlewares: [DummyMiddleware])
       assert_equal ["GET", "2"], second_client.call("GET", 2)
       assert_equal([["GET", "2"]], second_client.pipelined { |p| p.call("GET", 2) })
+    end
+
+    def test_prelude_context_is_exposed
+      client = new_client(middlewares: [PreludeContextMiddleware])
+      client.call("PING")
+
+      context = PreludeContextMiddleware.contexts.find { |ctx| ctx && ctx[:stage] == :connection_prelude }
+      refute_nil context
+      assert_equal :connection_prelude, context[:stage]
+      refute_nil context[:connection]
+      assert_kind_of RedisClient, PreludeContextMiddleware.client
+    ensure
+      PreludeContextMiddleware.contexts.clear
     end
 
     private
