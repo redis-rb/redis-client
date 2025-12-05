@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.26.2
+
 - Fix compatibility with `connection_pool` version 3+.
 
 # 0.26.1
