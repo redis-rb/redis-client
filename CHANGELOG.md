@@ -1,5 +1,7 @@
 # Unreleased
 
+- Fix compatibility with `connection_pool` version 3+.
+
 # 0.26.1
 
 - Fix a few corner cases where `RedisClient::Error#final?` was innacurate.

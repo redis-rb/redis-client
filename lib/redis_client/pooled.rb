@@ -23,7 +23,7 @@ class RedisClient
     end
 
     def with(options = EMPTY_HASH)
-      pool.with(options) do |client|
+      pool.with(**options) do |client|
         client.connect_timeout = connect_timeout
         client.read_timeout = read_timeout
         client.write_timeout = write_timeout
