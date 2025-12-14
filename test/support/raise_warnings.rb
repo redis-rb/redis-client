@@ -3,7 +3,7 @@
 $VERBOSE = true
 module RaiseWarnings
   def warn(message, *)
-    return if message.include?('Ractor is experimental')
+    return if message.match?(/Ractor.*is experimental/)
 
     super
 
