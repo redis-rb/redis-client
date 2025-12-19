@@ -248,6 +248,7 @@ class RedisClient
     super
     @middlewares = config.middlewares_stack.new(self)
     @raw_connection = nil
+    @prelude_sent = false
     @disable_reconnection = false
     @retry_attempt = nil
   end
@@ -745,6 +746,7 @@ class RedisClient
 
     if @disable_reconnection
       @raw_connection.retry_attempt = nil
+      send_prelude unless @prelude_sent
       if block_given?
         yield @raw_connection
       else
@@ -798,13 +800,17 @@ class RedisClient
   def raw_connection
     if @raw_connection.nil? || !@raw_connection.revalidate
       connect
+    elsif !@prelude_sent
+      send_prelude
     end
+
     @raw_connection.retry_attempt = @retry_attempt
     @raw_connection
   end
 
   def connect
     @pid = PIDCache.pid
+    @prelude_sent = false
 
     if @raw_connection&.revalidate
       @middlewares.connect(config) do
@@ -822,6 +828,24 @@ class RedisClient
     end
     @raw_connection.retry_attempt = @retry_attempt
 
+    send_prelude
+  rescue FailoverError, CannotConnectError => error
+    error._set_config(config)
+    raise error
+  rescue ConnectionError => error
+    connect_error = CannotConnectError.with_config(error.message, config)
+    connect_error.set_backtrace(error.backtrace)
+    raise connect_error
+  rescue CommandError => error
+    if error.message.match?(/ERR unknown command ['`]HELLO['`]/)
+      raise UnsupportedServer,
+        "redis-client requires Redis 6+ with HELLO command available (#{config.server_url})"
+    else
+      raise
+    end
+  end
+
+  def send_prelude
     prelude = config.connection_prelude.dup
 
     if id
@@ -842,20 +866,8 @@ class RedisClient
         end
       end
     end
-  rescue FailoverError, CannotConnectError => error
-    error._set_config(config)
-    raise error
-  rescue ConnectionError => error
-    connect_error = CannotConnectError.with_config(error.message, config)
-    connect_error.set_backtrace(error.backtrace)
-    raise connect_error
-  rescue CommandError => error
-    if error.message.match?(/ERR unknown command ['`]HELLO['`]/)
-      raise UnsupportedServer,
-        "redis-client requires Redis 6+ with HELLO command available (#{config.server_url})"
-    else
-      raise
-    end
+
+    @prelude_sent = true
   end
 end
 
