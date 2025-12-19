@@ -843,13 +843,16 @@ class RedisClient
       end
     end
   rescue FailoverError, CannotConnectError => error
+    @raw_connection&.close
     error._set_config(config)
     raise error
   rescue ConnectionError => error
+    @raw_connection&.close
     connect_error = CannotConnectError.with_config(error.message, config)
     connect_error.set_backtrace(error.backtrace)
     raise connect_error
   rescue CommandError => error
+    @raw_connection&.close
     if error.message.match?(/ERR unknown command ['`]HELLO['`]/)
       raise UnsupportedServer,
         "redis-client requires Redis 6+ with HELLO command available (#{config.server_url})"

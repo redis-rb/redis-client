@@ -328,7 +328,12 @@ module RedisClientTests
   end
 
   def test_authentication
-    @redis.call("ACL", "SETUSER", "AzureDiamond", ">hunter2", "on", "+PING")
+    @redis.call("ACL", "DELUSER", "AzureDiamond")
+    @redis.call("ACL", "SETUSER", "AzureDiamond", ">hunter2", "on", "+PING", "+CLIENT")
+    @redis.call("ACL", "DELUSER", "backup_admin")
+    @redis.call("ACL", "SETUSER", "backup_admin", ">hunter2", "on", "~*", "&*", "+@all")
+    backup = new_client(username: "backup_admin", password: "hunter2")
+    backup.call("ACL", "SETUSER", "default", "off")
 
     client = new_client(username: "AzureDiamond", password: "hunter2")
     assert_equal "PONG", client.call("PING")
@@ -337,10 +342,72 @@ module RedisClientTests
       client.call("GET", "foo")
     end
 
+    # Wrong password
     client = new_client(username: "AzureDiamond", password: "trolilol")
-    assert_raises RedisClient::AuthenticationError do
+    error = assert_raises RedisClient::AuthenticationError do
       client.call("PING")
     end
+    assert_match(/WRONGPASS invalid username-password pair/, error.message)
+
+    # The same error is raised, this shows that the client retried AUTH and didn't fall back to the default user
+    error = assert_raises RedisClient::AuthenticationError do
+      client.call("PING")
+    end
+    assert_match(/WRONGPASS invalid username-password pair/, error.message)
+
+    # Correct password, but user disabled
+    @redis.call("ACL", "DELUSER", "AnotherUser")
+    backup.call("ACL", "SETUSER", "AnotherUser", ">boom", "off", "+PING", "+CLIENT")
+    client = new_client(username: "AnotherUser", password: "boom")
+    error = assert_raises RedisClient::AuthenticationError do
+      client.call_once("PING")
+    end
+    assert_match(/WRONGPASS invalid username-password pair/, error.message)
+
+    # Correct password, user enabled
+    backup.call("ACL", "SETUSER", "AnotherUser", "on")
+    assert_equal "PONG", client.call_once("PING")
+    assert_match(/user=AnotherUser/, client.call("CLIENT", "INFO"))
+
+    # Wrong username
+    client = new_client(username: "GreenOpal", password: "boom")
+    error = assert_raises RedisClient::AuthenticationError do
+      client.call("PING")
+    end
+    assert_match(/WRONGPASS invalid username-password pair/, error.message)
+  ensure
+    backup.call("ACL", "SETUSER", "default", "on")
+  end
+
+  def test_prelude_failure
+    client = new_client(db: 100)
+    error = assert_raises RedisClient::CommandError do
+      client.call("PING")
+    end
+    assert_match(/ERR DB index is out of range/, error.message)
+
+    error = assert_raises RedisClient::CommandError do
+      client.call("PING")
+    end
+    assert_match(/ERR DB index is out of range/, error.message)
+  end
+
+  def test_noauth
+    @redis.call("ACL", "DELUSER", "AzureDiamond")
+    @redis.call("ACL", "SETUSER", "AzureDiamond", ">hunter2", "on", "~*", "&*", "+@all")
+    backup = new_client(username: "AzureDiamond", password: "hunter2")
+    backup.call("ACL", "SETUSER", "default", "off")
+
+    client = new_client(protocol: 2)
+    error = assert_raises RedisClient::CommandError do
+      client.call("PING")
+    end
+    assert_match(/NOAUTH Authentication required/, error.message)
+
+    backup.call("ACL", "SETUSER", "default", "on")
+    client.call("PING")
+  ensure
+    backup.call("ACL", "SETUSER", "default", "on")
   end
 
   def test_transaction
