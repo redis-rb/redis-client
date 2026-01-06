@@ -1,5 +1,8 @@
 # Unreleased
 
+# 0.26.3
+
+- Fix `rediss://` (ssl) URLs used with Redis sentinel.
 - Handle Ruby 4.0 connection timeout raising an `IO::Timeout` instead of `Errno::ETIMEDOUT`.
 - Entirely close the connection on authentication failures.
 
