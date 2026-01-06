@@ -156,7 +156,7 @@ class RedisClient
         write_timeout: @write_timeout,
       )
       true
-    rescue SystemCallError, OpenSSL::SSL::SSLError, SocketError => error
+    rescue SystemCallError, IOError, OpenSSL::SSL::SSLError, SocketError => error
       socket&.close
       raise CannotConnectError, error.message, error.backtrace
     end
