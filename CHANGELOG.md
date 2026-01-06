@@ -1,5 +1,6 @@
 # Unreleased
 
+- Handle Ruby 4.0 connection timeout raising an `IO::Timeout` instead of `Errno::ETIMEDOUT`.
 - Entirely close the connection on authentication failures.
 
 # 0.26.2
