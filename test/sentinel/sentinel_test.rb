@@ -277,6 +277,28 @@ class RedisClient
       end
     end
 
+    def test_config_ssl_from_rediss_url
+      sentinel_client_mock = SentinelClientMock.new([
+        [["SENTINEL", "get-master-addr-by-name", "cache"], [Servers::REDIS.host, Servers::REDIS.port.to_s]],
+        sentinel_refresh_command_mock,
+      ])
+
+      config = new_config(url: "rediss://george:hunter2@cache/10", name: nil)
+
+      stub(config, :sentinel_client, ->(_config) { sentinel_client_mock }) do
+        assert_equal "hunter2", config.password
+        assert_equal "george", config.username
+        assert_equal 10, config.db
+        assert_predicate config, :ssl?
+        assert_equal [Servers::REDIS.host, Servers::REDIS.port], [config.host, config.port]
+
+        config.sentinels.each do |sentinel|
+          assert_nil sentinel.password
+          refute_predicate sentinel, :ssl?
+        end
+      end
+    end
+
     def test_sentinel_shared_username_password
       config = new_config(sentinel_username: "alice", sentinel_password: "superpassword")
 

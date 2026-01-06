@@ -28,6 +28,7 @@ class RedisClient
           username: url_config.username,
           password: url_config.password,
           db: url_config.db,
+          ssl: url_config.ssl?,
         }.compact.merge(client_config)
         name ||= url_config.host
       end
@@ -66,6 +67,8 @@ class RedisClient
 
       client_config[:reconnect_attempts] ||= DEFAULT_RECONNECT_ATTEMPTS
       @client_config = client_config || {}
+      @sentinel_client_config = @client_config.dup
+      @sentinel_client_config.delete(:ssl)
       super(**client_config)
       @sentinel_configs = sentinels_to_configs(sentinels)
     end
@@ -133,9 +136,9 @@ class RedisClient
       sentinels.map do |sentinel|
         case sentinel
         when String
-          Config.new(**@client_config, **@extra_config, url: sentinel)
+          Config.new(**@sentinel_client_config, **@extra_config, url: sentinel)
         else
-          Config.new(**@client_config, **@extra_config, **sentinel)
+          Config.new(**@sentinel_client_config, **@extra_config, **sentinel)
         end
       end
     end
