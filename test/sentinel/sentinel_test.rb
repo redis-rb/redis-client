@@ -299,6 +299,24 @@ class RedisClient
       end
     end
 
+    def test_explicit_ssl_option_overrides_url
+      sentinel_client_mock = SentinelClientMock.new([
+        [["SENTINEL", "get-master-addr-by-name", "cache"], [Servers::REDIS.host, Servers::REDIS.port.to_s]],
+        sentinel_refresh_command_mock,
+      ])
+
+      # Passing ssl: true should enable SSL for both Redis and Sentinel configs
+      config = new_config(ssl: true)
+
+      stub(config, :sentinel_client, ->(_config) { sentinel_client_mock }) do
+        assert_predicate config, :ssl?, "Expected Redis config to use SSL when explicitly passed"
+
+        config.sentinels.each do |sentinel|
+          assert_predicate sentinel, :ssl?, "Expected Sentinel config to use SSL when explicitly passed"
+        end
+      end
+    end
+
     def test_sentinel_shared_username_password
       config = new_config(sentinel_username: "alice", sentinel_password: "superpassword")
 

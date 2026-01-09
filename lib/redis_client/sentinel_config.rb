@@ -22,6 +22,9 @@ class RedisClient
         raise ArgumentError, "Expected role to be either :master or :replica, got: #{role.inspect}"
       end
 
+      # Track whether SSL was explicitly provided by user
+      ssl_explicitly_set = client_config.key?(:ssl)
+
       if url
         url_config = URLConfig.new(url)
         client_config = {
@@ -68,7 +71,9 @@ class RedisClient
       client_config[:reconnect_attempts] ||= DEFAULT_RECONNECT_ATTEMPTS
       @client_config = client_config || {}
       @sentinel_client_config = @client_config.dup
-      @sentinel_client_config.delete(:ssl)
+      # Only remove SSL from sentinel config if it was derived from URL,
+      # not if explicitly set by user.
+      @sentinel_client_config.delete(:ssl) unless ssl_explicitly_set
       super(**client_config)
       @sentinel_configs = sentinels_to_configs(sentinels)
     end
