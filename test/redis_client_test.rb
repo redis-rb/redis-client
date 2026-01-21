@@ -15,6 +15,18 @@ class RedisClientTest < RedisClientTestCase
     assert_includes client.call("CLIENT", "INFO"), " db=5 "
   end
 
+  def test_raw_connection_reconnect_preserves_database
+    client = new_client(db: 5)
+    client.call("SET", "test_key", "value_in_db5")
+    assert_includes client.call("CLIENT", "INFO"), " db=5 "
+
+    raw_connection = client.instance_variable_get(:@raw_connection)
+    raw_connection.reconnect
+
+    assert_includes client.call("CLIENT", "INFO"), " db=5 "
+    assert_equal "value_in_db5", client.call("GET", "test_key")
+  end
+
   def test_set_client_id
     client = new_client(id: "peter")
     assert_includes client.call("CLIENT", "INFO"), " name=peter "

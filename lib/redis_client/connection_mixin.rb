@@ -15,6 +15,8 @@ class RedisClient
     def reconnect
       close
       connect
+      prelude = config.connection_prelude
+      call_pipelined(prelude, nil) unless prelude.empty?
     end
 
     def close
