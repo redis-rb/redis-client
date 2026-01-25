@@ -75,16 +75,20 @@ class RedisClient
         @close_count = 0
       end
 
-      def call(*args)
-        command, response = @responses.shift
-        if command == args
+      def call(*args, &block)
+        call_v(args, &block)
+      end
+
+      def call_v(command, &block)
+        expected_command, response = @responses.shift
+        if expected_command == command
           if block_given?
             yield response
           else
             response
           end
         else
-          raise "Expected #{command.inspect}, got: #{args.inspect}"
+          raise "Expected #{expected_command.inspect}, got: #{command.inspect}"
         end
       end
 
