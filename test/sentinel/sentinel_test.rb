@@ -79,7 +79,7 @@ class RedisClient
         call_v(args, &block)
       end
 
-      def call_v(command, &block)
+      def call_v(command)
         expected_command, response = @responses.shift
         if expected_command == command
           if block_given?
@@ -95,6 +95,11 @@ class RedisClient
       def close
         @close_count += 1
       end
+    end
+
+    # Mock that only has call_v, simulating Redis::Client which undefs call
+    class CallVOnlySentinelClientMock < SentinelClientMock
+      undef_method :call
     end
 
     def test_unknown_master
@@ -267,6 +272,17 @@ class RedisClient
       config = new_config(sentinel_password: "PASSWORD")
       refute_match "PASSWORD", config.inspect
       refute_match "PASSWORD", config.to_s
+    end
+
+    def test_sentinel_client_without_call_method
+      # Simulates Redis::Client which undefs call method
+      sentinel_client_mock = CallVOnlySentinelClientMock.new([
+        [["SENTINEL", "get-master-addr-by-name", "cache"], [Servers::REDIS.host, Servers::REDIS.port.to_s]],
+        sentinel_refresh_command_mock,
+      ])
+      stub(@config, :sentinel_client, ->(_config) { sentinel_client_mock }) do
+        assert_equal [Servers::REDIS.host, Servers::REDIS.port], [@config.host, @config.port]
+      end
     end
 
     def test_config_user_password_from_url_for_redis_master_replica_only
