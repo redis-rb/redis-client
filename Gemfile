@@ -10,6 +10,7 @@ gem "rake", "~> 13.3"
 gem "rake-compiler"
 gem "rubocop"
 gem "base64" # For rubocop
+gem "ostruct" # For rubocop
 gem "rubocop-minitest"
 gem "toxiproxy"
 gem "benchmark"

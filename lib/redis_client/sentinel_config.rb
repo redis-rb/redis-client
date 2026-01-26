@@ -160,7 +160,7 @@ class RedisClient
 
     def resolve_master
       each_sentinel do |sentinel_client|
-        host, port = sentinel_client.call("SENTINEL", "get-master-addr-by-name", @name)
+        host, port = sentinel_client.call_v(["SENTINEL", "get-master-addr-by-name", @name])
         next unless host && port
 
         refresh_sentinels(sentinel_client)
@@ -179,7 +179,7 @@ class RedisClient
 
     def resolve_replica
       each_sentinel do |sentinel_client|
-        replicas = sentinel_client.call("SENTINEL", "replicas", @name, &@to_list_of_hash)
+        replicas = sentinel_client.call_v(["SENTINEL", "replicas", @name], &@to_list_of_hash)
         replicas.reject! do |r|
           flags = r["flags"].to_s.split(",")
           flags.include?("s_down") || flags.include?("o_down")
@@ -222,7 +222,7 @@ class RedisClient
     end
 
     def refresh_sentinels(sentinel_client)
-      sentinel_response = sentinel_client.call("SENTINEL", "sentinels", @name, &@to_list_of_hash)
+      sentinel_response = sentinel_client.call_v(["SENTINEL", "sentinels", @name], &@to_list_of_hash)
       sentinels = sentinel_response.map do |sentinel|
         { host: sentinel.fetch("ip"), port: Integer(sentinel.fetch("port")) }
       end
