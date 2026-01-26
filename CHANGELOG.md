@@ -1,5 +1,10 @@
 # Unreleased
 
+# 0.26.4
+
+- Further improve `rediss://` URLs used with Redis sentinel. Now avoid override explictly set `ssl:` paramter.
+- Fix compatibility with `redis-rb` in sentinel mode.
+
 # 0.26.3
 
 - Fix `rediss://` (ssl) URLs used with Redis sentinel.
