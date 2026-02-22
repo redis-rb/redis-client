@@ -244,12 +244,15 @@ class RedisClient
 
   include Common
 
+  attr_reader :last_used_at
+
   def initialize(config, **)
     super
     @middlewares = config.middlewares_stack.new(self)
     @raw_connection = nil
     @disable_reconnection = false
     @retry_attempt = nil
+    @last_used_at = RedisClient.now
   end
 
   def inspect
