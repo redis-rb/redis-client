@@ -749,7 +749,9 @@ class RedisClient
     if @disable_reconnection
       @raw_connection.retry_attempt = nil
       if block_given?
-        yield @raw_connection
+        result = yield @raw_connection
+        @last_used_at = RedisClient.now
+        result
       else
         @raw_connection
       end
@@ -761,7 +763,9 @@ class RedisClient
         @retry_attempt = config.retriable?(tries) ? tries : nil
         connection = raw_connection
         if block_given?
-          yield connection
+          result = yield connection
+          @last_used_at = RedisClient.now
+          result
         else
           connection
         end
@@ -788,7 +792,9 @@ class RedisClient
       begin
         @disable_reconnection = true
         @raw_connection.retry_attempt = nil
-        yield connection
+        result = yield connection
+        @last_used_at = RedisClient.now
+        result
       rescue ConnectionError, ProtocolError
         close
         raise

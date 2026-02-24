@@ -27,14 +27,12 @@ class RedisClient
     def with(options = EMPTY_HASH)
       pool.with(**options) do |client|
         if @idle_timeout && (RedisClient.now - client.last_used_at > @idle_timeout)
-          client.close
+          client.call("PING")
         end
         client.connect_timeout = connect_timeout
         client.read_timeout = read_timeout
         client.write_timeout = write_timeout
         yield client
-      ensure
-        client.instance_variable_set(:@last_used_at, RedisClient.now)
       end
     rescue ConnectionPool::TimeoutError => error
       raise CheckoutTimeoutError, "Couldn't checkout a connection in time: #{error.message}"
