@@ -7,7 +7,7 @@ require 'fileutils'
 require 'net/http'
 
 class RedisBuilder
-  TARBALL_CACHE_EXPIRATION = 60 * 10
+  TARBALL_CACHE_EXPIRATION = 60 * 60 * 30
 
   def initialize(redis_branch, tmp_dir)
     @redis_branch = redis_branch
