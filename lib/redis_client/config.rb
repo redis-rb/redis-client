@@ -14,7 +14,7 @@ class RedisClient
     module Common
       attr_reader :db, :id, :ssl, :ssl_params, :command_builder, :inherit_socket,
         :connect_timeout, :read_timeout, :write_timeout, :driver, :protocol,
-        :middlewares_stack, :custom, :circuit_breaker
+        :middlewares_stack, :custom, :circuit_breaker, :driver_info
 
       alias_method :ssl?, :ssl
 
@@ -37,7 +37,8 @@ class RedisClient
         inherit_socket: false,
         reconnect_attempts: false,
         middlewares: false,
-        circuit_breaker: nil
+        circuit_breaker: nil,
+        driver_info: nil
       )
         @username = username
         @password = password && !password.respond_to?(:call) ? ->(_) { password } : password
@@ -84,6 +85,8 @@ class RedisClient
           end
         end
         @middlewares_stack = middlewares_stack
+
+        @driver_info = driver_info
       end
 
       def connection_prelude
@@ -107,6 +110,13 @@ class RedisClient
           prelude << ["SELECT", @db.to_s]
         end
 
+        # Add CLIENT SETINFO commands for lib-name and lib-ver
+        # These commands are supported in Redis 7.2+
+        if @driver_info
+          prelude << ["CLIENT", "SETINFO", "LIB-NAME", build_lib_name]
+          prelude << ["CLIENT", "SETINFO", "LIB-VER", RedisClient::VERSION]
+        end
+
         # Deep freeze all the strings and commands
         prelude.map! do |commands|
           commands = commands.map { |str| str.frozen? ? str : str.dup.freeze }
@@ -121,6 +131,25 @@ class RedisClient
 
       def username
         @username || DEFAULT_USERNAME
+      end
+
+      # Build the library name for CLIENT SETINFO LIB-NAME.
+      #
+      # @param driver_info [String, Array<String>, nil] Upstream driver info
+      # @return [String] Library name with optional upstream driver info
+      # @raise [ArgumentError] if driver_info is not a String or Array
+      def build_lib_name
+        return "redis-client" if @driver_info.nil?
+
+        info = case @driver_info
+        when String then @driver_info
+        when Array then @driver_info.join(";")
+               else raise ArgumentError, "driver_info must be a String or Array of Strings"
+        end
+
+        return "redis-client" if info.empty?
+
+        "redis-client(#{info})"
       end
 
       def resolved?

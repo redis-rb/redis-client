@@ -265,5 +265,59 @@ class RedisClient
       assert_equal 1, called
       assert_equal "george", argument
     end
+
+    def test_connection_prelude_with_driver_info
+      config = Config.new(driver_info: "rails_v7.0.0")
+      prelude = config.connection_prelude
+
+      assert_equal [
+        %w[HELLO 3],
+        %w[CLIENT SETINFO LIB-NAME redis-client(rails_v7.0.0)],
+        ["CLIENT", "SETINFO", "LIB-VER", RedisClient::VERSION],
+      ], prelude
+    end
+
+    def test_connection_prelude_with_multiple_upstream_drivers_string
+      config = Config.new(driver_info: "rails_v7.0.0;sidekiq_v7.1.0")
+      prelude = config.connection_prelude
+
+      assert_equal [
+        %w[HELLO 3],
+        ["CLIENT", "SETINFO", "LIB-NAME", "redis-client(rails_v7.0.0;sidekiq_v7.1.0)"],
+        ["CLIENT", "SETINFO", "LIB-VER", RedisClient::VERSION],
+      ], prelude
+    end
+
+    def test_connection_prelude_with_driver_info_array
+      config = Config.new(driver_info: ["rails_v7.0.0", "sidekiq_v7.1.0"])
+      prelude = config.connection_prelude
+
+      assert_equal [
+        %w[HELLO 3],
+        ["CLIENT", "SETINFO", "LIB-NAME", "redis-client(rails_v7.0.0;sidekiq_v7.1.0)"],
+        ["CLIENT", "SETINFO", "LIB-VER", RedisClient::VERSION],
+      ], prelude
+    end
+
+    def test_driver_info_attribute
+      config = Config.new(driver_info: "sidekiq_v7.1.0")
+
+      assert_equal "sidekiq_v7.1.0", config.driver_info
+      assert_equal "redis-client(sidekiq_v7.1.0)", config.build_lib_name
+    end
+
+    def test_build_lib_name_with_empty_string
+      config = Config.new(driver_info: "")
+
+      assert_equal "redis-client", config.build_lib_name
+    end
+
+    def test_build_lib_name_with_invalid_type
+      config = Config.new(driver_info: 123)
+
+      assert_raises ArgumentError do
+        config.build_lib_name
+      end
+    end
   end
 end

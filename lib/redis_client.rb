@@ -856,6 +856,9 @@ class RedisClient
     if error.message.match?(/ERR unknown command ['`]HELLO['`]/)
       raise UnsupportedServer,
         "redis-client requires Redis 6+ with HELLO command available (#{config.server_url})"
+    # Ignore CLIENT SETINFO errors (Redis < 7.2 doesn't support it)
+    elsif error.message.match?(/unknown subcommand.*setinfo/i)
+      # Silently ignore - CLIENT SETINFO is not supported on Redis < 7.2
     else
       raise
     end
