@@ -14,9 +14,11 @@ class RedisClient
       connect_timeout: config.connect_timeout,
       read_timeout: config.read_timeout,
       write_timeout: config.write_timeout,
+      idle_timeout: nil,
       **kwargs
     )
       super(config, id: id, connect_timeout: connect_timeout, read_timeout: read_timeout, write_timeout: write_timeout)
+      @idle_timeout = idle_timeout
       @pool_kwargs = kwargs
       @pool = new_pool
       @mutex = Mutex.new
@@ -24,6 +26,9 @@ class RedisClient
 
     def with(options = EMPTY_HASH)
       pool.with(**options) do |client|
+        if @idle_timeout && (RedisClient.now - client.last_used_at > @idle_timeout)
+          client.call("PING")
+        end
         client.connect_timeout = connect_timeout
         client.read_timeout = read_timeout
         client.write_timeout = write_timeout
