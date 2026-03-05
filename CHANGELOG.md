@@ -1,8 +1,10 @@
 # Unreleased
 
+- Added `idle_timeout` to revalidate connections that haven't been successfuly used in a long time. Defaults to 60 seconds.
+
 # 0.26.4
 
-- Further improve `rediss://` URLs used with Redis sentinel. Now avoid override explictly set `ssl:` paramter.
+- Further improve `rediss://` URLs used with Redis sentinel. Now avoid override explictly set `ssl:` parameter.
 - Fix compatibility with `redis-rb` in sentinel mode.
 
 # 0.26.3

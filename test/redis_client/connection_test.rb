@@ -296,6 +296,26 @@ class RedisClient
       assert_equal "NOSCRIPT", error.code
     end
 
+    def test_idle_timeout
+      client = new_client(idle_timeout: 5)
+      id = client.call("CLIENT", "ID")
+      assert_equal 1, @redis.call("CLIENT", "KILL", "ID", id)
+
+      travel(client.idle_timeout + 1) do
+        assert_equal "PONG", client.call("PING")
+      end
+    end
+
+    def test_no_idle_timeout
+      client = new_client(idle_timeout: 5)
+      id = client.call("CLIENT", "ID")
+      assert_equal 1, @redis.call("CLIENT", "KILL", "ID", id)
+
+      assert_raises ConnectionError do
+        client.call("PING")
+      end
+    end
+
     private
 
     def assert_timeout(error, faster_than = ClientTestHelper::DEFAULT_TIMEOUT + 0.2, &block)

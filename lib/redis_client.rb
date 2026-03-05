@@ -269,6 +269,10 @@ class RedisClient
     config.read_timeout
   end
 
+  def idle_timeout
+    config.idle_timeout
+  end
+
   def db
     config.db
   end
@@ -758,7 +762,9 @@ class RedisClient
         @retry_attempt = config.retriable?(tries) ? tries : nil
         connection = raw_connection
         if block_given?
-          yield connection
+          result = yield connection
+          @last_used_at = RedisClient.now
+          result
         else
           connection
         end
@@ -785,7 +791,9 @@ class RedisClient
       begin
         @disable_reconnection = true
         @raw_connection.retry_attempt = nil
-        yield connection
+        result = yield connection
+        @last_used_at = RedisClient.now
+        result
       rescue ConnectionError, ProtocolError
         close
         raise
@@ -799,6 +807,16 @@ class RedisClient
     if @raw_connection.nil? || !@raw_connection.revalidate
       connect
     end
+
+    if config.idle_timeout && (@last_used_at + config.idle_timeout) < RedisClient.now
+      @middlewares.call(["PING"], config) do
+        @raw_connection.call(["PING"], nil)
+      rescue ConnectionError, ProtocolError
+        close
+        connect
+      end
+    end
+
     @raw_connection.retry_attempt = @retry_attempt
     @raw_connection
   end
@@ -820,6 +838,7 @@ class RedisClient
         )
       end
     end
+    @last_used_at = RedisClient.now
     @raw_connection.retry_attempt = @retry_attempt
 
     prelude = config.connection_prelude.dup
