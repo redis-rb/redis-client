@@ -10,11 +10,12 @@ class RedisClient
     DEFAULT_PORT = 6379
     DEFAULT_USERNAME = "default"
     DEFAULT_DB = 0
+    DEFAULT_IDLE_TIMEOUT = 30.0
 
     module Common
       attr_reader :db, :id, :ssl, :ssl_params, :command_builder, :inherit_socket,
         :connect_timeout, :read_timeout, :write_timeout, :driver, :protocol,
-        :middlewares_stack, :custom, :circuit_breaker, :driver_info
+        :middlewares_stack, :custom, :circuit_breaker, :driver_info, :idle_timeout
 
       alias_method :ssl?, :ssl
 
@@ -27,6 +28,7 @@ class RedisClient
         read_timeout: timeout,
         write_timeout: timeout,
         connect_timeout: timeout,
+        idle_timeout: DEFAULT_IDLE_TIMEOUT,
         ssl: nil,
         custom: {},
         ssl_params: nil,
@@ -55,6 +57,7 @@ class RedisClient
         @connect_timeout = connect_timeout
         @read_timeout = read_timeout
         @write_timeout = write_timeout
+        @idle_timeout = idle_timeout
 
         @driver = driver ? RedisClient.driver(driver) : RedisClient.default_driver
 
