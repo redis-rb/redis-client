@@ -2,20 +2,6 @@
 
 require_relative "../test_helper"
 
-# See: https://github.com/redis-rb/redis-client/issues/16
-# The hiredis-rb gems expose all hiredis symbols, so we must be careful
-# about how we link against it.
-unless RUBY_PLATFORM == "java"
-  require "redis"
-  require "hiredis"
-
-  begin
-    Redis.new(driver: :hiredis).ping
-  rescue
-    nil # does not matter, we just want to load the library
-  end
-end
-
 require "hiredis-client"
 
 unless RedisClient.default_driver == RedisClient::HiredisConnection
