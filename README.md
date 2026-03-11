@@ -83,7 +83,7 @@ redis.call("GET", "mykey")
 - `connect_timeout`: The connection timeout, takes precedence over the general timeout when connecting to the server.
 - `read_timeout`: The read timeout, takes precedence over the general timeout when reading responses from the server.
 - `write_timeout`: The write timeout, takes precedence over the general timeout when sending commands to the server.
-- `idle_timeout`: Amount of time after which an idle connection has to be revalidated with a PING command. Defaults to `60` seconds.
+- `idle_timeout`: Amount of time after which an idle connection has to be revalidated with a PING command. Defaults to `30` seconds.
 - `reconnect_attempts`: Specify how many times the client should retry to send queries. Defaults to `0`. Makes sure to read the [reconnection section](#reconnection) before enabling it.
 - `circuit_breaker`: A Hash with circuit breaker configuration. Defaults to `nil`. See the [circuit breaker section](#circuit-breaker) for details.
 - `protocol:` The version of the RESP protocol to use. Default to `3`.

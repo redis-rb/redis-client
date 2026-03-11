@@ -2,7 +2,7 @@
 
 # 0.27.0
 
-- Added `idle_timeout` to revalidate connections that haven't been successfuly used in a long time. Defaults to 60 seconds.
+- Added `idle_timeout` to revalidate connections that haven't been successfuly used in a long time. Defaults to 30 seconds.
 - Added `driver_info` configuration, to issue `CLIENT SETINFO` during connection prelude.
 
 # 0.26.4
