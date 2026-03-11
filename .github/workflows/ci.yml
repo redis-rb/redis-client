@@ -5,6 +5,8 @@ on: [push, pull_request]
 jobs:
   lint:
     name: Rubocop
+    env:
+      BUNDLE_WITHOUT: "benchmark"
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -22,6 +24,8 @@ jobs:
 
   ruby:
     name: Ruby ${{ matrix.ruby }}
+    env:
+      BUNDLE_WITHOUT: "linter:benchmark"
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -54,6 +58,8 @@ jobs:
 
   redis:
     name: Redis ${{ matrix.redis }}
+    env:
+      BUNDLE_WITHOUT: "linter:benchmark"
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -89,6 +95,8 @@ jobs:
   # so that they're easier to retry and less likely to flake.
   sentinel:
     name: Sentinel
+    env:
+      BUNDLE_WITHOUT: "linter:benchmark"
     timeout-minutes: 15
     strategy:
       fail-fast: false

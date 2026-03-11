@@ -1,9 +1,16 @@
 # frozen_string_literal: true
 
 require "rake/extensiontask"
-require 'rubocop/rake_task'
 
-RuboCop::RakeTask.new
+begin
+  require 'rubocop/rake_task'
+
+  RuboCop::RakeTask.new
+rescue LoadError
+  task :rubocop do
+    # noop
+  end
+end
 
 require "rake/clean"
 CLOBBER.include "pkg"

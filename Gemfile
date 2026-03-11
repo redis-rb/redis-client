@@ -8,12 +8,15 @@ gemspec name: "redis-client"
 gem "megatest"
 gem "rake", "~> 13.3"
 gem "rake-compiler"
-gem "rubocop"
-gem "base64" # For rubocop
-gem "ostruct" # For rubocop
-gem "rubocop-minitest"
 gem "toxiproxy"
 gem "benchmark"
+
+group :linter do
+  gem "rubocop"
+  gem "base64" # For rubocop
+  gem "ostruct" # For rubocop
+  gem "rubocop-minitest"
+end
 
 group :benchmark do
   gem "benchmark-ips"
