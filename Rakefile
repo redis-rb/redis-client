@@ -30,9 +30,7 @@ end
 require "megatest/test_task"
 
 namespace :test do
-  jobs = ENV["JOBS"] || "4"
-  jobs = jobs && Process.respond_to?(:fork) ? ["-j", jobs] : []
-  extra_args = ["--max-retries", "1"] + jobs
+  extra_args = ["--max-retries", "1"]
 
   Megatest::TestTask.create(:ruby) do |t|
     t.tests = FileList["test/**/*_test.rb"].exclude("test/sentinel/*_test.rb")
