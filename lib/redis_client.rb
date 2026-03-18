@@ -61,7 +61,7 @@ class RedisClient
   end
 
   module Common
-    attr_reader :config, :id
+    attr_reader :config, :id, :nodes
     attr_accessor :connect_timeout, :read_timeout, :write_timeout
 
     def initialize(
@@ -78,6 +78,7 @@ class RedisClient
       @write_timeout = write_timeout
       @command_builder = config.command_builder
       @pid = PIDCache.pid
+      @nodes = [self].freeze
     end
 
     def timeout=(timeout)
