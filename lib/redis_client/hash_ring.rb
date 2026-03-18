@@ -17,11 +17,14 @@ class RedisClient
       end
     end
 
+    attr_reader :nodes
+
     def initialize(nodes = [], replicas: POINTS_PER_SERVER, digest: self.class.digest)
       @replicas = replicas
       @ring = {}
       @digest = digest
       ids = {}
+      @nodes = nodes.dup.freeze
       nodes.each do |node|
         id = node.id || node.config.server_url
         if ids[id]

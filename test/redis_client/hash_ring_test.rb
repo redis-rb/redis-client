@@ -47,6 +47,11 @@ class RedisClient
       assert_equal({ @nodes[0] => ["foo", "bar"] }, @nodes[0].nodes_for("foo", "bar"))
     end
 
+    def test_nodes
+      assert_equal @nodes, @ring.nodes
+      assert_equal [@nodes[0]], @nodes[0].nodes
+    end
+
     private
 
     def new_client(**overrides)
