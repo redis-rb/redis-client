@@ -5,7 +5,7 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in redis-client.gemspec
 gemspec name: "redis-client"
 
-gem "megatest"
+gem "megatest", github: "byroot/megatest"
 gem "rake", "~> 13.3"
 gem "rake-compiler"
 gem "toxiproxy"
