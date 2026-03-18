@@ -83,6 +83,15 @@ class RedisClient
     def timeout=(timeout)
       @connect_timeout = @read_timeout = @write_timeout = timeout
     end
+
+    def node_for(_key)
+      self
+    end
+
+    def nodes_for(*keys)
+      keys.flatten!
+      { self => keys }
+    end
   end
 
   module HasConfig

@@ -1,5 +1,7 @@
 # Unreleased
 
+- Added `RedisClient::HashRing` for horizontal sharing (compatible with `Redis::Distributed` from `redis-rb`).
+
 # 0.27.0
 
 - Added `idle_timeout` to revalidate connections that haven't been successfuly used in a long time. Defaults to 30 seconds.
