@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.28.0
+
 - Added `RedisClient::HashRing` for horizontal sharing (compatible with `Redis::Distributed` from `redis-rb`).
 
 # 0.27.0
