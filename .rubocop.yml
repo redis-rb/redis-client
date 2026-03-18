@@ -217,3 +217,6 @@ Style/EmptyMethod:
 
 Style/AccessModifierDeclarations:
   Enabled: false
+
+Style/RedundantFreeze:
+  Enabled: false # Has some false positives
