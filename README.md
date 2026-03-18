@@ -150,13 +150,11 @@ If you specify a username and/or password at the top level for your main Redis i
 To horizontally shard keys across multiple servers without relying on clustering, a `RedisClient::HashRing` class is provided:
 
 ```ruby
-require "redis_client/hash_ring"
-
-ring = RedisClient::HashRing.new([
+ring = RedisClient.ring(
   RedisClient.config(host: "10.0.1.1", port: 6380).new_pool(timeout: 0.5, size: 3),
   RedisClient.config(host: "10.0.1.2", port: 6380).new_pool(timeout: 0.5, size: 3),
   RedisClient.config(host: "10.0.1.3", port: 6380).new_pool(timeout: 0.5, size: 3),
-])
+)
 
 ring.node_for("cache_key").call("GET", "cache_key") # => "value"
 
@@ -169,7 +167,7 @@ ring.nodes.each do |node|
 end
 ```
 
-Note that regular clients do respond to `node_for`, `nodes_for` and `nodes`, so that code that support `RedisClient::HashRing` is also usable with a single server.
+Note that regular clients do respond to `node_for`, `nodes_for` and `nodes`, so that code that support `RedisClient.ring` is also usable with a single server.
 
 # Use 'mysecret' to authenticate against the mymaster instance, but skip authentication for the sentinels:
 SENTINELS = [{ host: '127.0.0.1', port: 26380 },

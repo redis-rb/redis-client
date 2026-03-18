@@ -15,7 +15,7 @@ class RedisClient
         new_client(db: 2, id: "cache-2"),
         new_client(db: 3, id: "cache-3"),
       ]
-      @ring = HashRing.new(@nodes)
+      @ring = RedisClient.ring(@nodes)
     end
 
     def test_node_for
@@ -27,7 +27,7 @@ class RedisClient
     end
 
     def test_custom_digest
-      @ring = HashRing.new(@nodes, digest: Digest::SHA1)
+      @ring = RedisClient.ring(@nodes, digest: Digest::SHA1)
 
       assert_equal @nodes[0], @ring.node_for("foo")
       assert_equal @nodes[2], @ring.node_for("bar")

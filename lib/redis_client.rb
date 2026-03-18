@@ -239,6 +239,12 @@ class RedisClient
       SentinelConfig.new(client_implementation: self, **kwargs)
     end
 
+    def ring(*clients, **options)
+      clients.flatten!
+      require "redis_client/hash_ring" unless defined?(HashRing)
+      HashRing.new(clients, **options)
+    end
+
     def new(arg = nil, **kwargs)
       if arg.is_a?(Config::Common)
         super
