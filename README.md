@@ -145,6 +145,29 @@ If you specify a username and/or password at the top level for your main Redis i
 
 ```ruby
 
+# Use 'mysecret' to authenticate against the mymaster instance, but skip authentication for the sentinels:
+SENTINELS = [{ host: '127.0.0.1', port: 26380 },
+             { host: '127.0.0.1', port: 26381 }]
+
+redis_config = RedisClient.sentinel(name: 'mymaster', sentinels: SENTINELS, role: :master, password: 'mysecret')
+```
+
+So you have to provide Sentinel credential and Redis explicitly even they are the same
+
+```ruby
+# Use 'mysecret' to authenticate against the mymaster instance and sentinel
+SENTINELS = [{ host: '127.0.0.1', port: 26380 },
+             { host: '127.0.0.1', port: 26381 }]
+
+redis_config = RedisClient.sentinel(name: 'mymaster', sentinels: SENTINELS, role: :master, password: 'mysecret', sentinel_password: 'mysecret')
+```
+
+Also the `name`, `password`, `username` and `db` for Redis instance can be passed as an url:
+
+```ruby
+redis_config = RedisClient.sentinel(url: "redis://appuser:mysecret@mymaster/10", sentinels: SENTINELS, role: :master)
+```
+
 ### Consistent Hashing
 
 To horizontally shard keys across multiple servers without relying on clustering, a `RedisClient::HashRing` class is provided:
@@ -168,29 +191,6 @@ end
 ```
 
 Note that regular clients do respond to `node_for`, `nodes_for` and `nodes`, so that code that support `RedisClient.ring` is also usable with a single server.
-
-# Use 'mysecret' to authenticate against the mymaster instance, but skip authentication for the sentinels:
-SENTINELS = [{ host: '127.0.0.1', port: 26380 },
-             { host: '127.0.0.1', port: 26381 }]
-
-redis_config = RedisClient.sentinel(name: 'mymaster', sentinels: SENTINELS, role: :master, password: 'mysecret')
-```
-
-So you have to provide Sentinel credential and Redis explicitly even they are the same
-
-```ruby
-# Use 'mysecret' to authenticate against the mymaster instance and sentinel
-SENTINELS = [{ host: '127.0.0.1', port: 26380 },
-             { host: '127.0.0.1', port: 26381 }]
-
-redis_config = RedisClient.sentinel(name: 'mymaster', sentinels: SENTINELS, role: :master, password: 'mysecret', sentinel_password: 'mysecret')
-```
-
-Also the `name`, `password`, `username` and `db` for Redis instance can be passed as an url:
-
-```ruby
-redis_config = RedisClient.sentinel(url: "redis://appuser:mysecret@mymaster/10", sentinels: SENTINELS, role: :master)
-```
 
 ### Type support
 
