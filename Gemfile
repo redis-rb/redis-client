@@ -6,7 +6,7 @@ source "https://rubygems.org"
 gemspec name: "redis-client"
 
 gem "megatest"
-gem "rake", "~> 13.3"
+gem "rake", "~> 13.4"
 gem "rake-compiler"
 gem "toxiproxy"
 gem "benchmark"
