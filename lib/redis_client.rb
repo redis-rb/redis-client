@@ -148,10 +148,16 @@ class RedisClient
     include HasConfig
     include Retriable
 
+    attr_reader :next_error
+
     def self.with_config(message, config = nil)
       error = new(message)
       error._set_config(config)
       error
+    end
+
+    def _set_next_error(error) # :nodoc:
+      @next_error = error
     end
   end
 

@@ -361,7 +361,11 @@ end
 
 #### Exception management
 
-The `exception` flag in the `#pipelined` method of `RedisClient` is a feature that modifies the pipeline execution
+By default, when a pipeline produce multiple command errors, only the first encountered error is raised.
+
+However, the raised exception have a `.next_error` method you can use like a linked list to check all encountered errors.
+
+Alternatively, the `exception` flag in the `#pipelined` method of `RedisClient` is a feature that modifies the pipeline execution
 behavior. When set to `false`, it doesn't raise an exception when a command error occurs. Instead, it allows the
 pipeline to execute all commands, and any failed command will be available in the returned array. (Defaults to `true`)
 

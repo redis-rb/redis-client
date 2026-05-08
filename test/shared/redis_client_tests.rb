@@ -206,6 +206,21 @@ module RedisClientTests
     assert_equal ["OK"] * 10, results
   end
 
+  def test_pipeline_with_multiple_error
+    error = assert_raises(RedisClient::CommandError) do
+      @redis.pipelined do |pipeline|
+        pipeline.call("DOESNT-EXIST-1")
+        pipeline.call("DOESNT-EXIST-2")
+      end
+    end
+    assert_equal ["DOESNT-EXIST-1"], error.command
+    assert_instance_of RedisClient::CommandError, error.next_error
+
+    error = error.next_error
+    assert_equal ["DOESNT-EXIST-2"], error.command
+    assert_nil error.next_error
+  end
+
   def test_get_set
     string = "a" * 15_000
     assert_equal "OK", @redis.call("SET", "foo", string)
