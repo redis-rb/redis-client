@@ -47,7 +47,7 @@ class RedisClient
     end
 
     def call_pipelined(commands, timeouts, exception: true)
-      first_exception = nil
+      first_error = last_error = nil
 
       size = commands.size
       results = Array.new(commands.size)
@@ -69,14 +69,16 @@ class RedisClient
           result._set_command(commands[index])
           result._set_config(config)
           result._set_retry_attempt(@retry_attempt)
-          first_exception ||= result
+
+          last_error&._set_next_error(result)
+          first_error ||= last_error = result
         end
 
         results[index] = result
       end
 
-      if first_exception && exception
-        raise first_exception
+      if first_error && exception
+        raise first_error
       else
         results
       end

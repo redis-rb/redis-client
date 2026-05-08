@@ -1,5 +1,7 @@
 # Unreleased
 
+- Added `RedisClient::Error#next_error` for an easier way to check all errors produced by a pipeline.
+
 # 0.28.0
 
 - Added `RedisClient::HashRing` for horizontal sharing (compatible with `Redis::Distributed` from `redis-rb`).
