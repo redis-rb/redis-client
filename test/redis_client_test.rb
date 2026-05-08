@@ -52,16 +52,20 @@ class RedisClientTest < RedisClientTestCase
 
   def test_older_server
     fake_redis5_driver = Class.new(RedisClient::RubyConnection) do
-      def call_pipelined(commands, *, &_)
-        commands.each do |command|
+      def call_pipelined(commands, *, exception:, &_)
+        raise "Expected `exception: false`" if exception
+
+        results = super
+
+        commands.each_with_index do |command, index|
           if command == ["HELLO", "3"]
             error = RedisClient::CommandError.new("ERR unknown command `HELLO`, with args beginning with: `3`")
             error._set_command(command)
-            raise error
+            results[index] = error
           end
         end
 
-        super
+        results
       end
     end
     client = new_client(driver: fake_redis5_driver)
@@ -75,16 +79,20 @@ class RedisClientTest < RedisClientTestCase
 
   def test_redis_6_server_with_missing_hello_command
     fake_redis6_driver = Class.new(RedisClient::RubyConnection) do
-      def call_pipelined(commands, *, &_)
-        commands.each do |command|
+      def call_pipelined(commands, *, exception:, &_)
+        raise "Expected `exception: false`" if exception
+
+        results = super
+
+        commands.each_with_index do |command, index|
           if command == ["HELLO", "3"]
             error = RedisClient::CommandError.new("ERR unknown command 'HELLO'")
             error._set_command(command)
-            raise error
+            results[index] = error
           end
         end
 
-        super
+        results
       end
     end
     client = new_client(driver: fake_redis6_driver)
@@ -98,16 +106,20 @@ class RedisClientTest < RedisClientTestCase
 
   def test_driver_info_on_server_without_setinfo
     fake_redis71_driver = Class.new(RedisClient::RubyConnection) do
-      def call_pipelined(commands, *, &_)
-        commands.each do |command|
+      def call_pipelined(commands, *, exception:, &_)
+        raise "Expected `exception: false`" if exception
+
+        results = super
+
+        commands.each_with_index do |command, index|
           if command[0] == "CLIENT" && command[1] == "SETINFO"
             error = RedisClient::CommandError.new("ERR Unknown subcommand or wrong number of arguments for 'SETINFO'")
             error._set_command(command)
-            raise error
+            results[index] = error
           end
         end
 
-        super
+        results
       end
     end
 
