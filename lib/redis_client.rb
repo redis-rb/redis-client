@@ -893,15 +893,21 @@ class RedisClient
     connect_error.set_backtrace(error.backtrace)
     raise connect_error
   rescue CommandError => error
-    @raw_connection&.close
-    if error.message.match?(/ERR unknown command ['`]HELLO['`]/)
-      raise UnsupportedServer,
-        "redis-client requires Redis 6+ with HELLO command available (#{config.server_url})"
-    # Ignore CLIENT SETINFO errors (Redis < 7.2 doesn't support it)
-    elsif error.message.match?(/unknown subcommand.*setinfo/i)
-      # Silently ignore - CLIENT SETINFO is not supported on Redis < 7.2
-    else
-      raise
+    while error && error.command[0] == "CLIENT" && error.command[1] == "SETINFO"
+      # CLIENT SETINFO is unsupported on Redis < 7.2. The pipeline drained all responses before raising,
+      # so if that's the only error, the socket is healthy: keep it.
+      error = error.next_error
+    end
+
+    if error
+      @raw_connection&.close
+
+      if error.command&.first == "HELLO" && error.message.match?(/ERR unknown command/)
+        raise UnsupportedServer,
+          "redis-client requires Redis 6+ with HELLO command available (#{config.server_url})", cause: error
+      else
+        raise error, cause: nil
+      end
     end
   end
 end
