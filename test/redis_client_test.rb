@@ -53,11 +53,15 @@ class RedisClientTest < RedisClientTestCase
   def test_older_server
     fake_redis5_driver = Class.new(RedisClient::RubyConnection) do
       def call_pipelined(commands, *, &_)
-        if commands.any? { |c| c == ["HELLO", "3"] }
-          raise RedisClient::CommandError, "ERR unknown command `HELLO`, with args beginning with: `3`"
-        else
-          super
+        commands.each do |command|
+          if command == ["HELLO", "3"]
+            error = RedisClient::CommandError.new("ERR unknown command `HELLO`, with args beginning with: `3`")
+            error._set_command(command)
+            raise error
+          end
         end
+
+        super
       end
     end
     client = new_client(driver: fake_redis5_driver)
@@ -72,11 +76,15 @@ class RedisClientTest < RedisClientTestCase
   def test_redis_6_server_with_missing_hello_command
     fake_redis6_driver = Class.new(RedisClient::RubyConnection) do
       def call_pipelined(commands, *, &_)
-        if commands.any? { |c| c == ["HELLO", "3"] }
-          raise RedisClient::CommandError, "ERR unknown command 'HELLO'"
-        else
-          super
+        commands.each do |command|
+          if command == ["HELLO", "3"]
+            error = RedisClient::CommandError.new("ERR unknown command 'HELLO'")
+            error._set_command(command)
+            raise error
+          end
         end
+
+        super
       end
     end
     client = new_client(driver: fake_redis6_driver)
@@ -86,6 +94,27 @@ class RedisClientTest < RedisClientTestCase
     end
     assert_includes error.message, "redis-client requires Redis 6+ with HELLO command available"
     assert_includes error.message, "(redis://"
+  end
+
+  def test_driver_info_on_server_without_setinfo
+    fake_redis71_driver = Class.new(RedisClient::RubyConnection) do
+      def call_pipelined(commands, *, &_)
+        commands.each do |command|
+          if command[0] == "CLIENT" && command[1] == "SETINFO"
+            error = RedisClient::CommandError.new("ERR Unknown subcommand or wrong number of arguments for 'SETINFO'")
+            error._set_command(command)
+            raise error
+          end
+        end
+
+        super
+      end
+    end
+
+    client = new_client(driver: fake_redis71_driver, driver_info: "test_v1.0")
+
+    assert_equal "PONG", client.call("PING")
+    assert_predicate client, :connected?
   end
 
   def test_handle_async_raise
