@@ -116,6 +116,10 @@ class RedisClient
     end
 
     def check_role!(role)
+      unless role.is_a?(String)
+        raise TypeError, "Expected role to be a string, got: #{role.inspect}"
+      end
+
       if @role == :master
         unless role == "master"
           sleep SENTINEL_DELAY

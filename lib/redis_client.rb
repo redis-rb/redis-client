@@ -869,18 +869,25 @@ class RedisClient
       prelude << ["CLIENT", "SETNAME", id]
     end
 
-    # The connection prelude is deliberately not sent to Middlewares
     if config.sentinel?
       prelude << ["ROLE"]
-      role, = @middlewares.call_pipelined(prelude, config) do
-        @raw_connection.call_pipelined(prelude, nil).last
+    end
+
+    unless prelude.empty?
+      results = @middlewares.call_pipelined(prelude, config) do
+        @raw_connection.call_pipelined(prelude, nil, exception: false)
       end
-      config.check_role!(role)
-    else
-      unless prelude.empty?
-        @middlewares.call_pipelined(prelude, config) do
-          @raw_connection.call_pipelined(prelude, nil)
+
+      results.each do |result|
+        # CLIENT SETINFO is unsupported on Redis < 7.2. The pipeline drained all responses before raising,
+        # so if that's the only error, the socket is healthy: keep it.
+        if result.is_a?(CommandError) && !(result.command[0] == "CLIENT" && result.command[1] == "SETINFO")
+          raise result
         end
+      end
+
+      if config.sentinel?
+        config.check_role!(results.last.first)
       end
     end
   rescue FailoverError, CannotConnectError => error
@@ -893,21 +900,13 @@ class RedisClient
     connect_error.set_backtrace(error.backtrace)
     raise connect_error
   rescue CommandError => error
-    while error && error.command[0] == "CLIENT" && error.command[1] == "SETINFO"
-      # CLIENT SETINFO is unsupported on Redis < 7.2. The pipeline drained all responses before raising,
-      # so if that's the only error, the socket is healthy: keep it.
-      error = error.next_error
-    end
+    @raw_connection&.close
 
-    if error
-      @raw_connection&.close
-
-      if error.command&.first == "HELLO" && error.message.match?(/ERR unknown command/)
-        raise UnsupportedServer,
-          "redis-client requires Redis 6+ with HELLO command available (#{config.server_url})", cause: error
-      else
-        raise error, cause: nil
-      end
+    if error.command&.first == "HELLO" && error.message.match?(/ERR unknown command/)
+      raise UnsupportedServer,
+        "redis-client requires Redis 6+ with HELLO command available (#{config.server_url})", cause: error
+    else
+      raise
     end
   end
 end
