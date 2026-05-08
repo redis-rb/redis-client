@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.29.0
+
 - Fix connecting to Redis 7.1 and older with `driver_info:`set.
 - Added `RedisClient::Error#next_error` for an easier way to check all errors produced by a pipeline.
 
