@@ -1,5 +1,21 @@
 # Unreleased
 
+- hiredis-client: Added support for configuring the OpenSSL peer-verification mode through
+  a new `verify_mode:` option on `RedisClient::HiredisConnection::SSLContext` and on the
+  `ssl_params` hash passed to `RedisClient.config`. The value is forwarded as-is to
+  `SSL_CTX_set_verify` on the underlying OpenSSL context, mirroring the
+  `redisSSLOptions.verify_mode` field exposed by upstream hiredis'
+  `redisCreateSSLContextWithOptions`. Accepted constants are
+  `OpenSSL::SSL::VERIFY_NONE`, `VERIFY_PEER`, `VERIFY_FAIL_IF_NO_PEER_CERT`,
+  `VERIFY_CLIENT_ONCE`, and `VERIFY_POST_HANDSHAKE`. When the option is omitted (the
+  default), behavior is unchanged and `REDIS_SSL_VERIFY_PEER` is used, exactly as
+  before.
+
+  The C extension's private `SSLContext#init` method changed arity from 5 to 6;
+  pure-Ruby callers of the public `RedisClient::HiredisConnection::SSLContext.new`
+  and `HiredisConnection.ssl_context` APIs are unaffected — both gained a new
+  optional keyword argument with a backward-compatible default of `nil`.
+
 # 0.29.0
 
 - Fix connecting to Redis 7.1 and older with `driver_info:`set.

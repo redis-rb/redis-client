@@ -39,7 +39,26 @@
 #include "vendor/hiredis.h"
 #include "vendor/net.h"
 #include "vendor/hiredis_ssl.h"
+#include <openssl/ssl.h>
 #include <poll.h>
+
+/* Layout of `struct redisSSLContext` in the vendored hiredis 1.0.x.
+ *
+ * The struct is opaque in the public hiredis_ssl.h, and the vendored
+ * hiredis (1.0.2) does not expose `redisCreateSSLContextWithOptions`,
+ * which would normally let us configure `verify_mode`.
+ *
+ * To support overriding `verify_mode` from Ruby without upgrading the
+ * bundled hiredis, we mirror the struct's first two members exactly as
+ * defined in hiredis-1.0.2 `ssl.c` and reach for `ssl_ctx` so we can
+ * call `SSL_CTX_set_verify` ourselves. If the vendored hiredis ever
+ * changes this layout, the build pin in extconf.rb / vendor/ must be
+ * updated together with this struct.
+ */
+struct hiredis_redisSSLContext_layout {
+    SSL_CTX *ssl_ctx;
+    char *server_name;
+};
 
 #if !defined(RUBY_ASSERT)
 #  define RUBY_ASSERT(condition) ((void)0)
@@ -109,7 +128,7 @@ static VALUE hiredis_ssl_context_alloc(VALUE klass) {
     return TypedData_Make_Struct(klass, hiredis_ssl_context_t, &hiredis_ssl_context_data_type, ssl_context);
 }
 
-static VALUE hiredis_ssl_context_init(VALUE self, VALUE ca_file, VALUE ca_path, VALUE cert, VALUE key, VALUE hostname) {
+static VALUE hiredis_ssl_context_init(VALUE self, VALUE ca_file, VALUE ca_path, VALUE cert, VALUE key, VALUE hostname, VALUE verify_mode) {
     redisSSLContextError ssl_error = 0;
     SSL_CONTEXT(self, ssl_context);
 
@@ -128,6 +147,17 @@ static VALUE hiredis_ssl_context_init(VALUE self, VALUE ca_file, VALUE ca_path, 
 
     if (!ssl_context->context) {
         return rb_str_new_cstr("Unknown error while creating SSLContext");
+    }
+
+    /* When the caller explicitly passes a verify_mode, override the
+     * default `SSL_VERIFY_PEER` that hiredis installs. We poke directly
+     * at the underlying SSL_CTX because the vendored hiredis predates
+     * `redisCreateSSLContextWithOptions`. The handshake has not started
+     * yet, so changing `SSL_CTX_set_verify` here is effective. */
+    if (!NIL_P(verify_mode)) {
+        struct hiredis_redisSSLContext_layout *layout =
+            (struct hiredis_redisSSLContext_layout *)ssl_context->context;
+        SSL_CTX_set_verify(layout->ssl_ctx, NUM2INT(verify_mode), NULL);
     }
 
     return Qnil;
@@ -945,5 +975,5 @@ RUBY_FUNC_EXPORTED void Init_hiredis_connection(void) {
 
     VALUE rb_cHiredisSSLContext = rb_define_class_under(rb_cHiredisConnection, "SSLContext", rb_cObject);
     rb_define_alloc_func(rb_cHiredisSSLContext, hiredis_ssl_context_alloc);
-    rb_define_private_method(rb_cHiredisSSLContext, "init", hiredis_ssl_context_init, 5);
+    rb_define_private_method(rb_cHiredisSSLContext, "init", hiredis_ssl_context_init, 6);
 }
