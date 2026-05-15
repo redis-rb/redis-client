@@ -1,5 +1,7 @@
 # Unreleased
 
+# 0.30.0
+
 - hiredis-client: Added support for configuring the OpenSSL peer-verification mode through
   a new `verify_mode:` option on `RedisClient::HiredisConnection::SSLContext` and on the
   `ssl_params` hash passed to `RedisClient.config`. The value is forwarded as-is to
