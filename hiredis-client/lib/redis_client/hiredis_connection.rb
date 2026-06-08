@@ -10,7 +10,7 @@ class RedisClient
 
     class << self
       def ssl_context(ssl_params)
-        unless ssl_params[:ca_file] || ssl_params[:ca_path]
+        unless ssl_params[:ca_file] || ssl_params[:ca_path] || ssl_params[:verify_mode] == OpenSSL::SSL::VERIFY_NONE
           default_ca_file = OpenSSL::X509::DEFAULT_CERT_FILE
           default_ca_path = OpenSSL::X509::DEFAULT_CERT_DIR
 
@@ -27,13 +27,14 @@ class RedisClient
           cert: ssl_params[:cert],
           key: ssl_params[:key],
           hostname: ssl_params[:hostname],
+          verify_mode: ssl_params[:verify_mode],
         )
       end
     end
 
     class SSLContext
-      def initialize(ca_file: nil, ca_path: nil, cert: nil, key: nil, hostname: nil)
-        if (error = init(ca_file, ca_path, cert, key, hostname))
+      def initialize(ca_file: nil, ca_path: nil, cert: nil, key: nil, hostname: nil, verify_mode: nil)
+        if (error = init(ca_file, ca_path, cert, key, hostname, verify_mode))
           raise error
         end
       end

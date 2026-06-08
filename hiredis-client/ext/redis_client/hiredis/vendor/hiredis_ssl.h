@@ -84,6 +84,16 @@ typedef enum {
     REDIS_SSL_CTX_PRIVATE_KEY_LOAD_FAILED       /* Failed to load private key */
 } redisSSLContextError;
 
+/* Options struct for redisCreateSSLContextWithOptions(). */
+typedef struct {
+    const char *cacert_filename;
+    const char *capath;
+    const char *cert_filename;
+    const char *private_key_filename;
+    const char *server_name;
+    int verify_mode;
+} redisSSLOptions;
+
 /**
  * Return the error message corresponding with the specified error code.
  */
@@ -123,6 +133,12 @@ int redisInitOpenSSL(void);
 redisSSLContext *redisCreateSSLContext(const char *cacert_filename, const char *capath,
         const char *cert_filename, const char *private_key_filename,
         const char *server_name, redisSSLContextError *error);
+
+/**
+ * Variant of redisCreateSSLContext() that accepts a redisSSLOptions struct,
+ * allowing the caller to set verify_mode (e.g. SSL_VERIFY_NONE).
+ */
+redisSSLContext *redisCreateSSLContextWithOptions(redisSSLOptions *options, redisSSLContextError *error);
 
 /**
  * Free a previously created OpenSSL context.
