@@ -109,18 +109,20 @@ static VALUE hiredis_ssl_context_alloc(VALUE klass) {
     return TypedData_Make_Struct(klass, hiredis_ssl_context_t, &hiredis_ssl_context_data_type, ssl_context);
 }
 
-static VALUE hiredis_ssl_context_init(VALUE self, VALUE ca_file, VALUE ca_path, VALUE cert, VALUE key, VALUE hostname) {
+static VALUE hiredis_ssl_context_init(VALUE self, VALUE ca_file, VALUE ca_path, VALUE cert, VALUE key, VALUE hostname, VALUE verify_mode) {
     redisSSLContextError ssl_error = 0;
     SSL_CONTEXT(self, ssl_context);
 
-    ssl_context->context = redisCreateSSLContext(
-        RTEST(ca_file) ? StringValueCStr(ca_file) : NULL,
-        RTEST(ca_path) ? StringValueCStr(ca_path) : NULL,
-        RTEST(cert) ? StringValueCStr(cert) : NULL,
-        RTEST(key) ? StringValueCStr(key) : NULL,
-        RTEST(hostname) ? StringValueCStr(hostname) : NULL,
-        &ssl_error
-    );
+    redisSSLOptions options = {
+        .cacert_filename = RTEST(ca_file) ? StringValueCStr(ca_file) : NULL,
+        .capath = RTEST(ca_path) ? StringValueCStr(ca_path) : NULL,
+        .cert_filename = RTEST(cert) ? StringValueCStr(cert) : NULL,
+        .private_key_filename = RTEST(key) ? StringValueCStr(key) : NULL,
+        .server_name = RTEST(hostname) ? StringValueCStr(hostname) : NULL,
+        .verify_mode = NIL_P(verify_mode) ? SSL_VERIFY_PEER : NUM2INT(verify_mode),
+    };
+
+    ssl_context->context = redisCreateSSLContextWithOptions(&options, &ssl_error);
 
     if (ssl_error) {
         return rb_str_new_cstr(redisSSLContextGetError(ssl_error));
@@ -945,5 +947,5 @@ RUBY_FUNC_EXPORTED void Init_hiredis_connection(void) {
 
     VALUE rb_cHiredisSSLContext = rb_define_class_under(rb_cHiredisConnection, "SSLContext", rb_cObject);
     rb_define_alloc_func(rb_cHiredisSSLContext, hiredis_ssl_context_alloc);
-    rb_define_private_method(rb_cHiredisSSLContext, "init", hiredis_ssl_context_init, 5);
+    rb_define_private_method(rb_cHiredisSSLContext, "init", hiredis_ssl_context_init, 6);
 }

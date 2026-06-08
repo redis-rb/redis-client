@@ -203,9 +203,7 @@ void redisFreeSSLContext(redisSSLContext *ctx)
  * redisSSLContext helper context initialization.
  */
 
-redisSSLContext *redisCreateSSLContext(const char *cacert_filename, const char *capath,
-        const char *cert_filename, const char *private_key_filename,
-        const char *server_name, redisSSLContextError *error)
+redisSSLContext *redisCreateSSLContextWithOptions(redisSSLOptions *options, redisSSLContextError *error)
 {
     redisSSLContext *ctx = hi_calloc(1, sizeof(redisSSLContext));
     if (ctx == NULL)
@@ -218,40 +216,55 @@ redisSSLContext *redisCreateSSLContext(const char *cacert_filename, const char *
     }
 
     SSL_CTX_set_options(ctx->ssl_ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
-    SSL_CTX_set_verify(ctx->ssl_ctx, SSL_VERIFY_PEER, NULL);
+    SSL_CTX_set_verify(ctx->ssl_ctx, options->verify_mode, NULL);
 
-    if ((cert_filename != NULL && private_key_filename == NULL) ||
-            (private_key_filename != NULL && cert_filename == NULL)) {
+    if ((options->cert_filename != NULL && options->private_key_filename == NULL) ||
+            (options->private_key_filename != NULL && options->cert_filename == NULL)) {
         if (error) *error = REDIS_SSL_CTX_CERT_KEY_REQUIRED;
         goto error;
     }
 
-    if (capath || cacert_filename) {
-        if (!SSL_CTX_load_verify_locations(ctx->ssl_ctx, cacert_filename, capath)) {
+    if (options->capath || options->cacert_filename) {
+        if (!SSL_CTX_load_verify_locations(ctx->ssl_ctx, options->cacert_filename, options->capath)) {
             if (error) *error = REDIS_SSL_CTX_CA_CERT_LOAD_FAILED;
             goto error;
         }
     }
 
-    if (cert_filename) {
-        if (!SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, cert_filename)) {
+    if (options->cert_filename) {
+        if (!SSL_CTX_use_certificate_chain_file(ctx->ssl_ctx, options->cert_filename)) {
             if (error) *error = REDIS_SSL_CTX_CLIENT_CERT_LOAD_FAILED;
             goto error;
         }
-        if (!SSL_CTX_use_PrivateKey_file(ctx->ssl_ctx, private_key_filename, SSL_FILETYPE_PEM)) {
+        if (!SSL_CTX_use_PrivateKey_file(ctx->ssl_ctx, options->private_key_filename, SSL_FILETYPE_PEM)) {
             if (error) *error = REDIS_SSL_CTX_PRIVATE_KEY_LOAD_FAILED;
             goto error;
         }
     }
 
-    if (server_name)
-        ctx->server_name = hi_strdup(server_name);
+    if (options->server_name)
+        ctx->server_name = hi_strdup(options->server_name);
 
     return ctx;
 
 error:
     redisFreeSSLContext(ctx);
     return NULL;
+}
+
+redisSSLContext *redisCreateSSLContext(const char *cacert_filename, const char *capath,
+        const char *cert_filename, const char *private_key_filename,
+        const char *server_name, redisSSLContextError *error)
+{
+    redisSSLOptions options = {
+        .cacert_filename = cacert_filename,
+        .capath = capath,
+        .cert_filename = cert_filename,
+        .private_key_filename = private_key_filename,
+        .server_name = server_name,
+        .verify_mode = SSL_VERIFY_PEER,
+    };
+    return redisCreateSSLContextWithOptions(&options, error);
 }
 
 int redisInitiateSSLContinue(redisContext *c) {
