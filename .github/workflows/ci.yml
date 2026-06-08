@@ -37,6 +37,9 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v6
+      - name: Delete Gemfile.lock
+        if: ${{ matrix.ruby == 'ruby-head' }}
+        run: rm -f Gemfile.lock
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
