@@ -1,5 +1,9 @@
 # Unreleased
 
+# 0.30.0
+
+- hiredis-client: Now support configuring SSL `verify_mode`.
+
 # 0.29.0
 
 - Fix connecting to Redis 7.1 and older with `driver_info:`set.
