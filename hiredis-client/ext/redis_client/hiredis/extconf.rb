@@ -59,6 +59,13 @@ class HiredisConnectionExtconf
 
   def configure_openssl(original_env)
     original_env.dup.tap do |env|
+      if pkg = pkg_config("openssl")
+        cflags, *ldflags = pkg
+        env["CFLAGS"] = concat_flags(env["CFLAGS"], cflags)
+        env["SSL_LDFLAGS"] = concat_flags(env["SSL_LDFLAGS"], *ldflags)
+        return env
+      end
+
       config = dir_config("openssl")
       if config.none?
         config = dir_config("opt").map { |c| detect_openssl_dir(c) }
