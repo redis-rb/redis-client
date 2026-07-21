@@ -1,5 +1,9 @@
 # Unreleased
 
+# 0.30.1
+
+- hiredis-client: Use `pkg-config` to locate OpenSSL. Should fix compilation issue on precompiled rubies such as the ones from `mise`.
+
 # 0.30.0
 
 - hiredis-client: Now support configuring SSL `verify_mode`.
