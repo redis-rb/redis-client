@@ -157,8 +157,9 @@ class RedisClient
       )
       true
     rescue SystemCallError, IOError, OpenSSL::SSL::SSLError, SocketError => error
-      socket&.close
       raise CannotConnectError, error.message, error.backtrace
+    ensure
+      socket&.to_io&.close unless @io
     end
 
     KEEP_ALIVE_INTERVAL = 15 # Same as hiredis defaults
