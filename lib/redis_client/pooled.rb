@@ -76,7 +76,7 @@ class RedisClient
     private
 
     def pool
-      @pool ||= @mutex.synchronize { new_pool }
+      @pool || @mutex.synchronize { @pool ||= new_pool }
     end
 
     def new_pool
