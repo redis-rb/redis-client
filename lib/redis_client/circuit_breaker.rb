@@ -65,6 +65,8 @@ class RedisClient
     def refresh_state
       now = RedisClient.now
       @lock.synchronize do
+        return unless @state == :open
+
         if @errors.last < (now - @error_timeout)
           if @success_threshold > 0
             @state = :half_open
