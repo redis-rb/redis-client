@@ -71,7 +71,8 @@ class RedisClient
           result._set_retry_attempt(@retry_attempt)
 
           last_error&._set_next_error(result)
-          first_error ||= last_error = result
+          first_error ||= result
+          last_error = result
         end
 
         results[index] = result
