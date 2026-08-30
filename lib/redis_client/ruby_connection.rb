@@ -117,7 +117,7 @@ class RedisClient
       socket = if @config.path
         UNIXSocket.new(@config.path)
       else
-        sock = if SUPPORTS_RESOLV_TIMEOUT
+        socket = if SUPPORTS_RESOLV_TIMEOUT
           begin
             Socket.tcp(@config.host, @config.port, connect_timeout: @connect_timeout, resolv_timeout: @connect_timeout)
           rescue Errno::ETIMEDOUT => timeout_error
@@ -128,9 +128,9 @@ class RedisClient
           Socket.tcp(@config.host, @config.port, connect_timeout: @connect_timeout)
         end
         # disables Nagle's Algorithm, prevents multiple round trips with MULTI
-        sock.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
-        enable_socket_keep_alive(sock)
-        sock
+        socket.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
+        enable_socket_keep_alive(socket)
+        socket
       end
 
       if @config.ssl
