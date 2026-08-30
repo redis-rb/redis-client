@@ -42,14 +42,14 @@ class RedisClient
     end
 
     def username
-      uri.user if uri.password && !uri.user.empty?
+      URI::RFC2396_PARSER.unescape(uri.user) if uri.password && !uri.user.empty?
     end
 
     def password
       if uri.user && !uri.password
-        URI.decode_www_form_component(uri.user)
+        URI::RFC2396_PARSER.unescape(uri.user)
       elsif uri.user && uri.password
-        URI.decode_www_form_component(uri.password)
+        URI::RFC2396_PARSER.unescape(uri.password)
       end
     end
 
