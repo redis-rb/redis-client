@@ -164,16 +164,19 @@ class RedisClient
     end
 
     def parse_array(io)
-      parse_sequence(io, io.gets_integer)
+      parse_sequence(io, parse_length(io))
     end
 
     def parse_set(io)
-      parse_sequence(io, io.gets_integer)
+      parse_sequence(io, parse_length(io))
     end
 
     def parse_map(io)
+      size = parse_length(io)
+      raise SyntaxError, "Invalid map length: #{size}" if size < 0
+
       hash = {}
-      io.gets_integer.times do
+      size.times do
         hash[parse(io).freeze] = parse(io)
       end
       hash
@@ -184,7 +187,8 @@ class RedisClient
     end
 
     def parse_sequence(io, size)
-      return if size < 0 # RESP2 nil
+      return if size == -1 # RESP2 nil
+      raise SyntaxError, "Invalid sequence length: #{size}" if size < -1
 
       array = Array.new(size)
       size.times do |index|
@@ -195,6 +199,8 @@ class RedisClient
 
     def parse_integer(io)
       Integer(io.gets_chomp)
+    rescue ArgumentError => error
+      raise SyntaxError, error.message
     end
 
     def parse_double(io)
@@ -208,25 +214,42 @@ class RedisClient
       else
         Float(value)
       end
+    rescue ArgumentError => error
+      raise SyntaxError, error.message
     end
 
     def parse_null(io)
-      io.skip(EOL_SIZE)
+      io.read_chomp(0)
       nil
+    rescue ArgumentError => error
+      raise SyntaxError, error.message
     end
 
     def parse_blob(io)
-      bytesize = io.gets_integer
-      return if bytesize < 0 # RESP2 nil type
+      bytesize = parse_length(io)
+      return if bytesize == -1 # RESP2 nil type
+      raise SyntaxError, "Invalid blob length: #{bytesize}" if bytesize < -1
 
       str = io.read_chomp(bytesize)
       str.force_encoding(Encoding::BINARY) unless str.valid_encoding?
       str
+    rescue ArgumentError => error
+      raise SyntaxError, error.message
     end
 
     def parse_verbatim_string(io)
       blob = parse_blob(io)
+      unless blob && blob.bytesize >= 4 && blob.getbyte(3) == 58 # ":".ord
+        raise SyntaxError, "Invalid verbatim string"
+      end
+
       blob.byteslice(4..-1)
+    end
+
+    def parse_length(io)
+      io.gets_integer
+    rescue ArgumentError => error
+      raise SyntaxError, error.message
     end
   end
 end

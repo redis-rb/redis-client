@@ -35,7 +35,13 @@ class RedisClient
         end
 
         def read_chomp(bytes)
+          raise ArgumentError, "negative byte length: #{bytes}" if bytes < 0
+
           ensure_remaining(bytes + EOL_SIZE)
+          unless @buffer.byteslice(@offset + bytes, EOL_SIZE) == EOL
+            raise ArgumentError, "expected CRLF after #{bytes} bytes"
+          end
+
           str = @buffer.byteslice(@offset, bytes)
           @offset += bytes + EOL_SIZE
           str
@@ -72,7 +78,13 @@ class RedisClient
         end
 
         def read_chomp(bytes)
+          raise ArgumentError, "negative byte length: #{bytes}" if bytes < 0
+
           ensure_remaining(bytes + EOL_SIZE)
+          unless @buffer.byteslice(@offset + bytes, EOL_SIZE) == EOL
+            raise ArgumentError, "expected CRLF after #{bytes} bytes"
+          end
+
           str = @buffer.byteslice(@offset, bytes)
           @offset += bytes + EOL_SIZE
           str.force_encoding(Encoding::UTF_8)
@@ -159,15 +171,30 @@ class RedisClient
       def gets_integer
         int = 0
         offset = @offset
+        negative = false
+        digits = false
         while true
           chr = @buffer.getbyte(offset)
 
           if chr
             if chr == 13 # "\r".ord
+              unless @buffer.getbyte(offset + 1)
+                ensure_line
+                return gets_integer
+              end
+              unless @buffer.getbyte(offset + 1) == 10 && digits
+                raise ArgumentError, "invalid integer line"
+              end
+
               @offset = offset + 2
-              break
-            else
+              return negative ? -int : int
+            elsif chr == 45 && offset == @offset # "-".ord
+              negative = true
+            elsif chr >= 48 && chr <= 57
+              digits = true
               int = (int * 10) + chr - 48
+            else
+              raise ArgumentError, "invalid byte in integer line: #{chr}"
             end
             offset += 1
           else
@@ -175,8 +202,6 @@ class RedisClient
             return gets_integer
           end
         end
-
-        int
       end
 
       private
