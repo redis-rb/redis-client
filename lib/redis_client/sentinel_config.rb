@@ -63,10 +63,12 @@ class RedisClient
         end
       end
 
-      @sentinels = {}.compare_by_identity
       @role = role.to_sym
       @mutex = Mutex.new
+      @condition = ConditionVariable.new
       @config = nil
+      @config_generation = 0
+      @resolving_thread = nil
 
       client_config[:reconnect_attempts] ||= DEFAULT_RECONNECT_ATTEMPTS
       @client_config = client_config || {}
@@ -87,6 +89,7 @@ class RedisClient
     def reset
       @mutex.synchronize do
         @config = nil
+        @config_generation += 1
       end
     end
 
@@ -153,12 +156,45 @@ class RedisClient
     end
 
     def config
-      @mutex.synchronize do
-        @config ||= if @role == :master
-          resolve_master
-        else
-          resolve_replica
+      loop do
+        generation = nil
+        primary_resolver = false
+        @mutex.synchronize do
+          return @config if @config
+
+          while @resolving_thread && @resolving_thread != Thread.current
+            @condition.wait(@mutex)
+            return @config if @config
+          end
+
+          generation = @config_generation
+          unless @resolving_thread
+            @resolving_thread = Thread.current
+            primary_resolver = true
+          end
         end
+
+        cached_config = begin
+          resolved_config = if @role == :master
+            resolve_master
+          else
+            resolve_replica
+          end
+
+          @mutex.synchronize do
+            @config ||= resolved_config if generation == @config_generation
+          end
+        ensure
+          finish_resolving if primary_resolver
+        end
+        return cached_config if cached_config
+      end
+    end
+
+    def finish_resolving
+      @mutex.synchronize do
+        @resolving_thread = nil
+        @condition.broadcast
       end
     end
 
@@ -175,10 +211,6 @@ class RedisClient
       raise ConnectionError, "No sentinels available"
     else
       raise ConnectionError, "Couldn't locate a replica for role: #{@name}"
-    end
-
-    def sentinel_client(sentinel_config)
-      @sentinels[sentinel_config] ||= sentinel_config.new_client
     end
 
     def resolve_replica
@@ -202,8 +234,9 @@ class RedisClient
     def each_sentinel
       last_error = nil
 
-      @sentinel_configs.dup.each do |sentinel_config|
-        sentinel_client = sentinel_client(sentinel_config)
+      sentinel_configs = @mutex.synchronize { @sentinel_configs.dup }
+      sentinel_configs.each do |sentinel_config|
+        sentinel_client = sentinel_config.new_client
         success = true
         begin
           yield sentinel_client
@@ -213,7 +246,11 @@ class RedisClient
           sleep SENTINEL_DELAY
         ensure
           if success
-            @sentinel_configs.unshift(@sentinel_configs.delete(sentinel_config))
+            @mutex.synchronize do
+              if @sentinel_configs.delete(sentinel_config)
+                @sentinel_configs.unshift(sentinel_config)
+              end
+            end
           end
           # Redis Sentinels may be configured to have a lower maxclients setting than
           # the Redis nodes. Close the connection to the Sentinel node to avoid using
@@ -230,13 +267,15 @@ class RedisClient
       sentinels = sentinel_response.map do |sentinel|
         { host: sentinel.fetch("ip"), port: Integer(sentinel.fetch("port")) }
       end
-      new_sentinels = sentinels.select do |sentinel|
-        @sentinel_configs.none? do |sentinel_config|
-          sentinel_config.host == sentinel.fetch(:host) && sentinel_config.port == sentinel.fetch(:port)
+      @mutex.synchronize do
+        new_sentinels = sentinels.select do |sentinel|
+          @sentinel_configs.none? do |sentinel_config|
+            sentinel_config.host == sentinel.fetch(:host) && sentinel_config.port == sentinel.fetch(:port)
+          end
         end
-      end
 
-      @sentinel_configs.concat sentinels_to_configs(new_sentinels)
+        @sentinel_configs.concat sentinels_to_configs(new_sentinels)
+      end
     end
   end
 end
