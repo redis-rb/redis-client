@@ -194,6 +194,14 @@ class RedisClient
         start = @offset - buffer_size
         empty_buffer = start >= 0
 
+        if !empty_buffer && @offset > (@chunk_size * 2)
+          old_buffer = @buffer
+          @buffer = @buffer.byteslice(@offset..-1)
+          old_buffer.clear
+          @offset = 0
+          start = @offset - @buffer.bytesize
+        end
+
         loop do
           bytes = if empty_buffer
             @io.read_nonblock([remaining, @chunk_size].max, @buffer, exception: false)
