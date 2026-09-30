@@ -319,5 +319,58 @@ class RedisClient
         config.build_lib_name
       end
     end
+
+    def test_ssl_params_hash_is_returned_as_is
+      params = { ca_file: "ca.crt" }
+      config = Config.new(ssl: true, ssl_params: params)
+
+      assert config.ssl_params.equal?(params)
+    end
+
+    def test_ssl_params_callable_is_resolved_on_read
+      calls = 0
+      resolver = lambda do
+        calls += 1
+        { ca_file: "ca.crt" }
+      end
+      config = Config.new(ssl: true, ssl_params: resolver)
+
+      assert_equal({ ca_file: "ca.crt" }, config.ssl_params)
+      assert_equal 1, calls
+    end
+
+    def test_ssl_context_is_memoized_for_a_hash
+      config = Config.new(ssl: true, driver: :ruby, ssl_params: { ca_file: "ca.crt" })
+      context = config.ssl_context
+
+      assert config.ssl_context.equal?(context)
+    end
+
+    def test_ssl_context_is_rebuilt_when_a_callable_returns_new_params
+      config = Config.new(ssl: true, driver: :ruby, ssl_params: -> { { ca_file: "ca.crt" } })
+      context = config.ssl_context
+
+      refute config.ssl_context.equal?(context)
+    end
+
+    def test_ssl_context_is_reused_while_a_callable_returns_the_same_params
+      params = { ca_file: "ca.crt" }.freeze
+      config = Config.new(ssl: true, driver: :ruby, ssl_params: -> { params })
+      context = config.ssl_context
+
+      assert config.ssl_context.equal?(context)
+    end
+
+    def test_ssl_context_is_not_built_without_ssl
+      calls = 0
+      resolver = lambda do
+        calls += 1
+        { ca_file: "ca.crt" }
+      end
+      config = Config.new(ssl_params: resolver)
+
+      assert_nil config.ssl_context
+      assert_equal 0, calls
+    end
   end
 end
