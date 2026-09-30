@@ -1,6 +1,7 @@
 # Unreleased
 
 - Raise `RedisClient::ProtocolError` instead of `NoMethodError` when the RESP3 parser hits an unexpected end of stream.
+- `ssl_params` can now be a callable, resolved on each new connection, for certificates that are rotated while the process is running. The `SSLContext` is rebuilt only when the callable returns a different object, so a Hash is still memoized as before.
 
 # 0.30.1
 

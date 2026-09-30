@@ -75,6 +75,10 @@ redis.call("GET", "mykey")
   - `cert`: The path to the client certificate (e.g. `client.crt`).
   - `key`: The path to the client key (e.g. `client.key`).
   - `ca_file`: The certificate authority to use, useful for self-signed certificates (e.g. `ca.crt`),
+
+  Can also be a callable returning that Hash, for certificates that are rotated while the process is
+  running. It is invoked on every new connection, and the `SSLContext` is rebuilt only when it returns
+  a different object, so returning the same Hash until the certificate changes keeps the context cached.
 - `db`: The database to select after connecting, defaults to `0`.
 - `id` ID for the client connection, assigns name to current connection by sending `CLIENT SETNAME`.
 - `username` Username to authenticate against server, defaults to `"default"`.

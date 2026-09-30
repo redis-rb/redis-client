@@ -13,7 +13,7 @@ class RedisClient
     DEFAULT_IDLE_TIMEOUT = 30.0
 
     module Common
-      attr_reader :db, :id, :ssl, :ssl_params, :command_builder, :inherit_socket,
+      attr_reader :db, :id, :ssl, :command_builder, :inherit_socket,
         :connect_timeout, :read_timeout, :write_timeout, :driver, :protocol,
         :middlewares_stack, :custom, :circuit_breaker, :driver_info, :idle_timeout
 
@@ -53,7 +53,7 @@ class RedisClient
         @id = id
         @ssl = ssl || false
 
-        @ssl_params = ssl_params
+        @ssl_params = ssl_params && !ssl_params.respond_to?(:call) ? -> { ssl_params } : ssl_params
         @connect_timeout = connect_timeout
         @read_timeout = read_timeout
         @write_timeout = write_timeout
@@ -132,6 +132,10 @@ class RedisClient
         @password&.call(username)
       end
 
+      def ssl_params
+        @ssl_params&.call
+      end
+
       def username
         @username || DEFAULT_USERNAME
       end
@@ -190,7 +194,12 @@ class RedisClient
 
       def ssl_context
         if ssl
-          @ssl_context ||= @driver.ssl_context(@ssl_params || {})
+          params = ssl_params
+          unless @ssl_context && @resolved_ssl_params.equal?(params)
+            @resolved_ssl_params = params
+            @ssl_context = @driver.ssl_context(params || {})
+          end
+          @ssl_context
         end
       end
 
