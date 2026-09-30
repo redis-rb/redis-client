@@ -127,6 +127,8 @@ module ClientTestHelper
         cert: Servers::CERTS_PATH.join("client.crt").to_s,
         key: Servers::CERTS_PATH.join("client.key").to_s,
         ca_file: Servers::CERTS_PATH.join("ca.crt").to_s,
+        verify_mode: OpenSSL::SSL::VERIFY_PEER,
+        verify_hostname: true,
       },
     }
   end

@@ -28,12 +28,6 @@ class RedisClient
 
         context = OpenSSL::SSL::SSLContext.new
         context.set_params(params)
-        if context.verify_mode != OpenSSL::SSL::VERIFY_NONE
-          if context.respond_to?(:verify_hostname) # Missing on JRuby
-            context.verify_hostname
-          end
-        end
-
         context
       end
     end
