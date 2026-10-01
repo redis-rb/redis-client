@@ -190,7 +190,7 @@ class RedisClient
 
       def ssl_context
         if ssl
-          @ssl_context ||= @driver.ssl_context(@ssl_params || {})
+          @driver.ssl_context(@ssl_params || {})
         end
       end
 
