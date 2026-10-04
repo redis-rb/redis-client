@@ -16,21 +16,6 @@ class RedisClient
       Integer => :dump_numeric,
       Float => :dump_numeric,
     }.freeze
-    PARSER_TYPES = {
-      '#' => :parse_boolean,
-      '$' => :parse_blob,
-      '+' => :parse_string,
-      '=' => :parse_verbatim_string,
-      '-' => :parse_error,
-      ':' => :parse_integer,
-      '(' => :parse_integer,
-      ',' => :parse_double,
-      '_' => :parse_null,
-      '*' => :parse_array,
-      '%' => :parse_map,
-      '~' => :parse_set,
-      '>' => :parse_array,
-    }.transform_keys(&:ord).freeze
     INTEGER_RANGE = ((((2**64) / 2) * -1)..(((2**64) / 2) - 1)).freeze
 
     def dump(command, buffer = nil)
@@ -69,23 +54,6 @@ class RedisClient
       buffer << '*' << array.size.to_s << EOL
       array.each do |item|
         dump_any(item, buffer)
-      end
-      buffer
-    end
-
-    def dump_set(set, buffer)
-      buffer << '~' << set.size.to_s << EOL
-      set.each do |item|
-        dump_any(item, buffer)
-      end
-      buffer
-    end
-
-    def dump_hash(hash, buffer)
-      buffer << '%' << hash.size.to_s << EOL
-      hash.each_pair do |key, value|
-        dump_any(key, buffer)
-        dump_any(value, buffer)
       end
       buffer
     end
@@ -179,10 +147,6 @@ class RedisClient
         hash[parse(io).freeze] = parse(io)
       end
       hash
-    end
-
-    def parse_push(io)
-      parse_array(io)
     end
 
     def parse_sequence(io, size)
