@@ -11,7 +11,6 @@ module Servers
   HOST = "127.0.0.1"
   CERTS_PATH = ServerManager::ROOT.join("test/fixtures/certs")
 
-  SENTINEL_CONF_PATH = ServerManager::ROOT.join("tmp/sentinel.conf")
   SENTINEL_NAME = "cache"
 
   DEFAULT_REDIS_VERSION = "7.0"
