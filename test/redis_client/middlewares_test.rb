@@ -236,10 +236,6 @@ class RedisClient
       assert_equal 1, TestMiddleware.calls.size
     end
 
-    def assert_calls(calls)
-      assert_equal calls, TestMiddleware.calls
-    end
-
     module TestMiddleware
       class << self
         attr_accessor :calls
