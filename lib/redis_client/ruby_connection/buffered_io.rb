@@ -193,12 +193,14 @@ class RedisClient
         buffer_size = @buffer.bytesize
         start = @offset - buffer_size
         empty_buffer = start >= 0
+        read_buffer = nil
 
         loop do
           bytes = if empty_buffer
             @io.read_nonblock([remaining, @chunk_size].max, @buffer, exception: false)
           else
-            @io.read_nonblock([remaining, @chunk_size].max, exception: false)
+            read_buffer ||= String.new(capacity: [remaining, @chunk_size].max, encoding: Encoding::BINARY)
+            @io.read_nonblock([remaining, @chunk_size].max, read_buffer, exception: false)
           end
 
           case bytes

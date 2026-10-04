@@ -14,6 +14,12 @@ class RedisClient
       end
     end
 
+    class ChunkedStringIO < StringIO
+      def read_nonblock(maxlen, *args, **kwargs)
+        super([maxlen, 1024].min, *args, **kwargs)
+      end
+    end
+
     def test_dump_mixed_encoding
       assert_dumps ["SET", "fée", "\xC6bIJ"], "*3\r\n$3\r\nSET\r\n$4\r\nfée\r\n$4\r\n\xC6bIJ\r\n"
     end
@@ -138,14 +144,20 @@ class RedisClient
       assert_parses(expected, payload)
     end
 
+    def test_load_blob_string_across_multiple_reads
+      # Each read returns at most 1KB, so the blob is assembled from many reads
+      value = Array.new(4_000) { |i| "#{i}," }.join
+      assert_parses value, "$#{value.bytesize}\r\n#{value}\r\n", io_class: ChunkedStringIO
+    end
+
     def test_load_verbatim_string
       assert_parses "Some string", "=15\r\ntxt:Some string\r\n"
     end
 
     private
 
-    def assert_parses(expected, payload)
-      raw_io = StringIO.new(payload.b)
+    def assert_parses(expected, payload, io_class: StringIO)
+      raw_io = io_class.new(payload.b)
       io = RedisClient::RubyConnection::BufferedIO.new(raw_io, read_timeout: 1, write_timeout: 1)
       actual = RESP3.load(io)
       if block_given?
