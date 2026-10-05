@@ -199,7 +199,10 @@ class RedisClient
           bytes = if empty_buffer
             @io.read_nonblock([remaining, @chunk_size].max, @buffer, exception: false)
           else
-            read_buffer ||= String.new(capacity: [remaining, @chunk_size].max, encoding: Encoding::BINARY)
+            # We're most likely reading 4kiB or more, hence the read buffer will never be
+            # embedded on any recent Ruby implementation, hence we can provide an empty
+            # buffer, Ruby will take care of preallocating the required memory.
+            read_buffer ||= "".b
             @io.read_nonblock([remaining, @chunk_size].max, read_buffer, exception: false)
           end
 
@@ -235,7 +238,10 @@ class RedisClient
               @buffer << bytes.force_encoding(ENCODING)
             end
             remaining -= bytes.bytesize
-            return if !strict || remaining <= 0
+            if !strict || remaining <= 0
+              read_buffer&.clear
+              return
+            end
           end
         end
       end
