@@ -1,5 +1,9 @@
 # Unreleased
 
+# 0.31.0
+
+- Improved the Ruby driver buffering logic, should trigger GC less, particularly for large response and when using SSL.
+- `ssl_params` can now be a proc, for environment where SSL certificates frequently change.
 - Raise `RedisClient::ProtocolError` instead of `NoMethodError` when the RESP3 parser hits an unexpected end of stream.
 
 # 0.30.1
