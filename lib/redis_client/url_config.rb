@@ -8,7 +8,7 @@ class RedisClient
 
     def initialize(url)
       @url = url
-      @uri = URI(url)
+      @uri = parse_url(url)
       @unix = false
       @ssl = false
       case uri.scheme
@@ -19,7 +19,12 @@ class RedisClient
       when "unix", nil
         @unix = true
       else
-        raise ArgumentError, "Unknown URL scheme: #{url.inspect}"
+        uri = @uri
+        if uri.password
+          uri = uri.dup
+          uri.password = 'REDACTED'
+        end
+        raise ArgumentError, "Unknown URL scheme: #{uri.to_s.inspect}"
       end
     end
 
@@ -69,6 +74,15 @@ class RedisClient
       return unless uri.port
 
       Integer(uri.port)
+    end
+
+    private
+
+    def parse_url(url)
+      URI(url)
+    rescue URI::InvalidURIError => error
+      error.message.sub!(%r{//(.*)@}, "//REDACTED@")
+      raise
     end
   end
 end

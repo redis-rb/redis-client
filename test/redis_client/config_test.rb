@@ -51,6 +51,17 @@ class RedisClient
       end
       assert_includes error.message, "Unknown URL scheme"
       assert_includes error.message, "example.com"
+
+      error = assert_raises ArgumentError do
+        Config.new(url: "redsi://:s3cret@redis:6379/0")
+      end
+      assert_includes error.message, "redsi://:REDACTED@redis:6379/0"
+
+      error = assert_raises URI::InvalidURIError do
+        Config.new(url: "redis://:s3cr^t@redis:6379/0")
+      end
+      assert_not_includes error.message, "s3cr^t"
+      assert_includes error.message, "redis://REDACTED@redis:6379/0"
     end
 
     def test_defaults_to_localhost
