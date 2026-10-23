@@ -245,44 +245,6 @@ static redisReplyObjectFunctions reply_functions = {
     reply_free,
 };
 
-typedef struct {
-    redisContext *context;
-    int return_value;
-} hiredis_buffer_read_args_t;
-
-static void *hiredis_buffer_read_safe(void *_args) {
-    hiredis_buffer_read_args_t *args = _args;
-    args->return_value = redisBufferRead(args->context);
-    return NULL;
-}
-static int hiredis_buffer_read_nogvl(redisContext *context) {
-    hiredis_buffer_read_args_t args = {
-        .context = context,
-    };
-    rb_thread_call_without_gvl(hiredis_buffer_read_safe, &args, RUBY_UBF_IO, 0);
-    return args.return_value;
-}
-
-typedef struct {
-    redisContext *context;
-    int *done;
-    int return_value;
-} hiredis_buffer_write_args_t;
-
-static void *hiredis_buffer_write_safe(void *_args) {
-    hiredis_buffer_write_args_t *args = _args;
-    args->return_value = redisBufferWrite(args->context, args->done);
-    return NULL;
-}
-static int hiredis_buffer_write_nogvl(redisContext *context, int *done) {
-    hiredis_buffer_write_args_t args = {
-        .context = context,
-        .done = done,
-    };
-    rb_thread_call_without_gvl(hiredis_buffer_write_safe, &args, RUBY_UBF_IO, 0);
-    return args.return_value;
-}
-
 #define CONNECTION(from, name) \
     hiredis_connection_t *name = NULL; \
     TypedData_Get_Struct(from, hiredis_connection_t, &hiredis_connection_data_type, name); \
@@ -413,8 +375,9 @@ static inline void redis_raise_error_and_disconnect(redisContext *context, VALUE
 }
 
 static inline void hiredis_raise_error_and_disconnect(hiredis_connection_t *connection, VALUE timeout_error) {
+    // Another thread may have already disconnected: still raise, never fall through.
+    ENSURE_CONNECTED(connection);
     redisContext *context = connection->context;
-    if (!context) return;
     connection->context = NULL;
     redis_raise_error_and_disconnect(context, timeout_error);
 }
@@ -690,24 +653,31 @@ static VALUE hiredis_write(VALUE self, VALUE command) {
 
 static VALUE hiredis_flush(VALUE self) {
     CONNECTION(self, connection);
-    ENSURE_CONNECTED(connection);
 
     int wdone = 0;
     while (!wdone) {
+        // A pubsub connection is shared by a reader and a writer thread. The socket is
+        // non-blocking, so redisBufferWrite/redisBufferRead are called with the GVL held:
+        // no other thread can disconnect the context (or use its SSL*) mid-call. Waiting
+        // for the socket does release the GVL, hence the re-check on every pass.
+        ENSURE_CONNECTED(connection);
         errno = 0;
-        if (hiredis_buffer_write_nogvl(connection->context, &wdone) == REDIS_ERR) {
-            if (errno == EAGAIN) {
-                int writable = 0;
+        if (redisBufferWrite(connection->context, &wdone) == REDIS_ERR && errno != EAGAIN) {
+            hiredis_raise_error_and_disconnect(connection, rb_eRedisClientWriteTimeoutError);
+        }
 
-                if (hiredis_wait_writable(connection->context->fd, &connection->write_timeout, &writable) < 0) {
-                    hiredis_raise_error_and_disconnect(connection, rb_eRedisClientWriteTimeoutError);
-                }
+        // Plain sockets report a full send buffer as REDIS_ERR + EAGAIN, but SSL reports
+        // SSL_ERROR_WANT_WRITE as REDIS_OK with nothing written. Wait in both cases, or we
+        // would spin with the GVL held and never honor write_timeout.
+        if (!wdone) {
+            int writable = 0;
 
-                if (!writable) {
-                    errno = EAGAIN;
-                    hiredis_raise_error_and_disconnect(connection, rb_eRedisClientWriteTimeoutError);
-                }
-            } else {
+            if (hiredis_wait_writable(connection->context->fd, &connection->write_timeout, &writable) < 0) {
+                hiredis_raise_error_and_disconnect(connection, rb_eRedisClientWriteTimeoutError);
+            }
+
+            if (!writable) {
+                errno = EAGAIN;
                 hiredis_raise_error_and_disconnect(connection, rb_eRedisClientWriteTimeoutError);
             }
         }
@@ -739,9 +709,13 @@ static int hiredis_read_internal(hiredis_connection_t *connection, VALUE *reply)
 
     /* Read until there is a full reply */
     while (redis_reply == NULL) {
+        // See hiredis_flush.
+        if (!connection->context) {
+            return HIREDIS_FATAL_CONNECTION_ERROR;
+        }
         errno = 0;
 
-        if (hiredis_buffer_read_nogvl(connection->context) == REDIS_ERR) {
+        if (redisBufferRead(connection->context) == REDIS_ERR) {
             return HIREDIS_FATAL_CONNECTION_ERROR; // Socket error
         }
 

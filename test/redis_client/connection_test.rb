@@ -478,6 +478,36 @@ class RedisClient
       end
     end
 
+    def test_write_timeout_when_server_stops_reading
+      context = OpenSSL::SSL::SSLContext.new
+      context.cert = OpenSSL::X509::Certificate.new(File.read(Servers::CERTS_PATH.join("redis.crt")))
+      context.key = OpenSSL::PKey.read(File.read(Servers::CERTS_PATH.join("redis.key")))
+      tcp_server = TCPServer.new("127.0.0.1", 0)
+      ssl_server = OpenSSL::SSL::SSLServer.new(tcp_server, context)
+      session = nil
+      server_thread = Thread.new do
+        session = ssl_server.accept
+        session.readpartial(4096) # HELLO
+        session.write("%0\r\n")
+        sleep # never read again, so the client's socket buffer fills up
+      end
+
+      client = new_client(host: "127.0.0.1", port: tcp_server.addr[1], write_timeout: 0.5, reconnect_attempts: 0)
+      writer = Thread.new { client.call("SET", "large", "x" * 20_000_000) }
+      writer.report_on_exception = false
+
+      # Thread#join re-raises the writer's error; nil means it was still writing after 5s.
+      assert_raises(WriteTimeoutError) do
+        flunk("write never timed out") unless writer.join(5)
+      end
+    ensure
+      writer&.kill
+      client&.close
+      server_thread&.kill
+      session&.to_io&.close
+      ssl_server&.close
+    end
+
     private
 
     def new_client(**overrides)

@@ -84,6 +84,48 @@ class RedisClient
       assert_nil @subscription.next_event(0.01)
     end
 
+    def test_concurrent_use_while_connection_is_killed
+      # Like redis-rb's SubscribedClient (used by ActionCable): one thread reads events
+      # while other threads subscribe and unsubscribe, writes serialized by a lock.
+      unexpected = Queue.new
+      write_lock = Mutex.new
+      kills = 0
+      deadline = RedisClient.now + 2
+
+      while RedisClient.now < deadline
+        subscription = @redis.pubsub
+        subscription.call("CLIENT", "ID")
+        id = subscription.next_event
+        stop = false
+        threads = [Thread.new do
+          subscription.next_event(0.01) until stop
+        rescue ConnectionError
+        rescue => error
+          unexpected << error
+        end]
+        threads += 4.times.map do |i|
+          Thread.new do
+            until stop
+              write_lock.synchronize { subscription.call("SUBSCRIBE", "channel-#{i}") }
+              write_lock.synchronize { subscription.call("UNSUBSCRIBE", "channel-#{i}") }
+            end
+          rescue ConnectionError
+          rescue => error
+            unexpected << error
+          end
+        end
+
+        sleep 0.01
+        kills += @redis.call("CLIENT", "KILL", "ID", id) # only ours: other test workers share this server
+        stop = true
+        threads.each(&:join)
+        subscription.close
+      end
+
+      assert_operator kills, :>, 0
+      assert_equal [], Array.new(unexpected.size) { unexpected.pop }
+    end
+
     def test_pubsub_with_disabled_reconnection
       @redis.send(:ensure_connected, retryable: false) do
         refute_nil @redis.pubsub
