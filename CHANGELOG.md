@@ -1,5 +1,8 @@
 # Unreleased
 
+- hiredis-client: Fix a crash (segfault at `0x8` in `redisBufferWrite`/`redisBufferRead`) when a `pubsub` client is used concurrently by a reader and a writer thread and the connection is lost.
+- hiredis-client: Honor `write_timeout` on SSL connections when the server stops reading. Previously the write busy-looped indefinitely.
+
 # 0.31.0
 
 - Improved the Ruby driver buffering logic, should trigger GC less, particularly for large response and when using SSL.
